@@ -16,13 +16,24 @@ Running the application also requires Docker and Docker Compose, used to start P
 
 The development credentials for Postgres and Keycloak (`modularhub`/`modularhub` for the database, `admin`/`admin` for the Keycloak admin) are already hardcoded in `compose.yaml` and have a matching default in `application.yaml`. For local development you don't need to create or export any environment variable for these.
 
-The only required variable is the Keycloak client secret used by the backend, which has no default on purpose:
+The only required variable is the Keycloak client secret used by the backend, which has no default on purpose. Put it in a `.env` file at the root of the repo (gitignored):
 
 ```
-export MODULARHUB_BACKEND_CLIENT_SECRET=<your-client-secret>
+MODULARHUB_BACKEND_CLIENT_SECRET=<your-client-secret>
 ```
 
-Export it in your shell before starting the backend, or set it as an environment variable in your IDE run configuration. Without it, the application fails to start because Spring can't resolve the placeholder.
+`docker compose` reads `.env` automatically, but Maven and your IDE don't: the backend needs it connected explicitly, in one of these ways.
+
+**IntelliJ IDEA** (no plugin needed): open the run configuration for `ModularhubApplication` (or `spring-boot:run`), expand the "Environment variables" field (the small sheet icon next to it) and paste the whole content of `.env` in there — the editor recognizes `KEY=value` lines on its own and splits them into separate variables, no need to type them one by one.
+
+**From the terminal**, regardless of the IDE:
+
+```bash
+export $(grep -v '^#' .env | xargs)
+./mvnw spring-boot:run
+```
+
+Without the variable set, the application fails to start because Spring can't resolve the placeholder.
 
 ## Running locally
 
@@ -34,10 +45,9 @@ docker compose up -d
 
 This starts Postgres (port 5432) and Keycloak (port 8090, admin console at `/admin`), with the development credentials already in place.
 
-You can then launch the backend:
+You can then launch the backend (with `MODULARHUB_BACKEND_CLIENT_SECRET` set, see Configuration above):
 
 ```
-export MODULARHUB_BACKEND_CLIENT_SECRET=<your-client-secret>
 ./mvnw spring-boot:run
 ```
 
