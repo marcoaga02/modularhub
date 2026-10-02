@@ -5,7 +5,8 @@ spring:
     active: keycloak
   docker:
     compose:
-      file: com.marcoaga02.modularhub/compose.yaml
+      enabled: false
+      file: compose.yaml
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
