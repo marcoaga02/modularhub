@@ -13,9 +13,9 @@ spring:
     hibernate:
       ddl-auto: update
   datasource:
-    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB:modularhub}
+    username: ${POSTGRES_USER:modularhub}
+    password: ${POSTGRES_PASSWORD:modularhub}
   security:
     oauth2:
       resourceserver:

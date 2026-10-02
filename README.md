@@ -1,45 +1,49 @@
 # modularhub
 
-Monorepo con backend Spring Boot (Java 21) e frontend Angular, pensato per girare insieme a Postgres e Keycloak.
+Monorepo with a Spring Boot backend (Java 21) and an Angular frontend, meant to run alongside Postgres and Keycloak.
 
-## Struttura del progetto
+## Project structure
 
-Il backend vive alla radice del repository (`pom.xml`, `src/main/java`, `src/main/resources`). Il frontend Angular si trova in `src/main/modularhub-ui` ed è un progetto a sé stante con il proprio `package.json`.
+The backend lives at the root of the repository (`pom.xml`, `src/main/java`, `src/main/resources`). The Angular frontend lives in `src/main/modularhub-ui` and is its own project with its own `package.json`.
 
-## Prerequisiti
+## Prerequisites
 
-Per buildare tutto serve solo Java 21 e Maven (o il wrapper `./mvnw` incluso nel repo). Node e npm non vanno installati a mano: il plugin Maven li scarica da solo in una cartella temporanea sotto `target/` durante la build.
+Building everything only requires Java 21 and Maven (or the `./mvnw` wrapper included in the repo). Node and npm don't need to be installed manually: the Maven plugin downloads them on its own into a temporary folder under `target/` during the build.
 
-Per far girare l'applicazione servono anche Docker e Docker Compose, usati per avviare Postgres e Keycloak.
+Running the application also requires Docker and Docker Compose, used to start Postgres and Keycloak.
 
-## Configurazione
+## Configuration
 
-Copia il file `.env.example` (se presente) in `.env` oppure crealo tu stesso nella root del progetto, valorizzando queste variabili:
+The development credentials for Postgres and Keycloak (`modularhub`/`modularhub` for the database, `admin`/`admin` for the Keycloak admin) are already hardcoded in `compose.yaml` and have a matching default in `application.yaml`. For local development you don't need to create or export any environment variable for these.
 
-- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`: credenziali del database applicativo
-- `KEYCLOAK_DB`, `KEYCLOAK_DB_USERNAME`, `KEYCLOAK_DB_PASSWORD`: credenziali del database usato da Keycloak
-- `KC_BOOTSTRAP_ADMIN_USERNAME`, `KC_BOOTSTRAP_ADMIN_PASSWORD`: credenziali dell'admin Keycloak al primo avvio
-- `MODULARHUB_BACKEND_CLIENT_SECRET`: client secret del client Keycloak usato dal backend
+The only required variable is the Keycloak client secret used by the backend, which has no default on purpose:
 
-## Avvio in locale
+```
+export MODULARHUB_BACKEND_CLIENT_SECRET=<your-client-secret>
+```
 
-Il docker compose non viene avviato automaticamente dal backend: va tirato su a mano prima di lanciare l'applicazione.
+Export it in your shell before starting the backend, or set it as an environment variable in your IDE run configuration. Without it, the application fails to start because Spring can't resolve the placeholder.
+
+## Running locally
+
+Docker compose is not started automatically by the backend: you need to bring it up by hand before launching the application.
 
 ```
 docker compose up -d
 ```
 
-Questo avvia Postgres (porta 5432) e Keycloak (porta 8090, admin console su `/admin`).
+This starts Postgres (port 5432) and Keycloak (port 8090, admin console at `/admin`), with the development credentials already in place.
 
-A questo punto puoi lanciare il backend:
+You can then launch the backend:
 
 ```
+export MODULARHUB_BACKEND_CLIENT_SECRET=<your-client-secret>
 ./mvnw spring-boot:run
 ```
 
-Il backend risponde su `http://localhost:8080/api`.
+The backend responds on `http://localhost:8080/api`.
 
-Per il frontend in modalità sviluppo, con hot reload:
+For the frontend in development mode, with hot reload:
 
 ```
 cd src/main/modularhub-ui
@@ -47,30 +51,30 @@ npm install
 npm start
 ```
 
-Il frontend risponde su `http://localhost:4200`.
+The frontend responds on `http://localhost:4200`.
 
-## Build completa
+## Full build
 
 ```
 ./mvnw clean package
 ```
 
-Questo comando builda sia il backend sia il frontend e produce un unico jar eseguibile in `target/`, con l'app Angular già compilata e servita come risorsa statica dal backend. Per lanciarlo basta avere Postgres e Keycloak già su con `docker compose up -d` e poi:
+This builds both the backend and the frontend and produces a single executable jar in `target/`, with the Angular app already compiled and served as a static resource by the backend. To run it, just have Postgres and Keycloak already up with `docker compose up -d` and then:
 
 ```
 java -jar target/modularhub-0.0.1-SNAPSHOT.jar
 ```
 
-Se vuoi saltare la build del frontend (ad esempio per velocizzare un ciclo di test sul solo backend) puoi passare `-Dskip.ui=true`:
+If you want to skip the frontend build (for example to speed up a backend-only test cycle), pass `-Dskip.ui=true`:
 
 ```
 ./mvnw clean package -Dskip.ui=true
 ```
 
-## Test
+## Tests
 
 ```
 ./mvnw verify
 ```
 
-Esegue i test unitari e quelli di integrazione (in `src/it`), questi ultimi basati su Testcontainers quindi serve Docker attivo, ma non serve avviare il compose a mano: i container vengono gestiti direttamente dai test.
+Runs unit tests and integration tests (in `src/it`). The latter are based on Testcontainers, so Docker needs to be running, but you don't need to start the compose stack by hand: the containers are managed directly by the tests.

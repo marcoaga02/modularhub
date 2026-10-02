@@ -3,15 +3,16 @@ services:
     image: 'postgres:17'
     container_name: modularhub-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: modularhub
+      POSTGRES_USER: modularhub
+      POSTGRES_PASSWORD: modularhub
     volumes:
       - ./init-keycloak-db.sql:/docker-entrypoint-initdb.d/init-keycloak-db.sql
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - '5432:5432'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U modularhub"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -20,15 +21,20 @@ services:
     image: quay.io/keycloak/keycloak:26.5.6
     container_name: modularhub-keycloak
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/${KEYCLOAK_DB}
-      KC_DB_USERNAME: ${KEYCLOAK_DB_USERNAME}
-      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: modularhub
+      KC_DB_PASSWORD: modularhub
     command: start-dev
     ports:
       - '8090:8080'
     depends_on:
       postgres:
         condition: service_healthy
+
+volumes:
+  postgres_data:
+    external: true
+    name: 4ed3dce1cecee377f3d461b8b072e06d983a405d42f9ad800839e0d55e405fcf
