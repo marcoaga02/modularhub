@@ -1,0 +1,55 @@
+<p-toolbar>
+  <ng-template #start>
+    <div class="flex items-center gap-4">
+      <img src="/logo.png" class="h-7" width="30" height="21" alt="logo"/>
+      <span>{{ currentPlugin?.description | translate }}</span>
+    </div>
+  </ng-template>
+  <ng-template #end>
+    @if (!loading() && currentAccount) {
+      <p-avatar
+        [label]="getInitials()"
+        shape="circle"
+        [pt]="avatarPT"
+        size="normal"
+        (click)="op.toggle($event)"
+      />
+      <p-popover
+        #op
+        [pt]="popoverPT"
+        appendTo="self"
+      >
+        <div class="flex flex-col">
+          <div class="flex items-center gap-3 p-3">
+            <p-avatar
+              [label]="getInitials()"
+              shape="circle"
+              [pt]="avatarPT"
+              size="large"
+            />
+            <div class="flex flex-col min-w-0">
+              <span class="font-bold truncate">{{ getFullName() }}</span>
+              <span class="text-sm text-gray-500 truncate">{{ currentAccount.username }}</span>
+            </div>
+          </div>
+          <hr>
+          <div
+            class="flex items-center gap-3 px-3 py-3.5 cursor-pointer hover:bg-gray-100 rounded-lg"
+            (click)="onProfileClick()"
+          >
+            <i class="pi pi-user text-gray-500"></i>
+            <span class="text-sm">{{ "core.components.top-bar.profile" | translate }}</span>
+          </div>
+          <hr>
+          <div
+            class="flex items-center gap-3 px-3 py-3.5 cursor-pointer hover:bg-gray-100 rounded-lg text-red-500"
+            (click)="logout()"
+          >
+            <i class="pi pi-sign-out"></i>
+            <span class="text-sm">{{ "general.logout.label" | translate }}</span>
+          </div>
+        </div>
+      </p-popover>
+    }
+  </ng-template>
+</p-toolbar>

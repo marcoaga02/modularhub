@@ -1,0 +1,20 @@
+<div class="flex flex-row justify-between">
+  <p-button
+    (onClick)="onGroupsButtonClick()"
+    [label]="'model.user.groups' | translate"
+    severity="secondary"
+  />
+  <div class="flex flex-row gap-x-4">
+    <p-button
+      (onClick)="onCancelButtonClick()"
+      [label]="'general.button.label.cancel' | translate"
+      severity="secondary"
+    />
+    <p-button
+      (onClick)="onConfirmButtonClick()"
+      [disabled]="(formValid | async) === false"
+      [label]="'general.button.label.confirm' | translate"
+      severity="secondary"
+    />
+  </div>
+</div>

@@ -1,0 +1,151 @@
+@if (!loading()) {
+  <div class="w-full h-full flex flex-row gap-10 px-6 pb-2" [formGroup]="userForm">
+    <div class="flex flex-col gap-4 w-1/2">
+      <div class="flex flex-col w-full gap-2">
+        <label for="firstname"
+               class="italic pl-1">{{ 'model.user.firstname' | translate }}
+          *</label>
+        <input
+          id="firstname"
+          pInputText
+          formControlName="firstname"
+          class="w-full"
+          [ngClass]="{'p-invalid': userForm.get('firstname')?.invalid && userForm.get('firstname')?.touched}"
+        >
+      </div>
+      <div class="flex flex-col w-full gap-2">
+        <label for="lastname"
+               class="italic pl-1">{{ 'model.user.lastname' | translate }} *</label>
+        <input
+          id="lastname"
+          pInputText
+          formControlName="lastname"
+          class="w-full"
+          [ngClass]="{'p-invalid': userForm.get('lastname')?.invalid && userForm.get('lastname')?.touched}"
+        >
+      </div>
+      <div class="flex flex-col w-full gap-2">
+        <label for="tax-id-number"
+               class="italic pl-1">{{ 'model.user.tax-id-number' | translate }}
+          *</label>
+        <input
+          id="tax-id-number"
+          pInputText
+          formControlName="taxIdNumber"
+          class="w-full"
+          [ngClass]="{'p-invalid': userForm.get('taxIdNumber')?.invalid && userForm.get('taxIdNumber')?.touched}"
+        >
+      </div>
+      <div class="flex flex-col w-full gap-2">
+        <label for="mobile-number"
+               class="italic pl-1">{{ 'model.user.mobile-number' | translate }}
+          *</label>
+        <input
+          id="mobile-number"
+          pInputText
+          formControlName="mobileNumber"
+          class="w-full"
+          [ngClass]="{'p-invalid': userForm.get('mobileNumber')?.invalid && userForm.get('mobileNumber')?.touched}"
+        >
+      </div>
+      <div class="flex items-center gap-2 pt-2">
+        <p-checkbox
+          id="enabled"
+          formControlName="enabled"
+          [binary]="true"
+        />
+        <label for="enabled"
+               class="italic pl-1">{{ 'model.user.enabled.label' | translate }}</label>
+      </div>
+    </div>
+    <div class="flex flex-col gap-4 w-1/2">
+      <div class="flex flex-col w-full gap-2">
+        <label for="email" class="italic pl-1">{{ 'model.user.email' | translate }}
+          *</label>
+        <input
+          id="email"
+          pInputText
+          formControlName="email"
+          class="w-full"
+          [ngClass]="{'p-invalid': userForm.get('email')?.invalid && userForm.get('email')?.touched}"
+        >
+      </div>
+      <div class="flex flex-col w-full gap-2">
+        <label for="username"
+               class="italic pl-1">{{ 'model.user.username' | translate }} *</label>
+        <input
+          id="username"
+          pInputText
+          formControlName="username"
+          class="w-full"
+          [ngClass]="{'p-invalid': userForm.get('username')?.invalid && userForm.get('username')?.touched}"
+        >
+      </div>
+      <div class="flex flex-col w-full gap-2">
+        <label for="password" class="italic pl-1">
+          {{ 'model.user.password' | translate }} *
+        </label>
+        <div class="flex gap-5">
+          <p-password
+            class="flex-1"
+            fluid
+            id="password"
+            formControlName="password"
+            variant="filled"
+            [placeholder]="userEdited ? '********' : ''"
+            [toggleMask]="true"
+            [ngClass]="{'p-invalid': userForm.get('password')?.invalid && userForm.get('password')?.touched}"
+          />
+          @if (isUserEdit()) {
+            <p-button
+              [label]="'modules.user-management.pages.user-form.reset-password.label' | translate"
+              [pTooltip]="'modules.user-management.pages.user-form.reset-password.tooltip-message' | translate"
+              (onClick)="onResetPasswordClick()"
+            />
+          }
+        </div>
+        <div class="flex flex-row w-full justify-between">
+          <div class="flex flex-col gap-2 w-2/3">
+            <label for="language"
+                   class="italic pl-1">{{ 'model.user.language' | translate }}
+              *</label>
+            <p-select
+              id="language"
+              [options]="languages"
+              formControlName="language"
+              optionValue="value"
+              optionLabel="label"
+              appendTo="body"
+              [placeholder]="'modules.user-management.pages.user-form.select-language-placeholder' | translate"
+              [ngClass]="{'p-invalid': userForm.get('language')?.invalid && userForm.get('language')?.touched}"
+            />
+          </div>
+          <div class="flex flex-col gap-2 pt-6 pr-2">
+            <div class="flex items-center gap-2">
+              <p-radio-button
+                id="gender-male"
+                formControlName="gender"
+                value="M"
+                variant="filled"
+                [ngClass]="{'p-invalid': userForm.get('gender')?.invalid && userForm.get('gender')?.touched}"
+              ></p-radio-button>
+              <label
+                for="gender-male">{{ "model.gender.male" | translate }}</label>
+            </div>
+            <div class="flex items-center gap-2">
+              <p-radio-button
+                id="gender-female"
+                formControlName="gender"
+                value="F"
+                variant="filled"
+                [ngClass]="{'p-invalid': userForm.get('gender')?.invalid && userForm.get('gender')?.touched}"
+              ></p-radio-button>
+              <label
+                for="gender-female">{{ "model.gender.female" | translate }}</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}

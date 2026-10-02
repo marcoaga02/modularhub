@@ -1,0 +1,8 @@
+<div class="w-full flex justify-end">
+  <p-button
+    [label]="'general.button.label.confirm' | translate"
+    (onClick)="onConfirmButtonClick()"
+    [disabled]="(formValid | async) === false"
+    severity="secondary"
+  />
+</div>

@@ -1,0 +1,160 @@
+{
+  "core": {
+    "components": {
+      "top-bar": {
+        "profile": "My profile"
+      }
+    },
+    "pages": {
+      "account-detail": {
+        "account": "Account",
+        "edit-preferences-message": "Account preferences have been updated successfully",
+        "personal-info": "Personal information",
+        "preferences": "Preferences"
+      }
+    }
+  },
+  "exception": {
+    "identity-provider": {
+      "error": "Identity provider error: please try again later"
+    },
+    "internal": {
+      "error": "Internal server error: please try again later"
+    },
+    "model": {
+      "account": {
+        "self-deletion": "Cannot delete the current user"
+      },
+      "account-preferences": {
+        "not-found": "User preferences not found"
+      },
+      "language": {
+        "not-found": "Language not found"
+      },
+      "user": {
+        "already-exists": {
+          "email": "A user with the same email already exists",
+          "tax-id": "A user with the same tax ID already exists",
+          "username": "A user with the same username already exists"
+        },
+        "not-found": "User not found"
+      }
+    },
+    "validation": {
+      "invalid-fields": "The following fields are invalid: {{fields}}"
+    }
+  },
+  "general": {
+    "button": {
+      "label": {
+        "add": "Add",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "delete": "Delete",
+        "edit": "Edit",
+        "save": "Save"
+      }
+    },
+    "error": "Error",
+    "logout": {
+      "label": "Logout",
+      "message": "Are you sure you want to log out?",
+      "title": "Confirm logout"
+    }
+  },
+  "groups": {
+    "admin": {
+      "description": "Administrator: has all roles"
+    }
+  },
+  "model": {
+    "account": {
+      "email": "Email",
+      "firstname": "First name",
+      "gender": "Gender",
+      "lastname": "Last name",
+      "mobile-number": "Mobile number",
+      "tax-id-number": "Tax ID number",
+      "username": "Username"
+    },
+    "account-preferences": {
+      "language": "Language"
+    },
+    "audit": {
+      "created-by": "Created by",
+      "created-on": "Created on",
+      "system": "System",
+      "updated-by": "Updated by",
+      "updated-on": "Updated on"
+    },
+    "gender": {
+      "female": "Female",
+      "male": "Male"
+    },
+    "user": {
+      "email": "Email",
+      "enabled": {
+        "false": "Inactive",
+        "label": "Enabled",
+        "true": "Active"
+      },
+      "firstname": "First name",
+      "gender": "Gender",
+      "groups": "Groups",
+      "language": "Language",
+      "lastname": "Last name",
+      "mobile-number": "Mobile number",
+      "password": "Password",
+      "tax-id-number": "Tax ID number",
+      "username": "Username"
+    }
+  },
+  "modules": {
+    "user-management": {
+      "description": "User Management",
+      "pages": {
+        "group-selector": {
+          "available-groups": "Available groups",
+          "filter-placeholder": "Filter groups",
+          "selected-groups": "Selected groups",
+          "title": "Group selection"
+        },
+        "user-detail": {
+          "account": "Account",
+          "audit": "Audit",
+          "no-groups": "No groups assigned",
+          "personal-info": "Personal information",
+          "title": "User detail {{fullName}}"
+        },
+        "user-form": {
+          "confirmation-cancel-dialog": {
+            "message": "All changes will be lost. Continue?",
+            "title": "Confirm discard changes"
+          },
+          "creation-title": "Create user",
+          "edit-title": "Edit user {{fullName}}",
+          "reset-password": {
+            "confirmation-message": "Are you sure you want to send the user an email to reset their password?",
+            "confirmation-title": "Confirm password reset",
+            "label": "Reset password",
+            "success": "Password reset email sent successfully",
+            "tooltip-message": "Send the user an email to change their password"
+          },
+          "select-language-placeholder": "Select language"
+        },
+        "user-list": {
+          "confirmation-delete-dialog": {
+            "message": "Are you sure you want to delete the selected users?",
+            "title": "Confirm user deletion"
+          },
+          "creation-message": "The user has been created successfully",
+          "delete-button-tooltip": "Cannot delete the currently authenticated user",
+          "delete-message": "User(s) deleted successfully",
+          "edit-message": "User has been updated successfully",
+          "empty-message": "No users found",
+          "filter-placeholder": "Filter users"
+        }
+      }
+    }
+  }
+}
