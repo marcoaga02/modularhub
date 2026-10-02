@@ -1,0 +1,32 @@
+@if (!loading()) {
+  <div class="flex flex-col gap-4 p-4" [formGroup]="preferencesForm">
+    <div class="flex flex-col gap-1">
+      <span class="text-sm text-gray-500">{{ "model.account-preferences.language" | translate }}</span>
+      <p-select
+        formControlName="language"
+        [options]="languages"
+        optionValue="value"
+        optionLabel="label"
+        appendTo="body"
+      />
+    </div>
+  </div>
+
+  <div class="flex justify-end gap-2">
+    @if (!editing) {
+      <p-button
+        label="Modifica"
+        icon="pi pi-pencil"
+        (onClick)="editing = true; preferencesForm.enable()"/>
+    } @else {
+      <p-button
+        label="Annulla"
+        severity="secondary"
+        outlined
+        (onClick)="onCancel()"/>
+      <p-button
+        label="Salva"
+        (onClick)="onSave()"/>
+    }
+  </div>
+}

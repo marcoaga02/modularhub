@@ -1,0 +1,40 @@
+<div
+  class="flex flex-col border rounded-r-xl h-full transition-all duration-300"
+  [ngClass]="{'w-80': isOpen, 'w-13': !isOpen}"
+>
+  <p-button
+    icon="pi pi-th-large"
+    class="p-1 border-b"
+    [text]="true"
+    (onClick)="toggle()"
+  />
+  <div class="flex flex-col p-1 gap-0.5 flex-1 border-b">
+    @for (plugin of plugins(); track plugin.path) {
+      <!-- NOSONAR -->
+      <div
+        class="flex items-center gap-3 h-12 px-3 border rounded-xl cursor-pointer"
+        [pTooltip]="!isOpen ? (plugin.description | translate) : ''"
+        tabindex="0"
+        role="button"
+        (click)="navigate(plugin.path)"
+        (keydown.enter)="navigate(plugin.path)"
+        (keydown.space)="navigate(plugin.path)"
+      >
+        <i [class]="plugin.icon + ' text-xl shrink-0'"></i>
+        @if (isOpen) {
+          <span class="text-sm truncate">{{ plugin.description | translate }}</span>
+        }
+      </div>
+    }
+  </div>
+  <div
+    class="flex items-center gap-3 h-12 px-3 cursor-pointer text-red-500"
+    [pTooltip]="!isOpen ? ('general.logout.label' | translate) : ''"
+    (click)="logout()"
+  >
+    <i class="pi pi-sign-out text-xl shrink-0"></i>
+    @if (isOpen) {
+      <span class="text-sm truncate">{{ "general.logout.label" | translate }}</span>
+    }
+  </div>
+</div>

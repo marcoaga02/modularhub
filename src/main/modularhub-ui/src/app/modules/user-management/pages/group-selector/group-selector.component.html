@@ -1,0 +1,29 @@
+<!-- TODO migliorare la grafica del picklist-->
+<p-pickList
+  [pt]="pickListPT"
+  [source]="availableGroups"
+  [target]="selectedGroups"
+  [dragdrop]="true"
+  [responsive]="true"
+  filterBy="description"
+  [sourceFilterPlaceholder]="'modules.user-management.pages.group-selector.filter-placeholder' | translate"
+  [targetFilterPlaceholder]="'modules.user-management.pages.group-selector.filter-placeholder' | translate"
+>
+  <ng-template pTemplate="sourceHeader">
+    <span class="font-bold">
+      {{ 'modules.user-management.pages.group-selector.available-groups' | translate }}
+    </span>
+  </ng-template>
+  <ng-template [appPickListItem]="availableGroups" let-group pTemplate="sourceItem">
+    <span>{{ group.description | translate }}</span>
+  </ng-template>
+
+  <ng-template pTemplate="targetHeader" class="font-bold">
+    <span class="font-bold">
+      {{ 'modules.user-management.pages.group-selector.selected-groups' | translate }}
+    </span>
+  </ng-template>
+  <ng-template [appPickListItem]="selectedGroups" let-group pTemplate="targetItem">
+    <span>{{ group.description | translate }}</span>
+  </ng-template>
+</p-pickList>

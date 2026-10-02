@@ -1,0 +1,160 @@
+{
+  "core": {
+    "components": {
+      "top-bar": {
+        "profile": "Il mio profilo"
+      }
+    },
+    "pages": {
+      "account-detail": {
+        "account": "Account",
+        "edit-preferences-message": "Le preferenze dell'account sono state modificate con successo",
+        "personal-info": "Informazioni personali",
+        "preferences": "Preferenze"
+      }
+    }
+  },
+  "exception": {
+    "identity-provider": {
+      "error": "Errore del provider dell'identità: riprovare più tardi"
+    },
+    "internal": {
+      "error": "Errore interno al server: riprovare più tardi"
+    },
+    "model": {
+      "account": {
+        "self-deletion": "Impossibile eliminare l'utente corrente"
+      },
+      "account-preferences": {
+        "not-found": "Preferenze dell'utente non trovate"
+      },
+      "language": {
+        "not-found": "Lingua non trovata"
+      },
+      "user": {
+        "already-exists": {
+          "email": "Esiste già un utente con la stessa email",
+          "tax-id": "Esiste già un utente con lo stesso codice fiscale",
+          "username": "Esiste già un utente con lo stesso username"
+        },
+        "not-found": "Utente non trovato"
+      }
+    },
+    "validation": {
+      "invalid-fields": "I seguenti campi non sono validi: {{fields}}"
+    }
+  },
+  "general": {
+    "button": {
+      "label": {
+        "add": "Aggiungi",
+        "cancel": "Annulla",
+        "confirm": "Conferma",
+        "delete": "Elimina",
+        "edit": "Modifica",
+        "save": "Salva"
+      }
+    },
+    "error": "Errore",
+    "logout": {
+      "label": "Esci",
+      "message": "Sei sicuro di voler uscire?",
+      "title": "Conferma uscita"
+    }
+  },
+  "groups": {
+    "admin": {
+      "description": "Amministratore: possiede tutti i ruoli"
+    }
+  },
+  "model": {
+    "account": {
+      "email": "Email",
+      "firstname": "Nome",
+      "gender": "Genere",
+      "lastname": "Cognome",
+      "mobile-number": "Cellulare",
+      "tax-id-number": "Codice fiscale",
+      "username": "Username"
+    },
+    "account-preferences": {
+      "language": "Lingua"
+    },
+    "audit": {
+      "created-by": "Creato da",
+      "created-on": "Creato il",
+      "system": "Sistema",
+      "updated-by": "Modificato da",
+      "updated-on": "Modificato il"
+    },
+    "gender": {
+      "female": "Femmina",
+      "male": "Maschio"
+    },
+    "user": {
+      "email": "Email",
+      "enabled": {
+        "false": "Inattivo",
+        "label": "Abilitato",
+        "true": "Attivo"
+      },
+      "firstname": "Nome",
+      "gender": "Genere",
+      "groups": "Gruppi",
+      "language": "Lingua",
+      "lastname": "Cognome",
+      "mobile-number": "Cellulare",
+      "password": "Password",
+      "tax-id-number": "Codice fiscale",
+      "username": "Username"
+    }
+  },
+  "modules": {
+    "user-management": {
+      "description": "Gestione Utenti",
+      "pages": {
+        "group-selector": {
+          "available-groups": "Gruppi disponibili",
+          "filter-placeholder": "Filtra gruppi",
+          "selected-groups": "Gruppi selezionati",
+          "title": "Selezione gruppi"
+        },
+        "user-detail": {
+          "account": "Account",
+          "audit": "Audit",
+          "no-groups": "Nessun gruppo assegnato",
+          "personal-info": "Informazioni personali",
+          "title": "Dettaglio utente {{fullName}}"
+        },
+        "user-form": {
+          "confirmation-cancel-dialog": {
+            "message": "Tutte le modifiche andranno perse. Continuare?",
+            "title": "Conferma annullamento modifiche"
+          },
+          "creation-title": "Creazione utente",
+          "edit-title": "Modifica utente {{fullName}}",
+          "reset-password": {
+            "confirmation-message": "Sei sicuro di voler inviare una mail all'utente per reimpostare la password?",
+            "confirmation-title": "Conferma reset password",
+            "label": "Reimposta password",
+            "success": "Email per reset della password inviata con successo",
+            "tooltip-message": "Invia un'email all'utente per cambiare la password"
+          },
+          "select-language-placeholder": "Seleziona lingua"
+        },
+        "user-list": {
+          "confirmation-delete-dialog": {
+            "message": "Sei sicuro di voler eliminare gli utenti selezionati?",
+            "title": "Conferma cancellazione utenti"
+          },
+          "creation-message": "L'utente è stato creato con successo",
+          "delete-button-tooltip": "Non è possibile eliminare l'utente correntemente autenticato",
+          "delete-message": "Utente/i cancellato/i con successo",
+          "edit-message": "L'utente è stato modificato con successo",
+          "empty-message": "Nessun utente trovato",
+          "filter-placeholder": "Filtra utenti"
+        }
+      }
+    }
+  }
+}
