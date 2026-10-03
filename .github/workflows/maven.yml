@@ -1,0 +1,62 @@
+# This workflow will build a Java project with Maven
+name: Java CI with Maven in Linux
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    name: Build with Java 21 on Linux
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: 21
+          distribution: 'temurin'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.m2
+            ~/.sonar/cache
+          key: ${{ runner.os }}-m2-21-${{ hashFiles('**/pom.xml', '**/*.yml') }}
+          restore-keys: ${{ runner.os }}-m2-
+
+      - name: Set Maven Additional Goals
+        run: |
+          EXTRA=""
+            if [ -n "$COVERALLS_REPO_TOKEN" ]; then
+              EXTRA="$EXTRA -Pcoveralls"
+            fi
+            if [ -n "$SONAR_TOKEN" ]; then
+              EXTRA="$EXTRA sonar:sonar"
+            fi
+          echo "EXTRA_GOALS=$EXTRA" >> $GITHUB_ENV
+
+      - name: Build with Maven
+        run: mvn verify -Pjacoco $EXTRA_GOALS
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Generate JUnit Report
+        run: mvn surefire-report:report-only
+        if: ${{ always() }}
+
+      - name: Archive JUnit Report
+        uses: actions/upload-artifact@v6
+        if: ${{ always() }}
+        with:
+          name: surefire-report-jdk-21
+          path: '**/target/reports'
