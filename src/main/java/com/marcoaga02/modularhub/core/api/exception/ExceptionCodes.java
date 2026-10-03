@@ -18,4 +18,6 @@ public final class ExceptionCodes {
 
     public static final String SELF_DELETION = "exception.model.account.self-deletion";
 
+    public static final String ACCESS_DENIED = "exception.access-denied";
+
 }
