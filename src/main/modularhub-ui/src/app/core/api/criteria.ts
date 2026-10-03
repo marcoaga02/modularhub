@@ -41,12 +41,9 @@ export abstract class PagedCriteria extends Criteria {
   public override toParams(): HttpParams {
     let params = super.toParams();
 
-    if (this.offset != null) {
-      params = params.append('offset', String(this.offset));
-    }
-
-    if (this.limit != null) {
-      params = params.append('limit', String(this.limit));
+    if (this.limit) {
+      params = params.append('page', String(Math.floor((this.offset ?? 0) / this.limit)));
+      params = params.append('size', String(this.limit));
     }
 
     if (this.sort) {
