@@ -1,6 +1,6 @@
-package com.marcoaga02.modularhub.modules.usermanagement.domain.repository;
+package com.marcoaga02.modularhub.core.domain.repository;
 
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;

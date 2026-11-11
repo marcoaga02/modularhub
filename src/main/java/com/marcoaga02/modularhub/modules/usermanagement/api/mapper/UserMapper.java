@@ -1,19 +1,21 @@
 package com.marcoaga02.modularhub.modules.usermanagement.api.mapper;
 
+import com.marcoaga02.modularhub.core.api.mapper.LanguageMapper;
+import com.marcoaga02.modularhub.core.domain.model.User;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
+import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = LanguageMapper.class, injectionStrategy = InjectionStrategy.CONSTRUCTOR)
 public interface UserMapper {
 
     @Mapping(target = "groups", ignore = true)
-    @Mapping(target = "language", ignore = true)
     @Mapping(target = "audit", ignore = true)
     @Mapping(source = "user.uuid", target = "id")
+    @Mapping(source = "user.preferences.language", target = "language")
     UserResponseDTO toDto(User user);
 
     @Mapping(target = "createdOn", ignore = true)
@@ -23,6 +25,7 @@ public interface UserMapper {
     @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "deletedBy", ignore = true)
     @Mapping(target = "identityId", ignore = true)
+    @Mapping(target = "preferences", ignore = true)
     User updateEntity(UserRequestDTO dto, @MappingTarget User user);
 
 }

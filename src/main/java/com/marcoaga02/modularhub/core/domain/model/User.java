@@ -1,8 +1,5 @@
-package com.marcoaga02.modularhub.modules.usermanagement.domain.model;
+package com.marcoaga02.modularhub.core.domain.model;
 
-import com.marcoaga02.modularhub.core.domain.model.AuditableEntity;
-import com.marcoaga02.modularhub.core.domain.model.BaseEntity;
-import com.marcoaga02.modularhub.core.domain.model.Gender;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,7 +12,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "users")
 public class User extends AuditableEntity {
 
-    @Column(name = "identity_id")
+    @Column(name = "identity_id", unique = true)
     private String identityId;
 
     @Column(name = "firstname")
@@ -43,6 +40,10 @@ public class User extends AuditableEntity {
 
     @Column(name = "enabled")
     private Boolean enabled;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "preferences_id", unique = true)
+    private AccountPreferences preferences;
 
     @Override
     protected Class<? extends BaseEntity> getEntityClass() {

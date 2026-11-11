@@ -25,9 +25,6 @@
       "account": {
         "self-deletion": "Impossibile eliminare l'utente corrente"
       },
-      "account-preferences": {
-        "not-found": "Preferenze dell'utente non trovate"
-      },
       "language": {
         "not-found": "Lingua non trovata"
       },

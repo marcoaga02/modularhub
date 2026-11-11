@@ -103,6 +103,46 @@ class IdentityServiceTest {
     }
 
     @Test
+    void createUser_shouldDeleteCreatedUserAndRethrow_whenPasswordUpdateFails() {
+        IdentityUserCreateRequestDTO user = createIdentityUserCreateRequestDto(
+                "mrossi",
+                "rossi@email.it",
+                "Mario",
+                "Rossi",
+                true,
+                true,
+                "Password123!",
+                List.of()
+        );
+        RuntimeException passwordError = new RuntimeException("password error");
+
+        when(identityProvider.createUser(any()))
+                .thenReturn("user-id");
+        doThrow(passwordError).when(identityProvider).updatePassword("user-id", "Password123!");
+
+        assertThatThrownBy(() -> identityService.createUser(user)).isSameAs(passwordError);
+
+        verify(identityProvider).deleteUser("user-id");
+    }
+
+    @Test
+    void rollbackCreatedUser_shouldDeleteUserWithoutSelfDeletionCheck() {
+        identityService.rollbackCreatedUser("user-id");
+
+        verify(identityProvider).deleteUser("user-id");
+        verifyNoInteractions(accountService);
+    }
+
+    @Test
+    void rollbackCreatedUser_shouldNotThrow_whenDeletionFails() {
+        doThrow(new RuntimeException("delete error")).when(identityProvider).deleteUser("user-id");
+
+        identityService.rollbackCreatedUser("user-id");
+
+        verify(identityProvider).deleteUser("user-id");
+    }
+
+    @Test
     void updateUser_shoudUpdateUser() {
         IdentityUserUpdateRequestDTO user = createIdentityUserUpdateRequestDto(
                     "mrossi",

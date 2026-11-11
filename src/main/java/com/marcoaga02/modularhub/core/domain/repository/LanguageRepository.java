@@ -12,4 +12,6 @@ public interface LanguageRepository extends JpaRepository<Language, Long>, JpaSp
 
     Optional<Language> findByUuid(String uuid);
 
+    Optional<Language> findByIsDefaultTrue();
+
 }

@@ -3,15 +3,12 @@ package com.marcoaga02.modularhub.core.domain.service;
 import com.marcoaga02.modularhub.core.api.dto.AccountDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesUpdateDTO;
-import com.marcoaga02.modularhub.core.api.dto.AccountProfileDTO;
 import com.marcoaga02.modularhub.core.api.exception.InternalStateException;
-import com.marcoaga02.modularhub.core.infrastructure.keycloak.KeycloakClaims;
-import com.marcoaga02.modularhub.core.spi.AccountDetailsProvider;
+import com.marcoaga02.modularhub.core.api.mapper.AccountMapper;
 import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.RequestScope;
@@ -27,13 +24,13 @@ public class AccountService {
 
     // TODO valutare se fare chaching
 
-    private final AccountPreferencesService accountPreferencesService;
+    private final UserAccountService userAccountService;
 
-    private final AccountDetailsProvider accountDetailsProvider;
+    private final AccountMapper accountMapper;
 
-    public AccountService(AccountPreferencesService accountPreferencesService, AccountDetailsProvider accountDetailsProvider) {
-        this.accountPreferencesService = accountPreferencesService;
-        this.accountDetailsProvider = accountDetailsProvider;
+    public AccountService(UserAccountService userAccountService, AccountMapper accountMapper) {
+        this.userAccountService = userAccountService;
+        this.accountMapper = accountMapper;
     }
 
     private JwtAuthenticationToken getJwtAuthentication() {
@@ -46,25 +43,10 @@ public class AccountService {
     }
 
     public AccountDTO getCurrentAccount() {
-        Jwt jwt = getJwtAuthentication().getToken();
-        String identityId = jwt.getSubject();
+        AccountDTO accountDTO = accountMapper.toDto(userAccountService.syncUser(getJwtAuthentication().getToken()));
+        accountDTO.setRoles(getRoles());
 
-        AccountPreferencesResponseDTO accountPreferencesResponseDTO = accountPreferencesService.getAccountPreferences(identityId);
-
-        AccountProfileDTO accountProfileDTO = accountDetailsProvider.getDetails(identityId);
-
-        return AccountDTO.builder()
-                .identityId(identityId)
-                .email(jwt.getClaimAsString(KeycloakClaims.EMAIL))
-                .username(jwt.getClaimAsString(KeycloakClaims.USERNAME))
-                .firstName(jwt.getClaimAsString(KeycloakClaims.FIRST_NAME))
-                .lastName(jwt.getClaimAsString(KeycloakClaims.LAST_NAME))
-                .roles(getRoles())
-                .preferences(accountPreferencesResponseDTO)
-                .gender(accountProfileDTO.getGender())
-                .mobileNumber(accountProfileDTO.getMobileNumber())
-                .taxIdNumber(accountProfileDTO.getTaxIdNumber())
-                .build();
+        return accountDTO;
     }
 
     public Set<String> getRoles() {
@@ -87,7 +69,7 @@ public class AccountService {
     }
 
     public AccountPreferencesResponseDTO updateCurrentAccountPreferences(AccountPreferencesUpdateDTO dto) {
-        return accountPreferencesService.updateAccountPreferencesByIdentityId(getCurrentIdentityId(), dto);
+        return userAccountService.updatePreferences(getJwtAuthentication().getToken(), dto);
     }
 
     public String getCurrentIdentityId() {

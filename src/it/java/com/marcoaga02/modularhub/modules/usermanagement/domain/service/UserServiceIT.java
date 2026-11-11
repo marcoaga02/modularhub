@@ -2,16 +2,13 @@ package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
 import com.marcoaga02.modularhub.ModularhubApplication;
 import com.marcoaga02.modularhub.config.BaseITWithMockIdentity;
-import com.marcoaga02.modularhub.core.api.dto.AccountProfileDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
-import com.marcoaga02.modularhub.core.domain.repository.AccountPreferencesRepository;
 import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
-import com.marcoaga02.modularhub.core.domain.service.AccountPreferencesService;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
@@ -19,8 +16,8 @@ import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserAlreadyExistsException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserManagementExceptionCodes;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserNotFoundException;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.repository.UserRepository;
+import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,16 +53,10 @@ class UserServiceIT extends BaseITWithMockIdentity {
     private UserService userService;
 
     @Autowired
-    private AccountPreferencesService accountPreferencesService;
-
-    @Autowired
     private UserRepository userRepository;
 
     @Autowired
     private LanguageRepository languageRepository;
-
-    @Autowired
-    private AccountPreferencesRepository accountPreferencesRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -81,6 +72,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
         enabledUser = createAndSaveUser(
                 "identity1",
+                lang1,
                 "firstname1",
                 "lastname1",
                 Gender.M,
@@ -94,6 +86,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
         disabledUser = createAndSaveUser(
                 "identity2",
+                lang2,
                 "firstname2",
                 "lastname2",
                 Gender.F,
@@ -107,6 +100,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
         anotherUser = createAndSaveUser(
                 "identity3",
+                lang2,
                 "firstname3",
                 "lastname3",
                 Gender.F,
@@ -121,6 +115,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
         // deleted user
         createAndSaveUser(
                 "identity4",
+                lang1,
                 "firstname4",
                 "lastname4",
                 Gender.M,
@@ -131,10 +126,6 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 true,
                 OffsetDateTime.now()
         );
-
-        createAndSaveAccountPreferences("identity1", lang1);
-        createAndSaveAccountPreferences("identity2", lang2);
-        createAndSaveAccountPreferences("identity3", lang2);
 
         entityManager.flush();
         entityManager.clear();
@@ -251,6 +242,13 @@ class UserServiceIT extends BaseITWithMockIdentity {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isNotNull();
         assertThat(result.getTaxIdNumber()).isEqualTo("NEW_TAX_ID");
+        assertThat(result.getLanguage().getId()).isEqualTo(lang1.getUuid());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        User saved = userRepository.findByUuidAndDeletedOnIsNull(result.getId()).orElseThrow();
+        assertThat(saved.getPreferences().getLanguage().getUuid()).isEqualTo(lang1.getUuid());
     }
 
     @Test
@@ -396,30 +394,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 });
     }
 
-    @Test
-    void getDetails_shouldReturnDetails_whenUserExists() {
-        AccountProfileDTO result = userService.getDetails(enabledUser.getIdentityId());
-
-        assertThat(result).isNotNull();
-        assertThat(result.getGender()).isEqualTo(Gender.M);
-        assertThat(result.getMobileNumber()).isEqualTo("0000");
-        assertThat(result.getTaxIdNumber()).isEqualTo(TAX_ID_NUMBER);
-    }
-
-    @Test
-    void getDetails_shouldThrowNotFoundException_whenUserNotFound() {
-        assertThatThrownBy(() -> userService.getDetails("non-existing"))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'non-existing' not found");
-                });
-    }
-
     private User createAndSaveUser(
             String identityId,
+            Language language,
             String firstname,
             String lastname,
             Gender gender,
@@ -430,7 +407,11 @@ class UserServiceIT extends BaseITWithMockIdentity {
             Boolean enabled,
             OffsetDateTime deletedOn
     ) {
+        AccountPreferences preferences = new AccountPreferences();
+        preferences.setLanguage(language);
+
         User user = new User();
+        user.setPreferences(preferences);
         user.setIdentityId(identityId);
         user.setFirstname(firstname);
         user.setLastname(lastname);
@@ -472,17 +453,4 @@ class UserServiceIT extends BaseITWithMockIdentity {
         dto.setEnabled(false);
         return dto;
     }
-
-    private void createAndSaveAccountPreferences(
-            String identityId,
-            Language language
-    ) {
-        AccountPreferences preferences = new AccountPreferences();
-        preferences.setIdentityId(identityId);
-        preferences.setLanguage(language);
-
-        accountPreferencesRepository.save(preferences);
-
-    }
-
 }

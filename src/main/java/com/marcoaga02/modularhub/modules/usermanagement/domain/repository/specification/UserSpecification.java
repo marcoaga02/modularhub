@@ -1,7 +1,7 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.repository.specification;
 
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.model.User;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.StringUtils;
 

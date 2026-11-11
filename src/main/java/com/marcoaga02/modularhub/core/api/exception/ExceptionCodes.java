@@ -14,8 +14,6 @@ public final class ExceptionCodes {
 
     public static final String LANGUAGE_NOT_FOUND = "exception.model.language.not-found";
 
-    public static final String ACCOUNT_PREFERENCES_NOT_FOUND = "exception.model.account-preferences.not-found";
-
     public static final String SELF_DELETION = "exception.model.account.self-deletion";
 
     public static final String ACCESS_DENIED = "exception.access-denied";

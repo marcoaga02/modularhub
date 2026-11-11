@@ -35,6 +35,26 @@ class LanguageRepositoryTest extends BaseRepositoryTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    void findByIsDefaultTrue_shouldReturnDefaultLanguage_whenPresent() {
+        createAndSaveLanguage("en-US", "English", false);
+        Language defaultLanguage = createAndSaveLanguage("it-IT", "Italiano", true);
+
+        Optional<Language> result = languageRepository.findByIsDefaultTrue();
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getUuid()).isEqualTo(defaultLanguage.getUuid());
+    }
+
+    @Test
+    void findByIsDefaultTrue_shouldReturnEmpty_whenNoDefaultLanguage() {
+        createAndSaveLanguage("en-US", "English", false);
+
+        Optional<Language> result = languageRepository.findByIsDefaultTrue();
+
+        assertThat(result).isEmpty();
+    }
+
     private Language createAndSaveLanguage(String code, String label, boolean isDefault) {
         Language language = new Language();
         language.setCode(code);

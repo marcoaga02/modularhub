@@ -3,8 +3,8 @@ package com.marcoaga02.modularhub.core.domain.service;
 import com.marcoaga02.modularhub.core.api.dto.*;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.InternalStateException;
-import com.marcoaga02.modularhub.core.domain.model.Gender;
-import com.marcoaga02.modularhub.core.spi.AccountDetailsProvider;
+import com.marcoaga02.modularhub.core.api.mapper.AccountMapper;
+import com.marcoaga02.modularhub.core.domain.model.User;
 import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -33,10 +33,10 @@ import static org.mockito.Mockito.when;
 class AccountServiceTest {
 
     @Mock
-    private AccountPreferencesService accountPreferencesService;
+    private UserAccountService userAccountService;
 
     @Mock
-    private AccountDetailsProvider accountDetailsProvider;
+    private AccountMapper accountMapper;
 
     @InjectMocks
     private AccountService accountService;
@@ -47,52 +47,27 @@ class AccountServiceTest {
     }
 
     @Test
-    void getCurrentAccount_shouldReturnCorrectAccount() {
-        final String identityId = "uuid-123";
-        mockAuthentication(
-                Map.of(
-                        "sub", identityId,
-                        "email", "mario@test.com",
-                        "preferred_username", "mario.rossi",
-                        "given_name", "Mario",
-                        "family_name", "Rossi"
-                ),
-                List.of("ROLE")
-        );
+    void getCurrentAccount_shouldReturnSyncedAccountWithRoles() {
+        Jwt jwt = mockAuthentication(Map.of("sub", "uuid-123"), List.of("ROLE"));
 
-        LanguageResponseDTO languageResponseDTO = new LanguageResponseDTO();
-        languageResponseDTO.setId("lang-id");
-        languageResponseDTO.setCode("it-IT");
-        languageResponseDTO.setLabel("italian");
-        languageResponseDTO.setIsDefault(true);
+        User user = new User();
+        AccountDTO accountDTO = AccountDTO.builder()
+                .identityId("uuid-123")
+                .username("mario.rossi")
+                .build();
 
-        AccountPreferencesResponseDTO preferencesDTO = new AccountPreferencesResponseDTO();
-        preferencesDTO.setLanguage(languageResponseDTO);
-
-        AccountProfileDTO profileDTO = new AccountProfileDTO();
-        profileDTO.setGender(Gender.M);
-        profileDTO.setMobileNumber("mobileNumber");
-        profileDTO.setTaxIdNumber("taxIdNumber");
-
-
-        when(accountPreferencesService.getAccountPreferences(identityId)).thenReturn(preferencesDTO);
-        when(accountDetailsProvider.getDetails(identityId)).thenReturn(profileDTO);
+        when(userAccountService.syncUser(jwt)).thenReturn(user);
+        when(accountMapper.toDto(user)).thenReturn(accountDTO);
 
         AccountDTO account = accountService.getCurrentAccount();
 
-        assertThat(account.getIdentityId()).isEqualTo(identityId);
-        assertThat(account.getEmail()).isEqualTo("mario@test.com");
+        assertThat(account).isSameAs(accountDTO);
+        assertThat(account.getIdentityId()).isEqualTo("uuid-123");
         assertThat(account.getUsername()).isEqualTo("mario.rossi");
-        assertThat(account.getFirstName()).isEqualTo("Mario");
-        assertThat(account.getLastName()).isEqualTo("Rossi");
         assertThat(account.getRoles()).containsExactly("ROLE");
-        assertThat(account.getPreferences()).isEqualTo(preferencesDTO);
-        assertThat(account.getGender()).isEqualTo(Gender.M);
-        assertThat(account.getMobileNumber()).isEqualTo("mobileNumber");
-        assertThat(account.getTaxIdNumber()).isEqualTo("taxIdNumber");
 
-        verify(accountPreferencesService).getAccountPreferences(identityId);
-        verify(accountDetailsProvider).getDetails(identityId);
+        verify(userAccountService).syncUser(jwt);
+        verify(accountMapper).toDto(user);
     }
 
     @Test
@@ -159,8 +134,7 @@ class AccountServiceTest {
 
     @Test
     void updateCurrentAccountPreferences_shouldReturnUpdatedPreferences() {
-        final String identityId = "uuid-123";
-        mockAuthentication(Map.of("sub", identityId), List.of());
+        Jwt jwt = mockAuthentication(Map.of("sub", "uuid-123"), List.of());
 
         AccountPreferencesUpdateDTO dto = new AccountPreferencesUpdateDTO();
         dto.setLanguageId("lang-456");
@@ -173,13 +147,12 @@ class AccountServiceTest {
         AccountPreferencesResponseDTO expected = new AccountPreferencesResponseDTO();
         expected.setLanguage(language);
 
-        when(accountPreferencesService.updateAccountPreferencesByIdentityId(identityId, dto))
-                .thenReturn(expected);
+        when(userAccountService.updatePreferences(jwt, dto)).thenReturn(expected);
 
         AccountPreferencesResponseDTO result = accountService.updateCurrentAccountPreferences(dto);
 
         assertThat(result).isEqualTo(expected);
-        verify(accountPreferencesService).updateAccountPreferencesByIdentityId(identityId, dto);
+        verify(userAccountService).updatePreferences(jwt, dto);
     }
 
     @Test
@@ -222,7 +195,7 @@ class AccountServiceTest {
                 });
     }
 
-    private void mockAuthentication(Map<String, Object> claims, List<String> roles) {
+    private Jwt mockAuthentication(Map<String, Object> claims, List<String> roles) {
         Map<String, Object> headers = Map.of("alg", "RS256");
         Jwt jwt = new Jwt("token", Instant.now(), Instant.now().plusSeconds(300), headers, claims);
 
@@ -232,5 +205,7 @@ class AccountServiceTest {
 
         JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, authorities);
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        return jwt;
     }
 }

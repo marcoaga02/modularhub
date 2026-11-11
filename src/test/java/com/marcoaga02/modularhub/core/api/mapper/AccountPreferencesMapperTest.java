@@ -3,27 +3,16 @@ package com.marcoaga02.modularhub.core.api.mapper;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Language;
-import com.marcoaga02.modularhub.core.domain.repository.AccountPreferencesRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.mapstruct.factory.Mappers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@ExtendWith(SpringExtension.class)
-@Import({AccountPreferencesMapperImpl.class, LanguageMapperImpl.class})
 class AccountPreferencesMapperTest {
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private AccountPreferencesMapper mapper;
-
-    @MockitoBean
-    private AccountPreferencesRepository repository;
+    private final AccountPreferencesMapper mapper =
+            new AccountPreferencesMapperImpl(Mappers.getMapper(LanguageMapper.class));
 
     private Language lang;
 
@@ -37,10 +26,7 @@ class AccountPreferencesMapperTest {
 
     @Test
     void toDto_shouldMapAllFields() {
-        final String identityId = "identity-id";
-
         AccountPreferences preferences = new AccountPreferences();
-        preferences.setIdentityId(identityId);
         preferences.setLanguage(lang);
 
         AccountPreferencesResponseDTO dto =  mapper.toDto(preferences);

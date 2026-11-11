@@ -67,7 +67,12 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
         }
 
         if (user.getGroupIds() != null && !user.getGroupIds().isEmpty()) {
-            updateUserGroups(userId, new HashSet<>(user.getGroupIds()));
+            try {
+                updateUserGroups(userId, new HashSet<>(user.getGroupIds()));
+            } catch (RuntimeException e) {
+                deleteCreatedUser(userId, e);
+                throw e;
+            }
         }
 
         return userId;
@@ -168,6 +173,14 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
                     .filter(id -> !currentGroups.contains(id))
                     .forEach(userResource::joinGroup);
         });
+    }
+
+    private void deleteCreatedUser(String userId, RuntimeException cause) {
+        try {
+            deleteUser(userId);
+        } catch (RuntimeException deleteException) {
+            cause.addSuppressed(deleteException);
+        }
     }
 
     private void checkResponse(Response response) {

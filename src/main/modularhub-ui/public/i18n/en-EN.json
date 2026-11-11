@@ -25,9 +25,6 @@
       "account": {
         "self-deletion": "Cannot delete the current user"
       },
-      "account-preferences": {
-        "not-found": "User preferences not found"
-      },
       "language": {
         "not-found": "Language not found"
       },

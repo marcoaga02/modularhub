@@ -279,6 +279,25 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     }
 
     @Test
+    void createUser_shouldDeleteCreatedUser_whenGroupAssignmentFails() {
+        IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
+                "orphan.user",
+                "orphan.user@example.com",
+                "Orphan",
+                "User",
+                true,
+                true,
+                "pa55w0rd",
+                List.of(firstGroupId, "non-existing-group-id")
+        );
+
+        assertThatThrownBy(() -> keycloakService.createUser(dto))
+                .isInstanceOf(IdentityProviderException.class);
+
+        assertThat(adminClient.realm(REALM).users().search("orphan.user", true)).isEmpty();
+    }
+
+    @Test
     void updateUser_shouldUpdateUser_whenValidRequest() {
         IdentityUserCreateRequestDTO createDto = getCreateRequestDTO(
                 "mario.rossi",

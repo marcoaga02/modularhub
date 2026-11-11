@@ -3,8 +3,8 @@ package com.marcoaga02.modularhub.modules.usermanagement.domain.repository.speci
 import com.marcoaga02.modularhub.config.BaseRepositoryTest;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.repository.UserRepository;
+import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,27 +1,23 @@
 package com.marcoaga02.modularhub.modules.usermanagement.api.mapper;
 
+import com.marcoaga02.modularhub.core.api.mapper.LanguageMapper;
+import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
+import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.model.User;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.mapstruct.factory.Mappers;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@ExtendWith(SpringExtension.class)
-@Import(UserMapperImpl.class)
 class UserMapperTest {
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private UserMapper userMapper;
+    private final UserMapper userMapper = new UserMapperImpl(Mappers.getMapper(LanguageMapper.class));
 
     private static final OffsetDateTime CREATED_ON = OffsetDateTime.parse("2026-01-01T10:15:30+01:00");
     private static final OffsetDateTime UPDATED_ON = OffsetDateTime.parse("2026-02-01T10:15:30+01:00");
@@ -36,13 +32,25 @@ class UserMapperTest {
         assertThat(dto.getFirstname()).isEqualTo("firstname");
         assertThat(dto.getLastname()).isEqualTo("lastname");
         assertThat(dto.getGender()).isEqualTo(Gender.M.name());
-        assertThat(dto.getLanguage()).isNull();
+        assertThat(dto.getLanguage()).isNotNull();
+        assertThat(dto.getLanguage().getId()).isEqualTo(user.getPreferences().getLanguage().getUuid());
+        assertThat(dto.getLanguage().getCode()).isEqualTo("it-IT");
         assertThat(dto.getMobileNumber()).isEqualTo("0000");
         assertThat(dto.getTaxIdNumber()).isEqualTo("USR1");
         assertThat(dto.getEmail()).isEqualTo("user@email.com");
         assertThat(dto.getUsername()).isEqualTo("username");
         assertThat(dto.getEnabled()).isTrue();
         assertThat(dto.getAudit()).isNull();
+    }
+
+    @Test
+    void toDto_shouldReturnNullLanguage_whenPreferencesAreNull() {
+        User user = buildUser();
+        user.setPreferences(null);
+
+        UserResponseDTO dto = userMapper.toDto(user);
+
+        assertThat(dto.getLanguage()).isNull();
     }
 
     @Test
@@ -55,6 +63,7 @@ class UserMapperTest {
         UserRequestDTO dto = buildUserRequestDTO();
         User existing = buildUser();
         String originalUuid = existing.getUuid();
+        AccountPreferences originalPreferences = existing.getPreferences();
 
         User result = userMapper.updateEntity(dto, existing);
         assertThat(result).isNotNull();
@@ -75,6 +84,8 @@ class UserMapperTest {
         assertThat(existing.getCreatedBy()).isEqualTo("user creator");
         assertThat(existing.getUpdatedBy()).isEqualTo("user updater");
         assertThat(existing.getDeletedBy()).isEqualTo("user deleter");
+        assertThat(existing.getIdentityId()).isEqualTo("identity");
+        assertThat(existing.getPreferences()).isSameAs(originalPreferences);
     }
 
     @Test
@@ -104,7 +115,16 @@ class UserMapperTest {
     }
 
     private User buildUser() {
+        Language language = new Language();
+        language.setCode("it-IT");
+        language.setLabel("Italiano");
+        language.setIsDefault(true);
+
+        AccountPreferences preferences = new AccountPreferences();
+        preferences.setLanguage(language);
+
         User user = new User();
+        user.setPreferences(preferences);
         user.setFirstname("firstname");
         user.setLastname("lastname");
         user.setGender(Gender.M);

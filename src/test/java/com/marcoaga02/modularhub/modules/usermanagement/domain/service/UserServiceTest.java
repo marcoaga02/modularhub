@@ -3,28 +3,30 @@ package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 import com.marcoaga02.modularhub.core.api.dto.*;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.LanguageNotFoundException;
+import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
-import com.marcoaga02.modularhub.core.domain.service.AccountPreferencesService;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
+import com.marcoaga02.modularhub.core.domain.service.UserAccountService;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserAlreadyExistsException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserManagementExceptionCodes;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserNotFoundException;
-import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.AccountProfileMapper;
 import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.UserMapper;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.repository.UserRepository;
+import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import org.apache.logging.log4j.util.Strings;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,6 +36,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -73,10 +77,7 @@ class UserServiceTest {
     private AccountService accountService;
 
     @Mock
-    private AccountPreferencesService accountPreferencesService;
-
-    @Mock
-    private AccountProfileMapper accountProfileMapper;
+    private UserAccountService userAccountService;
 
     @InjectMocks
     private UserService userService;
@@ -89,8 +90,15 @@ class UserServiceTest {
 
     private LanguageResponseDTO languageResponseDTO;
 
+    @AfterEach
+    void tearDown() {
+        TransactionSynchronizationManager.clear();
+    }
+
     @BeforeEach
     void setUp() {
+        TransactionSynchronizationManager.initSynchronization();
+
         language = new Language();
         language.setCode("it-IT");
         language.setLabel("Italiano");
@@ -102,7 +110,14 @@ class UserServiceTest {
         languageResponseDTO.setLabel("Italiano");
         languageResponseDTO.setIsDefault(true);
 
+        Language previousLanguage = new Language();
+        previousLanguage.setCode("en-US");
+
+        AccountPreferences preferences1 = new AccountPreferences();
+        preferences1.setLanguage(previousLanguage);
+
         user1 = new User();
+        user1.setPreferences(preferences1);
         user1.setFirstname("Mario");
         user1.setLastname("Rossi");
         user1.setGender(Gender.M);
@@ -234,21 +249,16 @@ class UserServiceTest {
         userResponseDTO.setEnabled(true);
         userResponseDTO.setGroups(List.of(groupDTO));
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
         when(userRepository.findByUuidAndDeletedOnIsNull(userUuid))
                 .thenReturn(Optional.of(user1));
-        when(userRepository.findByIdentityId(identityId2))
-                .thenReturn(Optional.of(user2));
-        when(userRepository.findByIdentityId(identityId1))
-                .thenReturn(Optional.of(user1));
+        when(userAccountService.resolveFullName(identityId2))
+                .thenReturn("Vittoria Bianchi");
+        when(userAccountService.resolveFullName(identityId1))
+                .thenReturn("Mario Rossi");
         when(userMapper.toDto(user1))
                 .thenReturn(userResponseDTO1);
         when(identityService.getUserById(identityId1))
                 .thenReturn(userResponseDTO);
-        when(accountPreferencesService.getAccountPreferences(identityId1))
-                .thenReturn(preferencesResponseDTO);
 
         UserResponseDTO result = userService.getUserByUuid(userUuid);
 
@@ -263,10 +273,9 @@ class UserServiceTest {
         assertThat(result.getLanguage()).isEqualTo(languageResponseDTO);
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(userUuid);
-        verify(userRepository).findByIdentityId(identityId2);
-        verify(userRepository).findByIdentityId(identityId1);
+        verify(userAccountService).resolveFullName(identityId2);
+        verify(userAccountService).resolveFullName(identityId1);
         verify(identityService).getUserById(identityId1);
-        verify(accountPreferencesService).getAccountPreferences(identityId1);
         verify(userMapper).toDto(user1);
     }
 
@@ -294,19 +303,16 @@ class UserServiceTest {
         userResponseDTO.setEnabled(true);
         userResponseDTO.setGroups(List.of(groupDTO));
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
         when(userRepository.findByUuidAndDeletedOnIsNull(userUuid))
                 .thenReturn(Optional.of(user1));
-        when(userRepository.findByIdentityId(identityId2))
-                .thenReturn(Optional.empty());
+        when(userAccountService.resolveFullName(identityId2))
+                .thenReturn("");
+        when(userAccountService.resolveFullName(null))
+                .thenReturn("");
         when(userMapper.toDto(user1))
                 .thenReturn(userResponseDTO1);
         when(identityService.getUserById(identityId1))
                 .thenReturn(userResponseDTO);
-        when(accountPreferencesService.getAccountPreferences(identityId1))
-                .thenReturn(preferencesResponseDTO);
 
         UserResponseDTO result = userService.getUserByUuid(userUuid);
 
@@ -321,10 +327,9 @@ class UserServiceTest {
         assertThat(result.getLanguage()).isEqualTo(languageResponseDTO);
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(userUuid);
-        verify(userRepository).findByIdentityId(identityId2);
-        verify(userRepository, times(1)).findByIdentityId(any());
+        verify(userAccountService).resolveFullName(identityId2);
+        verify(userAccountService).resolveFullName(null);
         verify(identityService).getUserById(identityId1);
-        verify(accountPreferencesService).getAccountPreferences(identityId1);
         verify(userMapper).toDto(user1);
     }
 
@@ -352,21 +357,16 @@ class UserServiceTest {
         userResponseDTO.setEnabled(true);
         userResponseDTO.setGroups(null);
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
         when(userRepository.findByUuidAndDeletedOnIsNull(userUuid))
                 .thenReturn(Optional.of(user1));
-        when(userRepository.findByIdentityId(identityId2))
-                .thenReturn(Optional.of(user2));
-        when(userRepository.findByIdentityId(identityId1))
-                .thenReturn(Optional.of(user1));
+        when(userAccountService.resolveFullName(identityId2))
+                .thenReturn("Vittoria Bianchi");
+        when(userAccountService.resolveFullName(identityId1))
+                .thenReturn("Mario Rossi");
         when(userMapper.toDto(user1))
                 .thenReturn(userResponseDTO1);
         when(identityService.getUserById(identityId1))
                 .thenReturn(userResponseDTO);
-        when(accountPreferencesService.getAccountPreferences(identityId1))
-                .thenReturn(preferencesResponseDTO);
 
         UserResponseDTO result = userService.getUserByUuid(userUuid);
 
@@ -380,10 +380,9 @@ class UserServiceTest {
         assertThat(result.getGroups()).isEmpty();
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(userUuid);
-        verify(userRepository).findByIdentityId(identityId2);
-        verify(userRepository).findByIdentityId(identityId1);
+        verify(userAccountService).resolveFullName(identityId2);
+        verify(userAccountService).resolveFullName(identityId1);
         verify(identityService).getUserById(identityId1);
-        verify(accountPreferencesService).getAccountPreferences(identityId1);
         verify(userMapper).toDto(user1);
     }
 
@@ -403,7 +402,7 @@ class UserServiceTest {
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
-        verify(userRepository, never()).findByIdentityId(anyString());
+        verify(userAccountService, never()).resolveFullName(any());
         verify(userMapper, never()).toDto(any());
     }
 
@@ -413,9 +412,6 @@ class UserServiceTest {
 
         UserRequestDTO dto = buildUserRequestDTO();
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
         when(languageRepository.findByUuid("LANG_ID_01"))
                 .thenReturn(Optional.of(language));
         when(userRepository.findByTaxIdNumberAndDeletedOnIsNull("TAX_ID_NEW"))
@@ -424,14 +420,12 @@ class UserServiceTest {
                 .thenReturn(Optional.empty());
         when(userRepository.findByEmailAndDeletedOnIsNull("new@email.com"))
                 .thenReturn(Optional.empty());
-        when(userRepository.save(any(User.class)))
+        when(userRepository.saveAndFlush(any(User.class)))
                 .thenReturn(user1);
         when(userMapper.toDto(user1))
                 .thenReturn(userResponseDTO1);
         when(identityService.createUser(any(IdentityUserCreateRequestDTO.class)))
                 .thenReturn(identityId);
-        when(accountPreferencesService.createAccountPreferences(any(AccountPreferencesCreateDTO.class)))
-                .thenReturn(preferencesResponseDTO);
 
         UserResponseDTO result = userService.createUser(dto);
 
@@ -458,24 +452,68 @@ class UserServiceTest {
         assertThat(captured.getGroupIds()).containsExactly("group-id");
         assertThat(captured.getEmailVerified()).isTrue();
 
-        ArgumentCaptor<AccountPreferencesCreateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesCreateDTO.class);
-
-        verify(accountPreferencesService).createAccountPreferences(preferencesCaptor.capture());
-
-        AccountPreferencesCreateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getIdentityId()).isEqualTo(identityId);
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
-
         verify(userMapper).toDto(user1);
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
-        verify(userRepository).save(userCaptor.capture());
+        verify(userRepository).saveAndFlush(userCaptor.capture());
 
         User savedUser = userCaptor.getValue();
         assertThat(savedUser.getIdentityId()).isEqualTo(identityId);
+        assertThat(savedUser.getPreferences()).isNotNull();
+        assertThat(savedUser.getPreferences().getLanguage()).isSameAs(language);
+
+        InOrder inOrder = inOrder(identityService, userRepository);
+        inOrder.verify(identityService).createUser(any(IdentityUserCreateRequestDTO.class));
+        inOrder.verify(userRepository).saveAndFlush(any(User.class));
+
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).hasSize(1);
+    }
+
+    @Test
+    void createUser_shouldRollbackIdentityUser_whenTransactionRollsBack() {
+        final String identityId = "identityId";
+
+        mockSuccessfulCreation(identityId);
+
+        userService.createUser(buildUserRequestDTO());
+
+        completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
+
+        verify(identityService).rollbackCreatedUser(identityId);
+    }
+
+    @Test
+    void createUser_shouldNotRollbackIdentityUser_whenTransactionCommits() {
+        final String identityId = "identityId";
+
+        mockSuccessfulCreation(identityId);
+
+        userService.createUser(buildUserRequestDTO());
+
+        completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
+
+        verify(identityService, never()).rollbackCreatedUser(any());
+    }
+
+    @Test
+    void createUser_shouldPropagateException_whenSaveFailsAfterIdentityCreation() {
+        final String identityId = "identityId";
+        final RuntimeException dbError = new RuntimeException("db error");
+
+        when(languageRepository.findByUuid("LANG_ID_01"))
+                .thenReturn(Optional.of(language));
+        when(identityService.createUser(any(IdentityUserCreateRequestDTO.class)))
+                .thenReturn(identityId);
+        when(userRepository.saveAndFlush(any(User.class)))
+                .thenThrow(dbError);
+
+        UserRequestDTO dto = buildUserRequestDTO();
+
+        assertThatThrownBy(() -> userService.createUser(dto)).isSameAs(dbError);
+
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).hasSize(1);
+        verify(userMapper, never()).toDto(any());
     }
 
     @Test
@@ -503,9 +541,9 @@ class UserServiceTest {
         verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
         verify(identityService, never()).createUser(any(IdentityUserCreateRequestDTO.class));
-        verify(accountPreferencesService, never()).createAccountPreferences(any(AccountPreferencesCreateDTO.class));
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
         verify(userMapper, never()).toDto(any());
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
     }
 
     @Test
@@ -536,9 +574,9 @@ class UserServiceTest {
         verify(userRepository).findByUsernameAndDeletedOnIsNull("existing.username");
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
         verify(identityService, never()).createUser(any(IdentityUserCreateRequestDTO.class));
-        verify(accountPreferencesService, never()).createAccountPreferences(any(AccountPreferencesCreateDTO.class));
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
         verify(userMapper, never()).toDto(any());
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
     }
 
     @Test
@@ -572,9 +610,9 @@ class UserServiceTest {
         verify(userRepository).findByUsernameAndDeletedOnIsNull("new.username");
         verify(userRepository).findByEmailAndDeletedOnIsNull("existing@email.it");
         verify(identityService, never()).createUser(any(IdentityUserCreateRequestDTO.class));
-        verify(accountPreferencesService, never()).createAccountPreferences(any(AccountPreferencesCreateDTO.class));
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
         verify(userMapper, never()).toDto(any());
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
     }
 
     @Test
@@ -602,9 +640,9 @@ class UserServiceTest {
         verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
         verify(identityService, never()).createUser(any(IdentityUserCreateRequestDTO.class));
-        verify(accountPreferencesService, never()).createAccountPreferences(any(AccountPreferencesCreateDTO.class));
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).saveAndFlush(any());
         verify(userMapper, never()).toDto(any());
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
     }
 
     @Test
@@ -617,19 +655,12 @@ class UserServiceTest {
         dto.setUsername(USERNAME_USER_1);
         dto.setEmail(EMAIL_USER_1);
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
         when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
                 .thenReturn(Optional.of(user1));
         when(languageRepository.findByUuid("LANG_ID_01"))
                 .thenReturn(Optional.of(language));
         when(userMapper.toDto(user1))
                 .thenReturn(userResponseDTO1);
-        when(accountPreferencesService.updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                any(AccountPreferencesUpdateDTO.class)
-        )).thenReturn(preferencesResponseDTO);
 
         UserResponseDTO result = userService.updateUser(user1.getUuid(), dto);
 
@@ -656,17 +687,11 @@ class UserServiceTest {
         assertThat(captured.getEnabled()).isFalse();
         assertThat(captured.getGroupIds()).containsExactly("group-id");
 
-        ArgumentCaptor<AccountPreferencesUpdateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesUpdateDTO.class);
+        assertThat(user1.getPreferences().getLanguage()).isSameAs(language);
 
-        verify(accountPreferencesService).updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                preferencesCaptor.capture()
-        );
-
-        AccountPreferencesUpdateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
+        InOrder inOrder = inOrder(userRepository, identityService);
+        inOrder.verify(userRepository).saveAndFlush(user1);
+        inOrder.verify(identityService).updateUser(eq(identityId), any(IdentityUserUpdateRequestDTO.class));
 
         verify(userMapper).toDto(user1);
     }
@@ -695,7 +720,6 @@ class UserServiceTest {
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
         verify(userMapper, never()).updateEntity(any(), any());
         verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
         verify(userMapper, never()).toDto(any());
     }
 
@@ -725,7 +749,6 @@ class UserServiceTest {
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
         verify(userMapper, never()).updateEntity(any(), any());
         verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
         verify(userMapper, never()).toDto(any());
     }
 
@@ -761,7 +784,6 @@ class UserServiceTest {
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
         verify(userMapper, never()).updateEntity(any(), any());
         verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
         verify(userMapper, never()).toDto(any());
     }
 
@@ -774,9 +796,6 @@ class UserServiceTest {
         dto.setUsername(USERNAME_USER_1);
         dto.setEmail(EMAIL_USER_1);
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
         when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
                 .thenReturn(Optional.of(user1));
         when(languageRepository.findByUuid("LANG_ID_01"))
@@ -785,10 +804,6 @@ class UserServiceTest {
                 .thenReturn(Optional.empty());
         when(userMapper.toDto(user1))
                 .thenReturn(userResponseDTO1);
-        when(accountPreferencesService.updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                any(AccountPreferencesUpdateDTO.class)
-        )).thenReturn(preferencesResponseDTO);
 
         UserResponseDTO result = userService.updateUser(user1.getUuid(), dto);
 
@@ -815,17 +830,11 @@ class UserServiceTest {
         assertThat(captured.getEnabled()).isFalse();
         assertThat(captured.getGroupIds()).containsExactly("group-id");
 
-        ArgumentCaptor<AccountPreferencesUpdateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesUpdateDTO.class);
+        assertThat(user1.getPreferences().getLanguage()).isSameAs(language);
 
-        verify(accountPreferencesService).updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                preferencesCaptor.capture()
-        );
-
-        AccountPreferencesUpdateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
+        InOrder inOrder = inOrder(userRepository, identityService);
+        inOrder.verify(userRepository).saveAndFlush(user1);
+        inOrder.verify(identityService).updateUser(eq(identityId), any(IdentityUserUpdateRequestDTO.class));
 
         verify(userMapper).toDto(user1);
     }
@@ -862,7 +871,6 @@ class UserServiceTest {
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(any());
         verify(userMapper, never()).updateEntity(any(), any());
         verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
         verify(userMapper, never()).toDto(any());
     }
 
@@ -875,9 +883,6 @@ class UserServiceTest {
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setEmail(EMAIL_USER_1);
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
         when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
                 .thenReturn(Optional.of(user1));
         when(languageRepository.findByUuid("LANG_ID_01"))
@@ -886,10 +891,6 @@ class UserServiceTest {
                 .thenReturn(Optional.empty());
         when(userMapper.toDto(user1))
                 .thenReturn(userResponseDTO1);
-        when(accountPreferencesService.updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                any(AccountPreferencesUpdateDTO.class)
-        )).thenReturn(preferencesResponseDTO);
 
         UserResponseDTO result = userService.updateUser(user1.getUuid(), dto);
 
@@ -916,17 +917,11 @@ class UserServiceTest {
         assertThat(captured.getEnabled()).isFalse();
         assertThat(captured.getGroupIds()).containsExactly("group-id");
 
-        ArgumentCaptor<AccountPreferencesUpdateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesUpdateDTO.class);
+        assertThat(user1.getPreferences().getLanguage()).isSameAs(language);
 
-        verify(accountPreferencesService).updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                preferencesCaptor.capture()
-        );
-
-        AccountPreferencesUpdateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
+        InOrder inOrder = inOrder(userRepository, identityService);
+        inOrder.verify(userRepository).saveAndFlush(user1);
+        inOrder.verify(identityService).updateUser(eq(identityId), any(IdentityUserUpdateRequestDTO.class));
 
         verify(userMapper).toDto(user1);
     }
@@ -963,7 +958,6 @@ class UserServiceTest {
         verify(userRepository).findByEmailAndDeletedOnIsNull(email);
         verify(userMapper, never()).updateEntity(any(), any());
         verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
         verify(userMapper, never()).toDto(any());
     }
 
@@ -976,9 +970,6 @@ class UserServiceTest {
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setUsername(USERNAME_USER_1);
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
         when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
                 .thenReturn(Optional.of(user1));
         when(languageRepository.findByUuid("LANG_ID_01"))
@@ -987,10 +978,6 @@ class UserServiceTest {
                 .thenReturn(Optional.empty());
         when(userMapper.toDto(user1))
                 .thenReturn(userResponseDTO1);
-        when(accountPreferencesService.updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                any(AccountPreferencesUpdateDTO.class)
-        )).thenReturn(preferencesResponseDTO);
 
         UserResponseDTO result = userService.updateUser(user1.getUuid(), dto);
 
@@ -1017,17 +1004,11 @@ class UserServiceTest {
         assertThat(captured.getEnabled()).isFalse();
         assertThat(captured.getGroupIds()).containsExactly("group-id");
 
-        ArgumentCaptor<AccountPreferencesUpdateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesUpdateDTO.class);
+        assertThat(user1.getPreferences().getLanguage()).isSameAs(language);
 
-        verify(accountPreferencesService).updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                preferencesCaptor.capture()
-        );
-
-        AccountPreferencesUpdateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
+        InOrder inOrder = inOrder(userRepository, identityService);
+        inOrder.verify(userRepository).saveAndFlush(user1);
+        inOrder.verify(identityService).updateUser(eq(identityId), any(IdentityUserUpdateRequestDTO.class));
 
         verify(userMapper).toDto(user1);
     }
@@ -1049,9 +1030,26 @@ class UserServiceTest {
         assertThat(user1.getDeletedOn()).isNotNull();
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(identityService).deleteUser(user1.getIdentityId());
         verify(accountService).getCurrentIdentityId();
-        verify(userRepository).save(user1);
+
+        InOrder inOrder = inOrder(userRepository, identityService);
+        inOrder.verify(userRepository).saveAndFlush(user1);
+        inOrder.verify(identityService).deleteUser(user1.getIdentityId());
+    }
+
+    @Test
+    void deleteUser_shouldPropagateException_whenIdentityDeletionFails() {
+        final RuntimeException identityError = new RuntimeException("identity error");
+
+        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
+                .thenReturn(Optional.of(user1));
+        when(accountService.getCurrentIdentityId())
+                .thenReturn("identityId");
+        doThrow(identityError).when(identityService).deleteUser(user1.getIdentityId());
+
+        assertThatThrownBy(() -> userService.deleteUser(user1.getUuid())).isSameAs(identityError);
+
+        verify(userRepository).saveAndFlush(user1);
     }
 
     @Test
@@ -1070,9 +1068,9 @@ class UserServiceTest {
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
-        verify(identityService, never()).updateUser(any(), any());
-        verify(accountService, never()).getCurrentAccount();
-        verify(userRepository, never()).save(any());
+        verify(identityService, never()).deleteUser(any());
+        verify(accountService, never()).getCurrentIdentityId();
+        verify(userRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -1106,42 +1104,38 @@ class UserServiceTest {
     }
 
     @Test
-    void getDetails_shouldReturnDetails_whenValid() {
-        final String identityId = "identityId";
+    void updateUser_shouldPropagateException_whenIdentityUpdateFails() {
+        final RuntimeException identityError = new RuntimeException("identity error");
 
-        AccountProfileDTO accountProfileDTO = new AccountProfileDTO();
-        accountProfileDTO.setGender(Gender.M);
-        accountProfileDTO.setMobileNumber("mobile-number");
-        accountProfileDTO.setTaxIdNumber("tax-id-number");
+        UserRequestDTO dto = buildUserRequestDTO();
+        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
+        dto.setUsername(USERNAME_USER_1);
+        dto.setEmail(EMAIL_USER_1);
 
-        when(userRepository.findByIdentityId(identityId))
+        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
                 .thenReturn(Optional.of(user1));
-        when(accountProfileMapper.toAccountProfileDTO(user1))
-                .thenReturn(accountProfileDTO);
+        when(languageRepository.findByUuid("LANG_ID_01"))
+                .thenReturn(Optional.of(language));
+        doThrow(identityError).when(identityService).updateUser(any(), any());
 
-        AccountProfileDTO result = userService.getDetails(identityId);
+        assertThatThrownBy(() -> userService.updateUser(user1.getUuid(), dto)).isSameAs(identityError);
 
-        assertThat(result).isEqualTo(accountProfileDTO);
-
-        verify(userRepository).findByIdentityId(identityId);
-        verify(accountProfileMapper).toAccountProfileDTO(user1);
+        verify(userRepository).saveAndFlush(user1);
+        verify(userMapper, never()).toDto(any());
     }
 
-    @Test
-    void getDetails_shouldThrowUserNotFoundException_whenInvalidUuid() {
-        final String identityId = "not-existing";
+    private void mockSuccessfulCreation(String identityId) {
+        when(languageRepository.findByUuid("LANG_ID_01"))
+                .thenReturn(Optional.of(language));
+        when(identityService.createUser(any(IdentityUserCreateRequestDTO.class)))
+                .thenReturn(identityId);
+        when(userRepository.saveAndFlush(any(User.class)))
+                .thenReturn(user1);
+    }
 
-        when(userRepository.findByIdentityId(identityId))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.getDetails(identityId))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'not-existing' not found");
-                });
+    private void completeTransaction(int status) {
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(synchronization -> synchronization.afterCompletion(status));
     }
 
     private UserRequestDTO buildUserRequestDTO() {

@@ -1,8 +1,10 @@
-package com.marcoaga02.modularhub.modules.usermanagement.domain.repository;
+package com.marcoaga02.modularhub.core.domain.repository;
 
 import com.marcoaga02.modularhub.config.BaseRepositoryTest;
+import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.User;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,12 +21,23 @@ class UserRepositoryTest extends BaseRepositoryTest {
     private UserRepository userRepository;
 
     @Autowired
+    private LanguageRepository languageRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     private User enabledUser1, deletedUser;
 
+    private Language language;
+
     @BeforeEach
     void setUp() {
+        language = new Language();
+        language.setCode("it-IT");
+        language.setLabel("Italiano");
+        language.setIsDefault(true);
+        languageRepository.save(language);
+
         enabledUser1 = createUser(
                 "identity1",
                 "firstname1",
@@ -157,6 +170,16 @@ class UserRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
+    void findByIdentity_shouldReturnUserWithPreferences_whenSavedInCascade() {
+        Optional<User> result = userRepository.findByIdentityId(enabledUser1.getIdentityId());
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getPreferences()).isNotNull();
+        assertThat(result.get().getPreferences().getUuid()).isEqualTo(enabledUser1.getPreferences().getUuid());
+        assertThat(result.get().getPreferences().getLanguage().getUuid()).isEqualTo(language.getUuid());
+    }
+
+    @Test
     void findByIdentity_shouldReturnEmpty_whenInvalidUuid() {
         Optional<User> result = userRepository.findByIdentityId("invalid-identity-id");
 
@@ -174,7 +197,11 @@ class UserRepositoryTest extends BaseRepositoryTest {
             String username,
             Boolean enabled,
             OffsetDateTime deletedOn) {
+        AccountPreferences preferences = new AccountPreferences();
+        preferences.setLanguage(language);
+
         User user = new User();
+        user.setPreferences(preferences);
         user.setIdentityId(identityId);
         user.setFirstname(firstname);
         user.setLastname(lastname);

@@ -2,32 +2,34 @@ package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
 import com.marcoaga02.modularhub.core.api.dto.*;
 import com.marcoaga02.modularhub.core.api.exception.LanguageNotFoundException;
+import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
+import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.User;
 import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
-import com.marcoaga02.modularhub.core.domain.service.AccountPreferencesService;
+import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
-import com.marcoaga02.modularhub.core.spi.AccountDetailsProvider;
+import com.marcoaga02.modularhub.core.domain.service.UserAccountService;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserAlreadyExistsException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserNotFoundException;
-import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.AccountProfileMapper;
 import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.UserMapper;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.modules.usermanagement.domain.repository.specification.UserSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Objects;
 
 @Service
-public class UserService implements AccountDetailsProvider {
+public class UserService {
 
     private static final Boolean EMAIL_VERIFIED = true;
 
@@ -37,22 +39,19 @@ public class UserService implements AccountDetailsProvider {
 
     private final UserMapper userMapper;
 
-    private final AccountProfileMapper accountProfileMapper;
-
     private final IdentityService identityService;
 
     private final AccountService accountService;
 
-    private final AccountPreferencesService accountPreferencesService;
+    private final UserAccountService userAccountService;
 
-    public UserService(UserRepository userRepository, LanguageRepository languageRepository, UserMapper userMapper, AccountProfileMapper accountProfileMapper, IdentityService identityService, AccountService accountService, AccountPreferencesService accountPreferencesService) {
+    public UserService(UserRepository userRepository, LanguageRepository languageRepository, UserMapper userMapper, IdentityService identityService, AccountService accountService, UserAccountService userAccountService) {
         this.userRepository = userRepository;
         this.languageRepository = languageRepository;
         this.userMapper = userMapper;
-        this.accountProfileMapper = accountProfileMapper;
         this.identityService = identityService;
         this.accountService = accountService;
-        this.accountPreferencesService = accountPreferencesService;
+        this.userAccountService = userAccountService;
     }
 
     public Page<UserResponseDTO> getAllUsers(UserCriteriaDTO criteria, Pageable pageable) {
@@ -70,9 +69,9 @@ public class UserService implements AccountDetailsProvider {
 
         AuditDTO auditDto = new AuditDTO();
         auditDto.setCreatedOn(user.getCreatedOn());
-        auditDto.setCreatedBy(resolveUserFullName(user.getCreatedBy()));
+        auditDto.setCreatedBy(userAccountService.resolveFullName(user.getCreatedBy()));
         auditDto.setUpdatedOn(user.getUpdatedOn());
-        auditDto.setUpdatedBy(resolveUserFullName(user.getUpdatedBy()));
+        auditDto.setUpdatedBy(userAccountService.resolveFullName(user.getUpdatedBy()));
 
         UserResponseDTO dto = userMapper.toDto(user);
         dto.setAudit(auditDto);
@@ -83,16 +82,12 @@ public class UserService implements AccountDetailsProvider {
             dto.setGroups(new HashSet<>(userResponseDTO.getGroups()));
         }
 
-        AccountPreferencesResponseDTO preferencesDTO = accountPreferencesService.getAccountPreferences(user.getIdentityId());
-
-        dto.setLanguage(preferencesDTO.getLanguage());
-
         return dto;
     }
 
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO dto) {
-        validateLanguage(dto.getLanguageId());
+        Language language = findLanguageOrElseThrow(dto.getLanguageId());
 
         if (existsActiveUserWithSameTaxIdNumber(dto.getTaxIdNumber())) {
             throw UserAlreadyExistsException.taxIdNumber(dto.getTaxIdNumber());
@@ -106,7 +101,11 @@ public class UserService implements AccountDetailsProvider {
             throw UserAlreadyExistsException.email(dto.getEmail());
         }
 
+        AccountPreferences preferences = new AccountPreferences();
+        preferences.setLanguage(language);
+
         User user = new User();
+        user.setPreferences(preferences);
 
         userMapper.updateEntity(dto, user);
 
@@ -122,20 +121,11 @@ public class UserService implements AccountDetailsProvider {
         );
 
         String identityId = identityService.createUser(userRequestDTO);
+        rollbackIdentityUserOnTransactionRollback(identityId);
+
         user.setIdentityId(identityId);
 
-        AccountPreferencesCreateDTO preferencesRequestDTO = new AccountPreferencesCreateDTO(
-                identityId,
-                dto.getLanguageId()
-        );
-
-        AccountPreferencesResponseDTO preferencesResponseDTO =
-                accountPreferencesService.createAccountPreferences(preferencesRequestDTO);
-
-        UserResponseDTO userResponseDTO = userMapper.toDto(userRepository.save(user));
-        userResponseDTO.setLanguage(preferencesResponseDTO.getLanguage());
-
-        return userResponseDTO;
+        return userMapper.toDto(userRepository.saveAndFlush(user));
     }
 
     @Transactional
@@ -143,7 +133,7 @@ public class UserService implements AccountDetailsProvider {
         User user = userRepository.findByUuidAndDeletedOnIsNull(uuid)
                 .orElseThrow(() -> new UserNotFoundException(uuid));
 
-        validateLanguage(dto.getLanguageId());
+        Language language = findLanguageOrElseThrow(dto.getLanguageId());
 
         if (!Objects.equals(user.getTaxIdNumber(), dto.getTaxIdNumber())
                 && existsActiveUserWithSameTaxIdNumber(dto.getTaxIdNumber())
@@ -163,8 +153,9 @@ public class UserService implements AccountDetailsProvider {
             throw UserAlreadyExistsException.email(dto.getEmail());
         }
 
-
         userMapper.updateEntity(dto, user);
+        user.getPreferences().setLanguage(language);
+        userRepository.saveAndFlush(user);
 
         IdentityUserUpdateRequestDTO userRequestDTO = new IdentityUserUpdateRequestDTO(
                 dto.getUsername(),
@@ -177,17 +168,7 @@ public class UserService implements AccountDetailsProvider {
 
         identityService.updateUser(user.getIdentityId(), userRequestDTO);
 
-        AccountPreferencesUpdateDTO preferencesRequestDTO = new AccountPreferencesUpdateDTO(
-                dto.getLanguageId()
-        );
-
-        AccountPreferencesResponseDTO preferencesResponseDTO =
-                accountPreferencesService.updateAccountPreferencesByIdentityId(user.getIdentityId(), preferencesRequestDTO);
-
-        UserResponseDTO userResponseDTO = userMapper.toDto(user);
-        userResponseDTO.setLanguage(preferencesResponseDTO.getLanguage());
-
-        return userResponseDTO;
+        return userMapper.toDto(user);
     }
 
     @Transactional
@@ -195,11 +176,11 @@ public class UserService implements AccountDetailsProvider {
         User user = userRepository.findByUuidAndDeletedOnIsNull(uuid)
                 .orElseThrow(() -> new UserNotFoundException(uuid));
 
-        identityService.deleteUser(user.getIdentityId());
-
         user.setDeletedBy(accountService.getCurrentIdentityId());
         user.setDeletedOn(OffsetDateTime.now());
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
+
+        identityService.deleteUser(user.getIdentityId());
     }
 
     public void resetPassword(String uuid) {
@@ -221,26 +202,19 @@ public class UserService implements AccountDetailsProvider {
         return userRepository.findByEmailAndDeletedOnIsNull(email).isPresent();
     }
 
-    private void validateLanguage(String langUuid) {
-        languageRepository.findByUuid(langUuid)
+    private void rollbackIdentityUserOnTransactionRollback(String identityId) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) {
+                    identityService.rollbackCreatedUser(identityId);
+                }
+            }
+        });
+    }
+
+    private Language findLanguageOrElseThrow(String langUuid) {
+        return languageRepository.findByUuid(langUuid)
                 .orElseThrow(() -> new LanguageNotFoundException(langUuid));
-    }
-
-    private String resolveUserFullName(String identityId) {
-        if (identityId == null) {
-            return "";
-        }
-
-        return userRepository.findByIdentityId(identityId)
-                .map(User::getFullName)
-                .orElse("");
-    }
-
-    @Override
-    public AccountProfileDTO getDetails(String identityId) {
-        User user = userRepository.findByIdentityId(identityId)
-                .orElseThrow(() -> new UserNotFoundException(identityId));
-
-        return accountProfileMapper.toAccountProfileDTO(user);
     }
 }
