@@ -27,7 +27,13 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: modularhub
       KC_DB_PASSWORD: modularhub
-    command: start-dev
+      MODULARHUB_BACKEND_CLIENT_SECRET: ${MODULARHUB_BACKEND_CLIENT_SECRET:?MODULARHUB_BACKEND_CLIENT_SECRET is required}
+      MODULARHUB_SMTP_FROM: ${MODULARHUB_SMTP_FROM:-}
+      MODULARHUB_SMTP_USER: ${MODULARHUB_SMTP_USER:-}
+      MODULARHUB_SMTP_PASSWORD: ${MODULARHUB_SMTP_PASSWORD:-}
+    command: start-dev --import-realm
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import:ro
     ports:
       - '8090:8080'
     depends_on:

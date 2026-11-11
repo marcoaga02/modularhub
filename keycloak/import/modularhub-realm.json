@@ -1,0 +1,104 @@
+{
+  "realm": "modularhub",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": true,
+  "smtpServer": {
+    "host": "in-v3.mailjet.com",
+    "port": "587",
+    "from": "${MODULARHUB_SMTP_FROM}",
+    "fromDisplayName": "ModularHub",
+    "auth": "true",
+    "authType": "basic",
+    "user": "${MODULARHUB_SMTP_USER}",
+    "password": "${MODULARHUB_SMTP_PASSWORD}",
+    "starttls": "true",
+    "ssl": "false",
+    "connectionTimeout": "10000",
+    "timeout": "10000",
+    "writeTimeout": "10000"
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "USER_MANAGEMENT"
+      }
+    ]
+  },
+  "groups": [
+    {
+      "name": "ADMIN",
+      "path": "/ADMIN",
+      "realmRoles": [
+        "USER_MANAGEMENT"
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "modularhub-frontend",
+      "name": "ModularHub Frontend",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:4200/*"
+      }
+    },
+    {
+      "clientId": "modularhub-backend",
+      "name": "ModularHub Backend",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${MODULARHUB_BACKEND_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-modularhub-backend",
+      "enabled": true,
+      "serviceAccountClientId": "modularhub-backend",
+      "clientRoles": {
+        "realm-management": [
+          "realm-admin"
+        ]
+      }
+    },
+    {
+      "username": "admin",
+      "email": "admin@modularhub.local",
+      "firstName": "Admin",
+      "lastName": "ModularHub",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/ADMIN"
+      ]
+    }
+  ]
+}
