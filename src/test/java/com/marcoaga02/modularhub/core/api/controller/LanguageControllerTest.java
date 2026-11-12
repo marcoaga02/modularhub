@@ -2,12 +2,13 @@ package com.marcoaga02.modularhub.core.api.controller;
 
 import com.marcoaga02.modularhub.core.api.dto.LanguageResponseDTO;
 import com.marcoaga02.modularhub.core.domain.service.LanguageService;
+import com.marcoaga02.modularhub.config.BaseControllerTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.List;
 
@@ -16,10 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(LanguageController.class)
-class LanguageControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
+class LanguageControllerTest extends BaseControllerTest {
 
     @MockitoBean
     private LanguageService languageService;
@@ -34,7 +32,7 @@ class LanguageControllerTest {
 
         when(languageService.getLanguages()).thenReturn(List.of(languageResponseDto));
 
-        mockMvc.perform(get("/languages"))
+        perform(get("/languages"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.length()").value(1))
@@ -48,9 +46,12 @@ class LanguageControllerTest {
     void getLanguages_shouldReturnOkWithEmptyList_whenNoLanguagesExist() throws Exception {
         when(languageService.getLanguages()).thenReturn(List.of());
 
-        mockMvc.perform(get("/languages"))
+        perform(get("/languages"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    private ResultActions perform(MockHttpServletRequestBuilder request) throws Exception {
+        return performWithRoles(request);
+    }
 }

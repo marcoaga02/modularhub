@@ -3,6 +3,7 @@ package com.marcoaga02.modularhub.core.api.exception;
 import com.marcoaga02.modularhub.core.api.dto.ErrorDTO;
 import com.marcoaga02.modularhub.core.api.exception.account.SelfDeletionException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityConflictException;
+import com.marcoaga02.modularhub.core.api.exception.identity.IdentityInvalidRequestException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityProviderUnavailableException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityResourceNotFoundException;
 import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
@@ -21,11 +23,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class GlobalExceptionHandlerTest {
 
@@ -37,8 +36,7 @@ class GlobalExceptionHandlerTest {
         bindingResult.addError(new FieldError("user", "email", "must be a well-formed email address"));
         bindingResult.addError(new FieldError("user", "email", "must not be blank"));
         bindingResult.addError(new FieldError("user", "username", "must not be blank"));
-        MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
-        when(exception.getBindingResult()).thenReturn(bindingResult);
+        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(null, bindingResult);
 
         ResponseEntity<ErrorDTO> response = handler.handleMethodArgumentNotValidException(exception);
 
@@ -48,22 +46,24 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void handleInvalidRequestException_shouldReturnBadRequest_whenRequestIsMalformed() {
-        ResponseEntity<ErrorDTO> response = handler.handleInvalidRequestException(mock(HttpMessageNotReadableException.class));
+        ResponseEntity<ErrorDTO> response = handler.handleInvalidRequestException(
+                new HttpMessageNotReadableException("malformed", new MockHttpInputMessage(new byte[0])));
 
         assertError(response, HttpStatus.BAD_REQUEST, ExceptionCodes.Validation.INVALID_REQUEST, Map.of());
     }
 
     @Test
     void handleNoResourceFoundException_shouldReturnNotFound_whenRouteDoesNotExist() {
-        ResponseEntity<ErrorDTO> response = handler.handleNoResourceFoundException(mock(NoResourceFoundException.class));
+        ResponseEntity<ErrorDTO> response = handler.handleNoResourceFoundException(
+                new NoResourceFoundException(HttpMethod.GET, "/missing", "missing"));
 
         assertError(response, HttpStatus.NOT_FOUND, ExceptionCodes.Generic.NOT_FOUND, Map.of());
     }
 
     @Test
     void handleMethodNotSupportedException_shouldReturnMethodNotAllowedWithAllowHeader_whenMethodIsNotSupported() {
-        HttpRequestMethodNotSupportedException exception = mock(HttpRequestMethodNotSupportedException.class);
-        when(exception.getSupportedHttpMethods()).thenReturn(Set.of(HttpMethod.GET));
+        HttpRequestMethodNotSupportedException exception =
+                new HttpRequestMethodNotSupportedException("DELETE", List.of("GET"));
 
         ResponseEntity<ErrorDTO> response = handler.handleMethodNotSupportedException(exception);
 
@@ -84,6 +84,14 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<ErrorDTO> response = handler.handleBadRequestException(new LanguageNotFoundException("lang"));
 
         assertError(response, HttpStatus.BAD_REQUEST, ExceptionCodes.Model.Language.NOT_FOUND, Map.of());
+    }
+
+    @Test
+    void handleBadRequestException_shouldReturnBadRequest_whenIdentityProviderRejectsTheRequest() {
+        ResponseEntity<ErrorDTO> response = handler.handleBadRequestException(
+                new IdentityInvalidRequestException("rejected", null));
+
+        assertError(response, HttpStatus.BAD_REQUEST, ExceptionCodes.IdentityProvider.INVALID_REQUEST, Map.of());
     }
 
     @Test

@@ -1,220 +1,100 @@
 package com.marcoaga02.modularhub.core.infrastructure.keycloak;
 
-import com.marcoaga02.modularhub.config.BaseIT;
-import com.marcoaga02.modularhub.config.TestContainersImages;
+import com.marcoaga02.modularhub.config.BaseKeycloakIT;
 import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityConflictException;
+import com.marcoaga02.modularhub.core.api.exception.identity.IdentityInvalidRequestException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityResourceNotFoundException;
-import dasniko.testcontainers.keycloak.KeycloakContainer;
-import jakarta.ws.rs.WebApplicationException;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import jakarta.ws.rs.NotFoundException;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.KeycloakBuilder;
-import org.keycloak.representations.idm.GroupRepresentation;
-import org.keycloak.representations.idm.RealmRepresentation;
+import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.io.IOException;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.groups.Tuple.tuple;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@Testcontainers
-@ActiveProfiles("keycloak")
-class KeycloakIdentityProviderServiceIT extends BaseIT {
+class KeycloakIdentityProviderServiceIT extends BaseKeycloakIT {
 
-    private static final String REALM = "test-realm";
+    private static final String UNKNOWN_ID = "unknown-id";
+    private static final String USERNAME = "mario.rossi";
+    private static final String EMAIL = "mario.rossi@test.com";
 
-    private static final String FIRST_GROUP_NAME = "test-group-first-name";
-    private static final String FIRST_GROUP_DESCRIPTION = "test-group-first-desc";
+    @Autowired
+    private KeycloakIdentityProviderService keycloakService;
 
-    private static final String SECOND_GROUP_NAME = "test-group-second-name";
-    private static final String SECOND_GROUP_DESCRIPTION = "test-group-second-desc";
+    private String firstGroupId;
 
-    @Container
-    private static final KeycloakContainer keycloak =
-            new KeycloakContainer(TestContainersImages.KEYCLOAK)
-                    .withAdminUsername("admin")
-                    .withAdminPassword("admin");
+    private String secondGroupId;
+
+    @BeforeEach
+    void loadGroupIds() {
+        firstGroupId = groupId(FIRST_GROUP_NAME);
+        secondGroupId = groupId(SECOND_GROUP_NAME);
+    }
 
     @Nested
     class CreateUser {
 
         @Test
-        void createUser_shouldReturnId_whenValidRequest() {
-            IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(firstGroupId, secondGroupId)
-            );
+        void createUser_shouldCreateUserWithRequestDataAndGroups() {
+            String userId = keycloakService.createUser(createRequest(List.of(firstGroupId, secondGroupId)));
 
-            String userId = keycloakService.createUser(dto);
-
-            assertNotNull(userId);
-
-            UserRepresentation created = adminClient.realm(REALM).users().get(userId).toRepresentation();
+            UserRepresentation created = realm().users().get(userId).toRepresentation();
             assertThat(created)
-                    .satisfies(u -> {
-                        assertThat(u.getUsername()).isEqualTo("mario.rossi");
-                        assertThat(u.getEmail()).isEqualTo("mario.rossi@example.com");
-                        assertThat(u.getFirstName()).isEqualTo("Mario");
-                        assertThat(u.getLastName()).isEqualTo("Rossi");
-                        assertThat(u.isEnabled()).isTrue();
-                        assertThat(u.isEmailVerified()).isTrue();
-                    });
-
-            List<String> groups = adminClient.realm(REALM).users().get(userId).groups()
-                    .stream()
-                    .map(GroupRepresentation::getId)
-                    .toList();
-
-            assertThat(groups)
-                    .hasSize(2)
-                    .contains(firstGroupId, secondGroupId);
+                    .extracting(UserRepresentation::getUsername, UserRepresentation::getEmail,
+                            UserRepresentation::getFirstName, UserRepresentation::getLastName,
+                            UserRepresentation::isEnabled, UserRepresentation::isEmailVerified)
+                    .containsExactly(USERNAME, EMAIL, "Mario", "Rossi", true, true);
+            assertThat(groupIdsOf(userId)).containsExactlyInAnyOrder(firstGroupId, secondGroupId);
         }
+
         @Test
-        void createUser_shouldReturnId_whenGroupIdsIsNull() {
-            IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    null
-            );
+        void createUser_shouldCreateUserWithoutGroups_whenGroupIdsIsNull() {
+            String userId = keycloakService.createUser(createRequest(null));
 
-            String userId = keycloakService.createUser(dto);
-
-            assertNotNull(userId);
-
-            UserRepresentation created = adminClient.realm(REALM).users().get(userId).toRepresentation();
-            assertThat(created)
-                    .satisfies(u -> {
-                        assertThat(u.getUsername()).isEqualTo("mario.rossi");
-                        assertThat(u.getEmail()).isEqualTo("mario.rossi@example.com");
-                        assertThat(u.getFirstName()).isEqualTo("Mario");
-                        assertThat(u.getLastName()).isEqualTo("Rossi");
-                        assertThat(u.isEnabled()).isTrue();
-                        assertThat(u.isEmailVerified()).isTrue();
-                    });
-
-            List<String> groups = adminClient.realm(REALM).users().get(userId).groups()
-                    .stream()
-                    .map(GroupRepresentation::getId)
-                    .toList();
-
-            assertThat(groups).isEmpty();
+            assertThat(groupIdsOf(userId)).isEmpty();
         }
+
         @Test
-        void createUser_shouldReturnId_whenGroupIdsIsEmpty() {
-            IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of()
-            );
+        void createUser_shouldCreateUserWithoutGroups_whenGroupIdsIsEmpty() {
+            String userId = keycloakService.createUser(createRequest(List.of()));
 
-            String userId = keycloakService.createUser(dto);
-
-            assertNotNull(userId);
-
-            UserRepresentation created = adminClient.realm(REALM).users().get(userId).toRepresentation();
-            assertThat(created)
-                    .satisfies(u -> {
-                        assertThat(u.getUsername()).isEqualTo("mario.rossi");
-                        assertThat(u.getEmail()).isEqualTo("mario.rossi@example.com");
-                        assertThat(u.getFirstName()).isEqualTo("Mario");
-                        assertThat(u.getLastName()).isEqualTo("Rossi");
-                        assertThat(u.isEnabled()).isTrue();
-                        assertThat(u.isEmailVerified()).isTrue();
-                    });
-
-            List<String> groups = adminClient.realm(REALM).users().get(userId).groups()
-                    .stream()
-                    .map(GroupRepresentation::getId)
-                    .toList();
-
-            assertThat(groups).isEmpty();
+            assertThat(groupIdsOf(userId)).isEmpty();
         }
+
         @Test
         void createUser_shouldThrowIdentityConflictException_whenUsernameAlreadyExists() {
-            IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
-                    "duplicate",
-                    "first@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "firstPa55w0rd",
-                    List.of(firstGroupId)
-            );
-            keycloakService.createUser(dto);
-
-            IdentityUserCreateRequestDTO duplicate = getCreateRequestDTO(
-                    "duplicate",
-                    "second@example.com",
-                    "Luigi",
-                    "Verdi",
-                    false,
-                    false,
-                    "secondPa55w0rd",
-                    List.of(secondGroupId)
-            );
+            keycloakService.createUser(createRequest(List.of()));
+            IdentityUserCreateRequestDTO duplicate = createRequest(List.of());
+            duplicate.setEmail("another@test.com");
 
             assertThatThrownBy(() -> keycloakService.createUser(duplicate))
-                    .isInstanceOf(IdentityConflictException.class)
-                    .satisfies(e -> {
-                        IdentityConflictException ex = (IdentityConflictException) e;
-                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.CONFLICT);
-                        assertThat(ex.getMessage()).isNotBlank();
-                    });
+                    .isInstanceOfSatisfying(IdentityConflictException.class, ex ->
+                            assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.CONFLICT));
         }
+
         @Test
         void createUser_shouldDeleteCreatedUser_whenGroupAssignmentFails() {
-            IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
-                    "orphan.user",
-                    "orphan.user@example.com",
-                    "Orphan",
-                    "User",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(firstGroupId, "non-existing-group-id")
-            );
+            IdentityUserCreateRequestDTO request = createRequest(List.of(firstGroupId, UNKNOWN_ID));
 
-            assertThatThrownBy(() -> keycloakService.createUser(dto))
-                    .isInstanceOf(IdentityResourceNotFoundException.class);
+            assertIdentityNotFound(() -> keycloakService.createUser(request));
 
-            assertThat(adminClient.realm(REALM).users().search("orphan.user", true)).isEmpty();
+            assertThat(realm().users().search(USERNAME, true)).isEmpty();
         }
     }
 
@@ -222,158 +102,43 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     class UpdateUser {
 
         @Test
-        void updateUser_shouldUpdateUser_whenValidRequest() {
-            IdentityUserCreateRequestDTO createDto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(secondGroupId)
-            );
+        void updateUser_shouldReplaceUserDataAndGroups() {
+            String userId = keycloakService.createUser(createRequest(List.of(firstGroupId)));
 
-            String userId = keycloakService.createUser(createDto);
+            keycloakService.updateUser(userId, updateRequest(List.of(secondGroupId)));
 
-            assertNotNull(userId);
-
-            IdentityUserUpdateRequestDTO updateDto = getUpdateRequestDTO(
-                    "updated.username",
-                    "updated@example.com",
-                    "updatedFirstName",
-                    "updatedLastName",
-                    false,
-                    List.of(secondGroupId)
-            );
-
-            keycloakService.updateUser(userId, updateDto);
-
-            UserRepresentation updated = adminClient.realm(REALM).users().get(userId).toRepresentation();
+            UserRepresentation updated = realm().users().get(userId).toRepresentation();
             assertThat(updated)
-                    .satisfies(u -> {
-                        assertThat(u.getUsername()).isEqualTo("updated.username");
-                        assertThat(u.getEmail()).isEqualTo("updated@example.com");
-                        assertThat(u.getFirstName()).isEqualTo("updatedFirstName");
-                        assertThat(u.getLastName()).isEqualTo("updatedLastName");
-                        assertThat(u.isEnabled()).isFalse();
-                    });
-
-            List<String> groups = adminClient.realm(REALM).users().get(userId).groups()
-                    .stream()
-                    .map(GroupRepresentation::getId)
-                    .toList();
-
-            assertThat(groups).containsExactly(secondGroupId);
+                    .extracting(UserRepresentation::getUsername, UserRepresentation::getEmail,
+                            UserRepresentation::getFirstName, UserRepresentation::getLastName,
+                            UserRepresentation::isEnabled)
+                    .containsExactly("luigi.verdi", "luigi.verdi@test.com", "Luigi", "Verdi", false);
+            assertThat(groupIdsOf(userId)).containsExactly(secondGroupId);
         }
+
         @Test
-        void updateUser_shouldUpdateUser_whenGroupIdsIsNull() {
-            IdentityUserCreateRequestDTO createDto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(secondGroupId)
-            );
+        void updateUser_shouldRemoveAllGroups_whenGroupIdsIsNull() {
+            String userId = keycloakService.createUser(createRequest(List.of(firstGroupId)));
 
-            String userId = keycloakService.createUser(createDto);
+            keycloakService.updateUser(userId, updateRequest(null));
 
-            assertNotNull(userId);
-
-            IdentityUserUpdateRequestDTO updateDto = getUpdateRequestDTO(
-                    "updated.username",
-                    "updated@example.com",
-                    "updatedFirstName",
-                    "updatedLastName",
-                    false,
-                    null
-            );
-
-            keycloakService.updateUser(userId, updateDto);
-
-            UserRepresentation updated = adminClient.realm(REALM).users().get(userId).toRepresentation();
-            assertThat(updated)
-                    .satisfies(u -> {
-                        assertThat(u.getUsername()).isEqualTo("updated.username");
-                        assertThat(u.getEmail()).isEqualTo("updated@example.com");
-                        assertThat(u.getFirstName()).isEqualTo("updatedFirstName");
-                        assertThat(u.getLastName()).isEqualTo("updatedLastName");
-                        assertThat(u.isEnabled()).isFalse();
-                    });
-
-            List<String> groups = adminClient.realm(REALM).users().get(userId).groups()
-                    .stream()
-                    .map(GroupRepresentation::getId)
-                    .toList();
-
-            assertThat(groups).isEmpty();
+            assertThat(groupIdsOf(userId)).isEmpty();
         }
+
         @Test
-        void updateUser_shouldUpdateUser_whenGroupIdsIsEmpty() {
-            IdentityUserCreateRequestDTO createDto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(secondGroupId)
-            );
+        void updateUser_shouldRemoveAllGroups_whenGroupIdsIsEmpty() {
+            String userId = keycloakService.createUser(createRequest(List.of(firstGroupId)));
 
-            String userId = keycloakService.createUser(createDto);
+            keycloakService.updateUser(userId, updateRequest(List.of()));
 
-            assertNotNull(userId);
-
-            IdentityUserUpdateRequestDTO updateDto = getUpdateRequestDTO(
-                    "updated.username",
-                    "updated@example.com",
-                    "updatedFirstName",
-                    "updatedLastName",
-                    false,
-                    List.of()
-            );
-
-            keycloakService.updateUser(userId, updateDto);
-
-            UserRepresentation updated = adminClient.realm(REALM).users().get(userId).toRepresentation();
-            assertThat(updated)
-                    .satisfies(u -> {
-                        assertThat(u.getUsername()).isEqualTo("updated.username");
-                        assertThat(u.getEmail()).isEqualTo("updated@example.com");
-                        assertThat(u.getFirstName()).isEqualTo("updatedFirstName");
-                        assertThat(u.getLastName()).isEqualTo("updatedLastName");
-                        assertThat(u.isEnabled()).isFalse();
-                    });
-
-            List<String> groups = adminClient.realm(REALM).users().get(userId).groups()
-                    .stream()
-                    .map(GroupRepresentation::getId)
-                    .toList();
-
-            assertThat(groups).isEmpty();
+            assertThat(groupIdsOf(userId)).isEmpty();
         }
-        @Test
-        void updateUser_shouldThrowIdentityResourceNotFoundException_whenInvalidUserId() {
-            IdentityUserUpdateRequestDTO updateDto = getUpdateRequestDTO(
-                    "updated.username",
-                    "updated@example.com",
-                    "updatedFirstName",
-                    "updatedLastName",
-                    false,
-                    List.of(secondGroupId)
-            );
 
-            assertThatThrownBy(() -> keycloakService.updateUser("invalid-uuid", updateDto))
-                    .isInstanceOf(IdentityResourceNotFoundException.class)
-                    .satisfies(e -> {
-                        IdentityResourceNotFoundException ex = (IdentityResourceNotFoundException) e;
-                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.NOT_FOUND);
-                        assertThat(ex.getMessage()).isNotBlank();
-                    });
+        @Test
+        void updateUser_shouldThrowIdentityResourceNotFoundException_whenUserDoesNotExist() {
+            IdentityUserUpdateRequestDTO request = updateRequest(List.of());
+
+            assertIdentityNotFound(() -> keycloakService.updateUser(UNKNOWN_ID, request));
         }
     }
 
@@ -381,38 +146,18 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     class DeleteUser {
 
         @Test
-        void deleteUser_shouldDeleteUser_whenValidRequest() {
-            IdentityUserCreateRequestDTO createDto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(secondGroupId)
-            );
-
-            String userId = keycloakService.createUser(createDto);
-            assertNotNull(userId);
+        void deleteUser_shouldDeleteUser_whenUserExists() {
+            String userId = keycloakService.createUser(createRequest(List.of()));
 
             keycloakService.deleteUser(userId);
 
-            // if the user has been deleted, this method call throw a WebApplicationException with http status NOT FOUND (404)
-            assertThatThrownBy(() -> adminClient.realm(REALM).users().get(userId).toRepresentation())
-                    .isInstanceOf(WebApplicationException.class)
-                    .extracting(e -> ((WebApplicationException) e).getResponse().getStatus())
-                    .isEqualTo(404);
+            assertThatThrownBy(() -> realm().users().get(userId).toRepresentation())
+                    .isInstanceOf(NotFoundException.class);
         }
+
         @Test
-        void deleteUser_shouldThrowIdentityResourceNotFoundException_whenInvalidUserId() {
-            assertThatThrownBy(() -> keycloakService.deleteUser("invalid-uuid"))
-                    .isInstanceOf(IdentityResourceNotFoundException.class)
-                    .satisfies(e -> {
-                        IdentityResourceNotFoundException ex = (IdentityResourceNotFoundException) e;
-                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.NOT_FOUND);
-                        assertThat(ex.getMessage()).isNotBlank();
-                    });
+        void deleteUser_shouldThrowIdentityResourceNotFoundException_whenUserDoesNotExist() {
+            assertIdentityNotFound(() -> keycloakService.deleteUser(UNKNOWN_ID));
         }
     }
 
@@ -420,47 +165,24 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     class GetUserById {
 
         @Test
-        void getUserById_shouldReturnUser_whenValidRequest() {
-            IdentityUserCreateRequestDTO createDto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(firstGroupId, secondGroupId)
-            );
-
-            String userId = keycloakService.createUser(createDto);
-            assertNotNull(userId);
+        void getUserById_shouldReturnUserWithGroups_whenUserExists() {
+            String userId = keycloakService.createUser(createRequest(List.of(firstGroupId, secondGroupId)));
 
             IdentityUserResponseDTO user = keycloakService.getUserById(userId);
+
             assertThat(user)
-                    .satisfies(u -> {
-                        assertThat(u.getId()).isEqualTo(userId);
-                        assertThat(u.getUsername()).isEqualTo("mario.rossi");
-                        assertThat(u.getEmail()).isEqualTo("mario.rossi@example.com");
-                        assertThat(u.getFirstName()).isEqualTo("Mario");
-                        assertThat(u.getLastName()).isEqualTo("Rossi");
-                        assertThat(u.getEnabled()).isTrue();
-                        assertThat(u.getGroups())
-                                .extracting(IdentityGroupDTO::getId, IdentityGroupDTO::getName, IdentityGroupDTO::getDescription)
-                                .containsExactlyInAnyOrder(
-                                        tuple(firstGroupId, FIRST_GROUP_NAME, FIRST_GROUP_DESCRIPTION),
-                                        tuple(secondGroupId, SECOND_GROUP_NAME, SECOND_GROUP_DESCRIPTION)
-                                );
-                    });
+                    .extracting(IdentityUserResponseDTO::getId, IdentityUserResponseDTO::getUsername,
+                            IdentityUserResponseDTO::getEmail, IdentityUserResponseDTO::getFirstName,
+                            IdentityUserResponseDTO::getLastName, IdentityUserResponseDTO::getEnabled)
+                    .containsExactly(userId, USERNAME, EMAIL, "Mario", "Rossi", true);
+            assertThat(user.getGroups())
+                    .extracting(IdentityGroupDTO::getId)
+                    .containsExactlyInAnyOrder(firstGroupId, secondGroupId);
         }
+
         @Test
-        void getUserById_shouldThrowIdentityResourceNotFoundException_whenInvalidUserId() {
-            assertThatThrownBy(() -> keycloakService.getUserById("invalid-uuid"))
-                    .isInstanceOf(IdentityResourceNotFoundException.class)
-                    .satisfies(e -> {
-                        IdentityResourceNotFoundException ex = (IdentityResourceNotFoundException) e;
-                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.NOT_FOUND);
-                        assertThat(ex.getCause()).isInstanceOf(WebApplicationException.class);
-                    });
+        void getUserById_shouldThrowIdentityResourceNotFoundException_whenUserDoesNotExist() {
+            assertIdentityNotFound(() -> keycloakService.getUserById(UNKNOWN_ID));
         }
     }
 
@@ -468,13 +190,12 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     class GetGroups {
 
         @Test
-        void getGroups_shouldReturnGroups_whenValidRequest() {
+        void getGroups_shouldReturnAllRealmGroupsWithDescription() {
             assertThat(keycloakService.getGroups())
                     .extracting(IdentityGroupDTO::getId, IdentityGroupDTO::getName, IdentityGroupDTO::getDescription)
                     .containsExactlyInAnyOrder(
                             tuple(firstGroupId, FIRST_GROUP_NAME, FIRST_GROUP_DESCRIPTION),
-                            tuple(secondGroupId, SECOND_GROUP_NAME, SECOND_GROUP_DESCRIPTION)
-                    );
+                            tuple(secondGroupId, SECOND_GROUP_NAME, SECOND_GROUP_DESCRIPTION));
         }
     }
 
@@ -482,57 +203,17 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     class GetUserGroups {
 
         @Test
-        void getUserGroups_shouldReturnGroups_whenValidRequestWithSingleGroup() {
-            IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(firstGroupId)
-            );
-
-            String userId = keycloakService.createUser(dto);
-            assertNotNull(userId);
+        void getUserGroups_shouldReturnOnlyTheGroupsOfTheUser() {
+            String userId = keycloakService.createUser(createRequest(List.of(firstGroupId)));
 
             assertThat(keycloakService.getUserGroups(userId))
                     .extracting(IdentityGroupDTO::getId, IdentityGroupDTO::getName, IdentityGroupDTO::getDescription)
                     .containsExactly(tuple(firstGroupId, FIRST_GROUP_NAME, FIRST_GROUP_DESCRIPTION));
         }
-        @Test
-        void getUserGroups_shouldReturnGroups_whenValidRequestWithMultipleGroups() {
-            IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(firstGroupId, secondGroupId)
-            );
 
-            String userId = keycloakService.createUser(dto);
-            assertNotNull(userId);
-
-            assertThat(keycloakService.getUserGroups(userId))
-                    .extracting(IdentityGroupDTO::getId, IdentityGroupDTO::getName, IdentityGroupDTO::getDescription)
-                    .containsExactlyInAnyOrder(
-                            tuple(firstGroupId, FIRST_GROUP_NAME, FIRST_GROUP_DESCRIPTION),
-                            tuple(secondGroupId, SECOND_GROUP_NAME, SECOND_GROUP_DESCRIPTION)
-                    );
-        }
         @Test
-        void getUserGroups_shouldThrowIdentityResourceNotFoundException_whenInvalidUserId() {
-            assertThatThrownBy(() -> keycloakService.getUserGroups("invalid-uuid"))
-                    .isInstanceOf(IdentityResourceNotFoundException.class)
-                    .satisfies(e -> {
-                        IdentityResourceNotFoundException ex = (IdentityResourceNotFoundException) e;
-                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.NOT_FOUND);
-                        assertThat(ex.getCause()).isInstanceOf(WebApplicationException.class);
-                    });
+        void getUserGroups_shouldThrowIdentityResourceNotFoundException_whenUserDoesNotExist() {
+            assertIdentityNotFound(() -> keycloakService.getUserGroups(UNKNOWN_ID));
         }
     }
 
@@ -540,163 +221,83 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     class UpdatePassword {
 
         @Test
-        void updatePassword_shouldNotThrow_whenValidRequest() {
-            IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(firstGroupId, secondGroupId)
-            );
+        void updatePassword_shouldStorePasswordCredential() {
+            String userId = keycloakService.createUser(createRequest(List.of()));
 
-            String userId = keycloakService.createUser(dto);
-            assertNotNull(userId);
+            keycloakService.updatePassword(userId, "newPassword123");
 
-            assertThatNoException()
-                    .isThrownBy(() -> keycloakService.updatePassword(userId, "newPassword123"));
+            assertThat(realm().users().get(userId).credentials())
+                    .extracting(CredentialRepresentation::getType)
+                    .containsExactly(CredentialRepresentation.PASSWORD);
         }
+
+        @Test
+        void updatePassword_shouldRequirePasswordChangeAtNextLogin() {
+            String userId = keycloakService.createUser(createRequest(List.of()));
+
+            keycloakService.updatePassword(userId, "newPassword123");
+
+            assertThat(realm().users().get(userId).toRepresentation().getRequiredActions())
+                    .containsExactly("UPDATE_PASSWORD");
+        }
+
         @ParameterizedTest
         @NullAndEmptySource
-        @ValueSource(strings = {" ", "\t", "\t "})
+        @ValueSource(strings = {" ", "\t"})
         void updatePassword_shouldThrowIllegalArgumentException_whenPasswordIsBlank(String password) {
-            String userId = keycloakService.createUser(getCreateRequestDTO(
-                    "mario.rossi",
-                    "mario.rossi@example.com",
-                    "Mario",
-                    "Rossi",
-                    true,
-                    true,
-                    "pa55w0rd",
-                    List.of(firstGroupId, secondGroupId)
-            ));
+            String userId = keycloakService.createUser(createRequest(List.of()));
 
             assertThatThrownBy(() -> keycloakService.updatePassword(userId, password))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Password must not be blank");
         }
-    }
 
-    @DynamicPropertySource
-    private static void properties(DynamicPropertyRegistry registry) {
-        registry.add("keycloak.server-url", keycloak::getAuthServerUrl);
-        registry.add("keycloak.realm", () -> REALM);
-        registry.add("keycloak.admin-username", () -> "admin");
-        registry.add("keycloak.admin-password", () -> "admin");
-        registry.add("keycloak.frontend-client-id", () -> "test-frontend-client");
-        registry.add("keycloak.app-url", () -> "http://localhost:4200");
-    }
+        @Test
+        void updatePassword_shouldThrowIdentityInvalidRequestException_whenPasswordViolatesPolicy() {
+            String userId = keycloakService.createUser(createRequest(List.of()));
+            String shortPassword = "x".repeat(MIN_PASSWORD_LENGTH - 1);
 
-    @Autowired
-    private KeycloakIdentityProviderService keycloakService;
+            assertThatThrownBy(() -> keycloakService.updatePassword(userId, shortPassword))
+                    .isInstanceOfSatisfying(IdentityInvalidRequestException.class, ex ->
+                            assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.INVALID_REQUEST));
+        }
 
-    private Keycloak adminClient;
-    private String firstGroupId;
-    private String secondGroupId;
-
-    @BeforeAll
-    static void setupRealm() {
-        try (Keycloak adminClient = KeycloakBuilder.builder()
-                .serverUrl(keycloak.getAuthServerUrl())
-                .realm("master")
-                .clientId("admin-cli")
-                .username("admin")
-                .password("admin")
-                .build()) {
-
-            RealmRepresentation realm = new RealmRepresentation();
-            realm.setRealm(REALM);
-            realm.setEnabled(true);
-            realm.setEditUsernameAllowed(true);
-            adminClient.realms().create(realm);
-
-            GroupRepresentation firstGroup = new GroupRepresentation();
-            firstGroup.setName(FIRST_GROUP_NAME);
-            firstGroup.setDescription(FIRST_GROUP_DESCRIPTION);
-
-            GroupRepresentation secondGroup = new GroupRepresentation();
-            secondGroup.setName(SECOND_GROUP_NAME);
-            secondGroup.setDescription(SECOND_GROUP_DESCRIPTION);
-
-            adminClient.realm(REALM).groups().add(firstGroup);
-            adminClient.realm(REALM).groups().add(secondGroup);
+        @Test
+        void updatePassword_shouldThrowIdentityResourceNotFoundException_whenUserDoesNotExist() {
+            assertIdentityNotFound(() -> keycloakService.updatePassword(UNKNOWN_ID, "newPassword123"));
         }
     }
 
-    @BeforeEach
-    void setupClient() {
-        adminClient = KeycloakBuilder.builder()
-                .serverUrl(keycloak.getAuthServerUrl())
-                .realm("master")
-                .clientId("admin-cli")
-                .username("admin")
-                .password("admin")
-                .build();
+    @Nested
+    class ResetPassword {
 
-        List<GroupRepresentation> groups = adminClient.realm(REALM).groups().groups();
+        @Test
+        void resetPassword_shouldSendUpdatePasswordEmailToUser() throws IOException, InterruptedException {
+            String userId = keycloakService.createUser(createRequest(List.of()));
 
-        firstGroupId = groups.stream()
-                .filter(g -> g.getName().equals(FIRST_GROUP_NAME))
-                .map(GroupRepresentation::getId)
-                .findFirst()
-                .orElseThrow();
+            keycloakService.resetPassword(userId);
 
-        secondGroupId = groups.stream()
-                .filter(g -> g.getName().equals(SECOND_GROUP_NAME))
-                .map(GroupRepresentation::getId)
-                .findFirst()
-                .orElseThrow();
+            assertThat(mailRecipients()).containsExactly(EMAIL);
+        }
+
+        @Test
+        void resetPassword_shouldThrowIdentityResourceNotFoundException_whenUserDoesNotExist() {
+            assertIdentityNotFound(() -> keycloakService.resetPassword(UNKNOWN_ID));
+        }
     }
 
-    @AfterEach
-    void cleanup() {
-        adminClient.realm(REALM).users().list()
-                .forEach(u -> adminClient.realm(REALM).users().delete(u.getId()));
-        adminClient.close();
+    private static void assertIdentityNotFound(ThrowingCallable call) {
+        assertThatThrownBy(call)
+                .isInstanceOfSatisfying(IdentityResourceNotFoundException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.NOT_FOUND));
     }
 
-    private IdentityUserCreateRequestDTO getCreateRequestDTO(
-            String username,
-            String email,
-            String firstName,
-            String lastName,
-            Boolean enabled,
-            Boolean emailVerified,
-            String password,
-            List<String> groupIds
-    ) {
-        IdentityUserCreateRequestDTO dto = new IdentityUserCreateRequestDTO();
-        dto.setUsername(username);
-        dto.setEmail(email);
-        dto.setFirstName(firstName);
-        dto.setLastName(lastName);
-        dto.setEnabled(enabled);
-        dto.setEmailVerified(emailVerified);
-        dto.setPassword(password);
-        dto.setGroupIds(groupIds);
-
-        return dto;
+    private static IdentityUserCreateRequestDTO createRequest(List<String> groupIds) {
+        return new IdentityUserCreateRequestDTO(USERNAME, EMAIL, "Mario", "Rossi", true, true, "pa55w0rd", groupIds);
     }
 
-    private IdentityUserUpdateRequestDTO getUpdateRequestDTO(
-            String username,
-            String email,
-            String firstName,
-            String lastName,
-            Boolean enabled,
-            List<String> groupIds
-    ) {
-        IdentityUserUpdateRequestDTO dto = new IdentityUserUpdateRequestDTO();
-        dto.setUsername(username);
-        dto.setEmail(email);
-        dto.setFirstName(firstName);
-        dto.setLastName(lastName);
-        dto.setEnabled(enabled);
-        dto.setGroupIds(groupIds);
-
-        return dto;
+    private static IdentityUserUpdateRequestDTO updateRequest(List<String> groupIds) {
+        return new IdentityUserUpdateRequestDTO("luigi.verdi", "luigi.verdi@test.com", "Luigi", "Verdi", false,
+                groupIds);
     }
-
 }

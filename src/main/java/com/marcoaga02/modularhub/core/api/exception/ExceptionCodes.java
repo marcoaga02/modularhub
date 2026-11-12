@@ -47,6 +47,7 @@ public final class ExceptionCodes {
         public static final String ERROR = "exception.identity-provider.error";
         public static final String NOT_FOUND = "exception.identity-provider.not-found";
         public static final String CONFLICT = "exception.identity-provider.conflict";
+        public static final String INVALID_REQUEST = "exception.identity-provider.invalid-request";
 
         private IdentityProvider() {
         }

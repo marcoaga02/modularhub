@@ -1,8 +1,10 @@
 package com.marcoaga02.modularhub.config;
 
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
+import com.marcoaga02.modularhub.core.spi.IdentityProviderService;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-@ActiveProfiles({"mock-identity", "test"})
-@Import(MockIdentityConfig.class)
-public abstract class BaseITWithMockIdentity extends BaseIT {}
+public abstract class BaseITWithMockIdentity extends BaseIT {
+
+    @MockitoBean
+    protected IdentityProviderService identityProvider;
+}

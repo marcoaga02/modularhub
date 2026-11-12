@@ -1,6 +1,5 @@
 package com.marcoaga02.modularhub.core.domain.service;
 
-import com.marcoaga02.modularhub.ModularhubApplication;
 import com.marcoaga02.modularhub.config.BaseITWithMockIdentity;
 import com.marcoaga02.modularhub.core.api.dto.LanguageResponseDTO;
 import com.marcoaga02.modularhub.core.domain.model.Language;
@@ -8,7 +7,6 @@ import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
@@ -16,7 +14,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(classes = ModularhubApplication.class)
 @Transactional
 class LanguageServiceIT extends BaseITWithMockIdentity {
 

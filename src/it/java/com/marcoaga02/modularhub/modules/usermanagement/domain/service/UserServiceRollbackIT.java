@@ -1,56 +1,25 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
+import com.marcoaga02.modularhub.config.BaseKeycloakIT;
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
-import com.marcoaga02.modularhub.config.BaseIT;
-import com.marcoaga02.modularhub.config.TestContainersImages;
 import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
-import dasniko.testcontainers.keycloak.KeycloakContainer;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.KeycloakBuilder;
-import org.keycloak.representations.idm.RealmRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.List;
-
+import static com.marcoaga02.modularhub.fixture.UserFixtures.language;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Testcontainers
-@ActiveProfiles("keycloak")
-class UserServiceRollbackIT extends BaseIT {
+class UserServiceRollbackIT extends BaseKeycloakIT {
 
-    private static final String REALM = "rollback-realm";
-
-    @Container
-    private static final KeycloakContainer keycloak =
-            new KeycloakContainer(TestContainersImages.KEYCLOAK)
-                    .withAdminUsername("admin")
-                    .withAdminPassword("admin");
-
-    @DynamicPropertySource
-    private static void properties(DynamicPropertyRegistry registry) {
-        registry.add("keycloak.server-url", keycloak::getAuthServerUrl);
-        registry.add("keycloak.realm", () -> REALM);
-        registry.add("keycloak.admin-username", () -> "admin");
-        registry.add("keycloak.admin-password", () -> "admin");
-        registry.add("keycloak.frontend-client-id", () -> "test-frontend-client");
-        registry.add("keycloak.app-url", () -> "http://localhost:4200");
-    }
+    private static final String TOO_LONG_TAX_ID = "X".repeat(300);
 
     @Autowired
     private UserService userService;
@@ -61,84 +30,48 @@ class UserServiceRollbackIT extends BaseIT {
     @Autowired
     private LanguageRepository languageRepository;
 
-    private Keycloak adminClient;
-
     private Language language;
-
-    @BeforeAll
-    static void setupRealm() {
-        try (Keycloak client = buildAdminClient()) {
-            RealmRepresentation realm = new RealmRepresentation();
-            realm.setRealm(REALM);
-            realm.setEnabled(true);
-            client.realms().create(realm);
-        }
-    }
 
     @BeforeEach
     void setUp() {
-        adminClient = buildAdminClient();
-
-        language = new Language();
-        language.setCode("it-IT");
-        language.setLabel("Italiano");
-        language.setIsDefault(true);
-        languageRepository.save(language);
+        language = languageRepository.save(language("it-IT", true));
     }
 
     @AfterEach
-    void cleanup() {
-        adminClient.realm(REALM).users().list()
-                .forEach(u -> adminClient.realm(REALM).users().delete(u.getId()));
-        adminClient.close();
-
+    void cleanUp() {
         userRepository.deleteAll();
         languageRepository.deleteAll();
     }
 
     @Test
     void createUser_shouldKeepIdentityUser_whenTransactionCommits() {
-        UserResponseDTO result = userService.createUser(buildUserCreateRequestDTO("committed.user", "TAX_ID"));
+        UserResponseDTO result = userService.createUser(createRequest("committed.user", "TAX"));
 
         assertThat(userRepository.findByUuidAndDeletedOnIsNull(result.getId())).isPresent();
-
-        List<UserRepresentation> identityUsers = adminClient.realm(REALM).users().search("committed.user", true);
-        assertThat(identityUsers).hasSize(1);
+        assertThat(realm().users().search("committed.user", true)).hasSize(1);
     }
 
     @Test
     void createUser_shouldDeleteIdentityUser_whenDatabaseSaveFails() {
-        UserCreateRequestDTO dto = buildUserCreateRequestDTO("rolledback.user", "X".repeat(300));
+        UserCreateRequestDTO request = createRequest("rolledback.user", TOO_LONG_TAX_ID);
 
-        assertThatThrownBy(() -> userService.createUser(dto))
+        assertThatThrownBy(() -> userService.createUser(request))
                 .isInstanceOf(DataIntegrityViolationException.class);
 
         assertThat(userRepository.findAll()).isEmpty();
-        assertThat(adminClient.realm(REALM).users().search("rolledback.user", true)).isEmpty();
+        assertThat(realm().users().search("rolledback.user", true)).isEmpty();
     }
 
-    private UserCreateRequestDTO buildUserCreateRequestDTO(String username, String taxIdNumber) {
-        UserCreateRequestDTO dto = new UserCreateRequestDTO();
-        dto.setFirstname("Mario");
-        dto.setLastname("Rossi");
-        dto.setGender(GenderDTO.M);
-        dto.setLanguageId(language.getUuid());
-        dto.setMobileNumber("0000");
-        dto.setTaxIdNumber(taxIdNumber);
-        dto.setEmail(username + "@example.com");
-        dto.setUsername(username);
-        dto.setPassword("pa55w0rd");
-        dto.setEnabled(true);
-        return dto;
-    }
-
-    private static Keycloak buildAdminClient() {
-        return KeycloakBuilder.builder()
-                .serverUrl(keycloak.getAuthServerUrl())
-                .realm("master")
-                .clientId("admin-cli")
-                .username("admin")
-                .password("admin")
-                .build();
+    private UserCreateRequestDTO createRequest(String username, String taxIdNumber) {
+        return new UserCreateRequestDTO()
+                .firstname("Mario")
+                .lastname("Rossi")
+                .gender(GenderDTO.M)
+                .languageId(language.getUuid())
+                .taxIdNumber(taxIdNumber)
+                .email(username + "@test.com")
+                .username(username)
+                .password("pa55w0rd")
+                .enabled(true);
     }
 }

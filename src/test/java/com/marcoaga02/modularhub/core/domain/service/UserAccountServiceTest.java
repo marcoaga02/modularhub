@@ -11,28 +11,46 @@ import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.model.User;
 import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.marcoaga02.modularhub.core.infrastructure.keycloak.KeycloakClaims;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.jwt.Jwt;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.marcoaga02.modularhub.fixture.SecurityFixtures.jwt;
+import static com.marcoaga02.modularhub.fixture.UserFixtures.language;
+import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserAccountServiceTest {
 
-    private static final String IDENTITY_ID = "identity-123";
+    private static final String IDENTITY_ID = "identity-id";
+    private static final String USERNAME = "mario.rossi";
+    private static final String EMAIL = "mario@test.com";
+    private static final String FIRST_NAME = "Mario";
+    private static final String LAST_NAME = "Rossi";
+    private static final String LANGUAGE_ID = "language-id";
+
+    private static final Jwt JWT = jwt(IDENTITY_ID, Map.of(
+            KeycloakClaims.USERNAME, USERNAME,
+            KeycloakClaims.EMAIL, EMAIL,
+            KeycloakClaims.FIRST_NAME, FIRST_NAME,
+            KeycloakClaims.LAST_NAME, LAST_NAME
+    ));
 
     @Mock
     private UserRepository userRepository;
@@ -46,100 +64,67 @@ class UserAccountServiceTest {
     @InjectMocks
     private UserAccountService userAccountService;
 
-    private Jwt jwt;
-
-    private Language defaultLanguage;
-
-    @BeforeEach
-    void setUp() {
-        jwt = new Jwt(
-                "token",
-                Instant.now(),
-                Instant.now().plusSeconds(300),
-                Map.of("alg", "RS256"),
-                Map.of(
-                        "sub", IDENTITY_ID,
-                        "preferred_username", "mario.rossi",
-                        "email", "mario@test.com",
-                        "given_name", "Mario",
-                        "family_name", "Rossi"
-                )
-        );
-
-        defaultLanguage = new Language();
-        defaultLanguage.setCode("it-IT");
-        defaultLanguage.setIsDefault(true);
-    }
-
     @Nested
     class SyncUser {
 
         @Test
-        void syncUser_shouldCreateUserWithDefaultLanguage_whenUserNotExists() {
+        void syncUser_shouldCreateEnabledUserWithDefaultLanguageAndTokenClaims_whenUserDoesNotExist() {
+            Language defaultLanguage = language("it-IT", true);
             when(userRepository.findByIdentityId(IDENTITY_ID)).thenReturn(Optional.empty());
             when(languageRepository.findByIsDefaultTrue()).thenReturn(Optional.of(defaultLanguage));
-            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            User result = userAccountService.syncUser(jwt);
+            User result = userAccountService.syncUser(JWT);
 
-            assertThat(result.getIdentityId()).isEqualTo(IDENTITY_ID);
-            assertThat(result.getUsername()).isEqualTo("mario.rossi");
-            assertThat(result.getEmail()).isEqualTo("mario@test.com");
-            assertThat(result.getFirstname()).isEqualTo("Mario");
-            assertThat(result.getLastname()).isEqualTo("Rossi");
-            assertThat(result.getEnabled()).isTrue();
-            assertThat(result.getPreferences()).isNotNull();
+            ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).save(saved.capture());
+            assertThat(result).isSameAs(saved.getValue());
+            assertClaimsCopied(result);
+            assertThat(result)
+                    .extracting(User::getIdentityId, User::getEnabled)
+                    .containsExactly(IDENTITY_ID, true);
             assertThat(result.getPreferences().getLanguage()).isSameAs(defaultLanguage);
-
-            verify(userRepository).save(result);
         }
+
         @Test
-        void syncUser_shouldUpdateClaimsAndKeepData_whenUserExists() {
-            AccountPreferences preferences = new AccountPreferences();
-            Language language = new Language();
-            preferences.setLanguage(language);
-
-            User existing = new User();
-            existing.setIdentityId(IDENTITY_ID);
-            existing.setUsername("old.username");
-            existing.setEmail("old@test.com");
-            existing.setFirstname("Old");
-            existing.setLastname("Name");
+        void syncUser_shouldRefreshClaimsAndKeepOtherData_whenUserExists() {
+            Language language = language("en-US", false);
+            User existing = user("existing", language);
             existing.setEnabled(false);
-            existing.setTaxIdNumber("TAX");
-            existing.setPreferences(preferences);
-
+            AccountPreferences preferences = existing.getPreferences();
             when(userRepository.findByIdentityId(IDENTITY_ID)).thenReturn(Optional.of(existing));
             when(userRepository.save(existing)).thenReturn(existing);
 
-            User result = userAccountService.syncUser(jwt);
+            User result = userAccountService.syncUser(JWT);
 
             assertThat(result).isSameAs(existing);
-            assertThat(result.getUsername()).isEqualTo("mario.rossi");
-            assertThat(result.getEmail()).isEqualTo("mario@test.com");
-            assertThat(result.getFirstname()).isEqualTo("Mario");
-            assertThat(result.getLastname()).isEqualTo("Rossi");
-            assertThat(result.getEnabled()).isFalse();
-            assertThat(result.getTaxIdNumber()).isEqualTo("TAX");
-            assertThat(result.getPreferences()).isSameAs(preferences);
-            assertThat(result.getPreferences().getLanguage()).isSameAs(language);
-
-            verify(languageRepository, never()).findByIsDefaultTrue();
+            assertClaimsCopied(result);
+            assertThat(result)
+                    .extracting(User::getEnabled, User::getTaxIdNumber, User::getPreferences)
+                    .containsExactly(false, "TAX-existing", preferences);
+            assertThat(preferences.getLanguage()).isSameAs(language);
+            verify(userRepository).save(existing);
+            verifyNoInteractions(languageRepository);
         }
+
         @Test
-        void syncUser_shouldThrowInternalStateException_whenNoDefaultLanguage() {
+        void syncUser_shouldThrowInternalStateException_whenUserDoesNotExistAndNoDefaultLanguage() {
             when(userRepository.findByIdentityId(IDENTITY_ID)).thenReturn(Optional.empty());
             when(languageRepository.findByIsDefaultTrue()).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> userAccountService.syncUser(jwt))
-                    .isInstanceOf(InternalStateException.class)
-                    .satisfies(e -> {
-                        InternalStateException ex = (InternalStateException) e;
+            assertThatThrownBy(() -> userAccountService.syncUser(JWT))
+                    .isInstanceOfSatisfying(InternalStateException.class, ex -> {
                         assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
-                        assertThat(ex.getMessage()).isEqualTo("No default language configured");
+                        assertThat(ex).hasMessage("No default language configured");
                     });
 
             verify(userRepository, never()).save(any());
+        }
+
+        private static void assertClaimsCopied(User user) {
+            assertThat(user)
+                    .extracting(User::getUsername, User::getEmail, User::getFirstname, User::getLastname)
+                    .containsExactly(USERNAME, EMAIL, FIRST_NAME, LAST_NAME);
         }
     }
 
@@ -147,43 +132,45 @@ class UserAccountServiceTest {
     class UpdatePreferences {
 
         @Test
-        void updatePreferences_shouldUpdateLanguage_whenLanguageExists() {
-            User existing = new User();
-            existing.setIdentityId(IDENTITY_ID);
-            existing.setPreferences(new AccountPreferences());
-
-            Language newLanguage = new Language();
-            AccountPreferencesResponseDTO expected = new AccountPreferencesResponseDTO();
-
+        void updatePreferences_shouldSyncUserAndSetRequestedLanguage_whenLanguageExists() {
+            User existing = user("existing", language("en-US", false));
+            Language newLanguage = language("it-IT", true);
+            AccountPreferencesResponseDTO response = new AccountPreferencesResponseDTO();
             when(userRepository.findByIdentityId(IDENTITY_ID)).thenReturn(Optional.of(existing));
             when(userRepository.save(existing)).thenReturn(existing);
-            when(languageRepository.findByUuid("lang-id")).thenReturn(Optional.of(newLanguage));
-            when(accountPreferencesMapper.toDto(existing.getPreferences())).thenReturn(expected);
+            when(languageRepository.findByUuid(LANGUAGE_ID)).thenReturn(Optional.of(newLanguage));
+            when(accountPreferencesMapper.toDto(existing.getPreferences())).thenReturn(response);
 
-            AccountPreferencesResponseDTO result =
-                    userAccountService.updatePreferences(jwt, new AccountPreferencesUpdateDTO().languageId("lang-id"));
+            AccountPreferencesResponseDTO result = userAccountService.updatePreferences(JWT, updateRequest());
 
-            assertThat(result).isSameAs(expected);
+            assertThat(result).isSameAs(response);
             assertThat(existing.getPreferences().getLanguage()).isSameAs(newLanguage);
+            assertThat(existing.getUsername()).isEqualTo(USERNAME);
+            verify(userRepository).save(existing);
+            verify(accountPreferencesMapper).toDto(existing.getPreferences());
         }
-        @Test
-        void updatePreferences_shouldThrowLanguageNotFoundException_whenLanguageNotExists() {
-            User existing = new User();
-            existing.setIdentityId(IDENTITY_ID);
-            existing.setPreferences(new AccountPreferences());
 
+        @Test
+        void updatePreferences_shouldThrowLanguageNotFoundException_whenLanguageDoesNotExist() {
+            Language currentLanguage = language("en-US", false);
+            User existing = user("existing", currentLanguage);
             when(userRepository.findByIdentityId(IDENTITY_ID)).thenReturn(Optional.of(existing));
             when(userRepository.save(existing)).thenReturn(existing);
-            when(languageRepository.findByUuid("missing")).thenReturn(Optional.empty());
+            when(languageRepository.findByUuid(LANGUAGE_ID)).thenReturn(Optional.empty());
+            AccountPreferencesUpdateDTO request = updateRequest();
 
-            AccountPreferencesUpdateDTO dto = new AccountPreferencesUpdateDTO().languageId("missing");
+            assertThatThrownBy(() -> userAccountService.updatePreferences(JWT, request))
+                    .isInstanceOfSatisfying(LanguageNotFoundException.class, ex -> {
+                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND);
+                        assertThat(ex).hasMessage("Language not found: " + LANGUAGE_ID);
+                    });
 
-            assertThatThrownBy(() -> userAccountService.updatePreferences(jwt, dto))
-                    .isInstanceOf(LanguageNotFoundException.class)
-                    .satisfies(e -> assertThat(((LanguageNotFoundException) e).getErrorCode())
-                            .isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND));
-
+            assertThat(existing.getPreferences().getLanguage()).isSameAs(currentLanguage);
             verifyNoInteractions(accountPreferencesMapper);
+        }
+
+        private static AccountPreferencesUpdateDTO updateRequest() {
+            return new AccountPreferencesUpdateDTO().languageId(LANGUAGE_ID);
         }
     }
 
@@ -196,21 +183,26 @@ class UserAccountServiceTest {
 
             verifyNoInteractions(userRepository);
         }
+
         @Test
-        void resolveFullName_shouldReturnEmpty_whenUserNotFound() {
+        void resolveFullName_shouldReturnEmpty_whenUserIsNotFound() {
             when(userRepository.findByIdentityId(IDENTITY_ID)).thenReturn(Optional.empty());
 
             assertThat(userAccountService.resolveFullName(IDENTITY_ID)).isEmpty();
-        }
-        @Test
-        void resolveFullName_shouldReturnFullName_whenUserFound() {
-            User user = new User();
-            user.setFirstname("Mario");
-            user.setLastname("Rossi");
 
+            verify(userRepository).findByIdentityId(IDENTITY_ID);
+        }
+
+        @Test
+        void resolveFullName_shouldReturnFirstnameAndLastname_whenUserIsFound() {
+            User user = new User();
+            user.setFirstname(FIRST_NAME);
+            user.setLastname(LAST_NAME);
             when(userRepository.findByIdentityId(IDENTITY_ID)).thenReturn(Optional.of(user));
 
             assertThat(userAccountService.resolveFullName(IDENTITY_ID)).isEqualTo("Mario Rossi");
+
+            verify(userRepository).findByIdentityId(IDENTITY_ID);
         }
     }
 }

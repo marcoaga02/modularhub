@@ -7,6 +7,7 @@ import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.api.exception.ApplicationException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityProviderUnavailableException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityConflictException;
+import com.marcoaga02.modularhub.core.api.exception.identity.IdentityInvalidRequestException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityResourceNotFoundException;
 import com.marcoaga02.modularhub.core.spi.IdentityProviderService;
 import jakarta.ws.rs.ProcessingException;
@@ -216,6 +217,7 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
 
     private ApplicationException toApplicationException(int status, String message, Throwable cause) {
         return switch (status) {
+            case 400 -> new IdentityInvalidRequestException(message, cause);
             case 404 -> new IdentityResourceNotFoundException(message, cause);
             case 409 -> new IdentityConflictException(message, cause);
             default -> new IdentityProviderUnavailableException(message, cause);

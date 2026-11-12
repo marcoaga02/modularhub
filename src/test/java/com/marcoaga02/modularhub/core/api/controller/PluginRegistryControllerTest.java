@@ -2,12 +2,13 @@ package com.marcoaga02.modularhub.core.api.controller;
 
 import com.marcoaga02.modularhub.core.api.dto.PluginDTO;
 import com.marcoaga02.modularhub.core.domain.service.PluginRegistryService;
+import com.marcoaga02.modularhub.config.BaseControllerTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.List;
 
@@ -18,10 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PluginRegistryController.class)
-class PluginRegistryControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
+class PluginRegistryControllerTest extends BaseControllerTest {
 
     @MockitoBean
     private PluginRegistryService pluginRegistryService;
@@ -35,7 +33,7 @@ class PluginRegistryControllerTest {
                 .icon("pi pi-users");
         when(pluginRegistryService.getAuthorizedPlugins()).thenReturn(List.of(plugin));
 
-        mockMvc.perform(get("/plugins"))
+        perform(get("/plugins"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.length()").value(1))
@@ -49,8 +47,12 @@ class PluginRegistryControllerTest {
     void getAuthorizedPlugins_shouldReturnOkWithEmptyList_whenNoPluginIsAuthorized() throws Exception {
         when(pluginRegistryService.getAuthorizedPlugins()).thenReturn(List.of());
 
-        mockMvc.perform(get("/plugins"))
+        perform(get("/plugins"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    private ResultActions perform(MockHttpServletRequestBuilder request) throws Exception {
+        return performWithRoles(request);
     }
 }

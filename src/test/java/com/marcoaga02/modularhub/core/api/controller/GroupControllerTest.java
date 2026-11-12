@@ -2,12 +2,13 @@ package com.marcoaga02.modularhub.core.api.controller;
 
 import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.domain.service.GroupService;
+import com.marcoaga02.modularhub.config.BaseControllerTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.Collections;
 import java.util.List;
@@ -17,10 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(GroupController.class)
-class GroupControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
+class GroupControllerTest extends BaseControllerTest {
 
     @MockitoBean
     private GroupService groupService;
@@ -29,7 +27,7 @@ class GroupControllerTest {
     void getAllGroups_shouldReturnOkWithEmptyList_whenNoGroupIsPresent() throws Exception {
         when(groupService.getAllGroups()).thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/groups"))
+        perform(get("/groups"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.length()").value(0));
@@ -44,7 +42,7 @@ class GroupControllerTest {
 
         when(groupService.getAllGroups()).thenReturn(groups);
 
-        mockMvc.perform(get("/groups"))
+        perform(get("/groups"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.length()").value(2))
@@ -54,4 +52,7 @@ class GroupControllerTest {
                 .andExpect(jsonPath("$[1].name").value("User"));
     }
 
+    private ResultActions perform(MockHttpServletRequestBuilder request) throws Exception {
+        return performWithRoles(request);
+    }
 }

@@ -18,7 +18,8 @@
     "identity-provider": {
       "error": "Errore del provider dell'identità: riprovare più tardi",
       "not-found": "Elemento non trovato sul provider dell'identità",
-      "conflict": "Il provider dell'identità contiene già un elemento con gli stessi dati"
+      "conflict": "Il provider dell'identità contiene già un elemento con gli stessi dati",
+      "invalid-request": "Richiesta rifiutata dal provider dell'identità: verificare i dati inseriti (es. i requisiti della password)"
     },
     "internal": {
       "error": "Errore interno al server: riprovare più tardi"

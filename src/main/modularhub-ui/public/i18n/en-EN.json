@@ -18,7 +18,8 @@
     "identity-provider": {
       "error": "Identity provider error: please try again later",
       "not-found": "Item not found on the identity provider",
-      "conflict": "The identity provider already contains an item with the same data"
+      "conflict": "The identity provider already contains an item with the same data",
+      "invalid-request": "Request rejected by the identity provider: check the entered data (e.g. the password requirements)"
     },
     "internal": {
       "error": "Internal server error: please try again later"

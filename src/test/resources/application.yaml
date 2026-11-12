@@ -10,3 +10,8 @@ spring:
       hibernate:
         type:
           preferred_enum_jdbc_type: VARCHAR
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost/jwks-not-used-in-tests
