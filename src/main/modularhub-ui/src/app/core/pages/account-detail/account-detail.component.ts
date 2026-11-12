@@ -2,7 +2,7 @@ import {Component, inject, signal} from '@angular/core';
 import {AccountService} from 'app/core/api/services/account.service';
 import {first, forkJoin, retry} from 'rxjs';
 import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
-import {Account} from 'app/core/api/models/account';
+import {Account} from 'app/core/api/generated';
 import {ProgressSpinner} from 'primeng/progressspinner';
 import {UpperCasePipe} from '@angular/common';
 import {TranslatePipe, TranslateService} from '@ngx-translate/core';
@@ -11,7 +11,7 @@ import {LanguageService} from 'app/modules/user-management/api/services/language
 import {FormBuilder, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Select} from 'primeng/select';
 import {Button} from 'primeng/button';
-import {AccountPreferencesRequest} from 'app/core/api/models/account-preferences';
+import {AccountPreferencesUpdate} from 'app/core/api/generated';
 import {MessageService} from 'primeng/api';
 
 type LanguageWithValue = {
@@ -106,7 +106,7 @@ export class AccountDetailComponent {
 
   protected onSaveClick() {
     const formValues = this.preferencesForm.getRawValue();
-    let preferences: AccountPreferencesRequest = {
+    let preferences: AccountPreferencesUpdate = {
       languageId: formValues.language!
     };
 

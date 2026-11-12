@@ -37,4 +37,18 @@ describe('UserCriteria', () => {
 
     expect(params.has('text')).toBe(false);
   });
+
+  it('should expose page and size computed from offset and limit', () => {
+    const criteria = new UserCriteria(40, 20);
+
+    expect(criteria.page).toBe(2);
+    expect(criteria.size).toBe(20);
+  });
+
+  it('should expose undefined page and size when limit is zero', () => {
+    const criteria = new UserCriteria(0, 0);
+
+    expect(criteria.page).toBeUndefined();
+    expect(criteria.size).toBeUndefined();
+  });
 });

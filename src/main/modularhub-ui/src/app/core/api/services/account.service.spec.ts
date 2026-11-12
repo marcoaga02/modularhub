@@ -1,7 +1,7 @@
 import {TestBed} from '@angular/core/testing';
 
 import {AccountService} from 'app/core/api/services/account.service';
-import {HttpClient} from '@angular/common/http';
+import {AccountApiService} from 'app/core/api/generated';
 import {TranslateService} from '@ngx-translate/core';
 import {OAuthService} from 'angular-oauth2-oidc';
 
@@ -13,7 +13,7 @@ describe('AccountService', () => {
       providers: [
         AccountService,
         { provide: TranslateService, useValue: {} },
-        { provide: HttpClient, useValue: {} },
+        { provide: AccountApiService, useValue: {} },
         { provide: OAuthService, useValue: {} },
       ]
     });

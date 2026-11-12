@@ -50,10 +50,9 @@ class AccountServiceTest {
         Jwt jwt = mockAuthentication(Map.of("sub", "uuid-123"), List.of("ROLE"));
 
         User user = new User();
-        AccountDTO accountDTO = AccountDTO.builder()
+        AccountDTO accountDTO = new AccountDTO()
                 .identityId("uuid-123")
-                .username("mario.rossi")
-                .build();
+                .username("mario.rossi");
 
         when(userAccountService.syncUser(jwt)).thenReturn(user);
         when(accountMapper.toDto(user)).thenReturn(accountDTO);

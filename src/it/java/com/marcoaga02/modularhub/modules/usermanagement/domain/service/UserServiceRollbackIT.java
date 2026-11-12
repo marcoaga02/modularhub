@@ -1,12 +1,12 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
+import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
 import com.marcoaga02.modularhub.config.BaseIT;
 import com.marcoaga02.modularhub.config.TestContainersImages;
-import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
-import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import org.junit.jupiter.api.AfterEach;
@@ -98,7 +98,7 @@ class UserServiceRollbackIT extends BaseIT {
 
     @Test
     void createUser_shouldKeepIdentityUser_whenTransactionCommits() {
-        UserResponseDTO result = userService.createUser(buildUserRequestDTO("committed.user", "TAX_ID"));
+        UserResponseDTO result = userService.createUser(buildUserCreateRequestDTO("committed.user", "TAX_ID"));
 
         assertThat(userRepository.findByUuidAndDeletedOnIsNull(result.getId())).isPresent();
 
@@ -108,7 +108,7 @@ class UserServiceRollbackIT extends BaseIT {
 
     @Test
     void createUser_shouldDeleteIdentityUser_whenDatabaseSaveFails() {
-        UserRequestDTO dto = buildUserRequestDTO("rolledback.user", "X".repeat(300));
+        UserCreateRequestDTO dto = buildUserCreateRequestDTO("rolledback.user", "X".repeat(300));
 
         assertThatThrownBy(() -> userService.createUser(dto))
                 .isInstanceOf(DataIntegrityViolationException.class);
@@ -117,11 +117,11 @@ class UserServiceRollbackIT extends BaseIT {
         assertThat(adminClient.realm(REALM).users().search("rolledback.user", true)).isEmpty();
     }
 
-    private UserRequestDTO buildUserRequestDTO(String username, String taxIdNumber) {
-        UserRequestDTO dto = new UserRequestDTO();
+    private UserCreateRequestDTO buildUserCreateRequestDTO(String username, String taxIdNumber) {
+        UserCreateRequestDTO dto = new UserCreateRequestDTO();
         dto.setFirstname("Mario");
         dto.setLastname("Rossi");
-        dto.setGender(Gender.M);
+        dto.setGender(GenderDTO.M);
         dto.setLanguageId(language.getUuid());
         dto.setMobileNumber("0000");
         dto.setTaxIdNumber(taxIdNumber);

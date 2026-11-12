@@ -2,7 +2,7 @@ import {Component, inject, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {UUID} from 'app/core/api/models/uuid';
 import {AccountService} from 'app/core/api/services/account.service';
-import {Account} from 'app/core/api/models/account';
+import {Account} from 'app/core/api/generated';
 import {first, forkJoin, Observable, retry} from 'rxjs';
 import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
 import {Select} from 'primeng/select';

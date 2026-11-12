@@ -3,7 +3,7 @@ import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 import {InputText} from 'primeng/inputtext';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Checkbox} from 'primeng/checkbox';
-import {Gender} from 'app/core/api/models/gender';
+import {Gender} from 'app/core/api/generated';
 import {RadioButton} from 'primeng/radiobutton';
 import {LanguageService} from 'app/modules/user-management/api/services/language.service';
 import {BehaviorSubject, forkJoin, retry, Subject} from 'rxjs';
@@ -15,13 +15,13 @@ import {
 } from 'app/modules/user-management/pages/user-form/user-form-footer/user-form-footer.component';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ConfirmationService, MessageService} from 'primeng/api';
-import {User, UserRequest} from 'app/modules/user-management/api/models/user';
+import {UserCreateRequest, UserResponse, UserUpdateRequest} from 'app/modules/user-management/api/generated';
 import {UserService} from 'app/modules/user-management/api/services/user.service';
 import {Password} from 'primeng/password';
 import {NgClass} from '@angular/common';
 import {GroupSelectorComponent} from 'app/modules/user-management/pages/group-selector/group-selector.component';
 import {GroupService} from 'app/modules/user-management/api/services/group.service';
-import {Group} from 'app/core/api/models/group';
+import {IdentityGroup} from 'app/core/api/generated';
 import {DialogFooterComponent} from 'app/core/components/dialog-footer/dialog-footer.component';
 import {UUID} from 'app/core/api/models/uuid';
 import {Button} from 'primeng/button';
@@ -68,13 +68,13 @@ export class UserFormComponent {
   });
 
   protected loading = signal(true);
-  protected userEdited?: User;
+  protected userEdited?: UserResponse;
 
   protected languages: LanguageWithValue[] = [];
-  private groups: Group[] = [];
+  private groups: IdentityGroup[] = [];
 
   constructor(
-    private readonly config: DynamicDialogConfig<UserFormFooterConfig & {userId?: string}>,
+    private readonly config: DynamicDialogConfig<UserFormFooterConfig & {userId?: UUID}>,
     private readonly ref: DynamicDialogRef,
     private readonly confirmationService: ConfirmationService,
     private readonly translateService: TranslateService,
@@ -173,7 +173,7 @@ export class UserFormComponent {
     }
 
     const formValues = this.userForm.getRawValue();
-    const userReq: UserRequest = {
+    const userReq: UserUpdateRequest = {
       firstname: formValues.firstname,
       lastname: formValues.lastname,
       gender: formValues.gender!,
@@ -182,13 +182,12 @@ export class UserFormComponent {
       taxIdNumber: formValues.taxIdNumber,
       email: formValues.email,
       username: formValues.username,
-      password: formValues.password,
       groupIds: formValues.groupsIds,
       enabled: formValues.enabled,
     }
 
     if (this.userEdited) {
-      this.userService.updateUser(this.userEdited.id!, userReq).subscribe({
+      this.userService.updateUser(this.userEdited.id, userReq).subscribe({
         next: user => {
           this.ref.close(user);
         },
@@ -196,7 +195,8 @@ export class UserFormComponent {
         }
       });
     } else {
-      this.userService.createUser(userReq).subscribe({
+      const createReq: UserCreateRequest = {...userReq, password: formValues.password};
+      this.userService.createUser(createReq).subscribe({
         next: user => {
           this.ref.close(user);
         },
@@ -254,7 +254,7 @@ export class UserFormComponent {
     });
   }
 
-  private initForm(user: User) {
+  private initForm(user: UserResponse) {
     this.userForm.patchValue({
       firstname: user.firstname,
       lastname: user.lastname,

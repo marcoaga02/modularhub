@@ -38,12 +38,20 @@ export abstract class PagedCriteria extends Criteria {
     this.sort = sort;
   }
 
+  get page(): number | undefined {
+    return this.limit ? Math.floor((this.offset ?? 0) / this.limit) : undefined;
+  }
+
+  get size(): number | undefined {
+    return this.limit || undefined;
+  }
+
   public override toParams(): HttpParams {
     let params = super.toParams();
 
-    if (this.limit) {
-      params = params.append('page', String(Math.floor((this.offset ?? 0) / this.limit)));
-      params = params.append('size', String(this.limit));
+    if (this.page !== undefined && this.size !== undefined) {
+      params = params.append('page', String(this.page));
+      params = params.append('size', String(this.size));
     }
 
     if (this.sort) {

@@ -1,5 +1,6 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
+import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
 import com.marcoaga02.modularhub.ModularhubApplication;
 import com.marcoaga02.modularhub.config.BaseITWithMockIdentity;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
@@ -16,7 +17,8 @@ import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
-import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserManagementExceptionCodes;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserAlreadyExistsException;
@@ -238,7 +240,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @Test
     void createUser_shouldCreateAndReturnDTO_whenValid() {
-        UserRequestDTO dto = buildUserRequestDTO(lang1.getUuid(), "NEW_TAX_ID");
+        UserCreateRequestDTO dto = buildUserCreateRequestDTO(lang1.getUuid(), "NEW_TAX_ID");
 
         UserResponseDTO result = userService.createUser(dto);
         assertThat(result).isNotNull();
@@ -255,7 +257,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @Test
     void createUser_shouldThrowLanguageNotFoundException_whenInvalidLanguageId() {
-        UserRequestDTO dto = buildUserRequestDTO("NON-EXIST-LANG", "NEW_TAX_ID");
+        UserCreateRequestDTO dto = buildUserCreateRequestDTO("NON-EXIST-LANG", "NEW_TAX_ID");
 
         assertThatThrownBy(() -> userService.createUser(dto))
                 .isInstanceOf(LanguageNotFoundException.class)
@@ -269,7 +271,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @Test
     void createUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
-        UserRequestDTO dto = buildUserRequestDTO(lang1.getUuid(), TAX_ID_NUMBER);
+        UserCreateRequestDTO dto = buildUserCreateRequestDTO(lang1.getUuid(), TAX_ID_NUMBER);
 
         assertThatThrownBy(() -> userService.createUser(dto))
                 .isInstanceOf(UserAlreadyExistsException.class)
@@ -283,7 +285,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @Test
     void updateUser_shouldUpdateAndReturnDTO_whenValidRequest() {
-        UserRequestDTO dto = buildUserRequestDTO(lang2.getUuid(), enabledUser.getTaxIdNumber());
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang2.getUuid(), enabledUser.getTaxIdNumber());
 
         UserResponseDTO result = userService.updateUser(enabledUser.getUuid(), dto);
 
@@ -291,7 +293,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
         assertThat(result.getId()).isEqualTo(enabledUser.getUuid());
         assertThat(result.getFirstname()).isEqualTo("new firstname");
         assertThat(result.getLastname()).isEqualTo("new lastname");
-        assertThat(result.getGender()).isEqualTo(Gender.F.name());
+        assertThat(result.getGender()).isEqualTo(GenderDTO.F);
         assertThat(result.getMobileNumber()).isEqualTo("9999");
         assertThat(result.getTaxIdNumber()).isEqualTo(enabledUser.getTaxIdNumber());
         assertThat(result.getEmail()).isEqualTo("new@email.com");
@@ -301,7 +303,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @Test
     void updateUser_shouldUpdateAndReturnDTO_whenTaxIdNumberChangedAndNotExists() {
-        UserRequestDTO dto = buildUserRequestDTO(lang1.getUuid(), "TAX_ID_NEW");
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang1.getUuid(), "TAX_ID_NEW");
 
         UserResponseDTO result = userService.updateUser(enabledUser.getUuid(), dto);
 
@@ -312,7 +314,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @Test
     void updateUser_shouldThrowNotFoundException_whenUserNotFound() {
-        UserRequestDTO dto = buildUserRequestDTO(lang1.getUuid(), "TAX_ID_NEW");
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang1.getUuid(), "TAX_ID_NEW");
 
         assertThatThrownBy(() -> userService.updateUser("non-existing-uuid", dto))
                 .isInstanceOf(UserNotFoundException.class)
@@ -326,7 +328,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @Test
     void updateUser_shouldThrowLanguageNotFoundException_whenInvalidLanguage() {
-        UserRequestDTO dto = buildUserRequestDTO("NON-EXIST-LANG", enabledUser.getTaxIdNumber());
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO("NON-EXIST-LANG", enabledUser.getTaxIdNumber());
 
         assertThatThrownBy(() -> userService.updateUser(enabledUser.getUuid(), dto))
                 .isInstanceOf(LanguageNotFoundException.class)
@@ -340,7 +342,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @Test
     void updateUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
-        UserRequestDTO dto = buildUserRequestDTO(lang1.getUuid(), anotherUser.getTaxIdNumber());
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang1.getUuid(), anotherUser.getTaxIdNumber());
 
         assertThatThrownBy(() -> userService.updateUser(enabledUser.getUuid(), dto))
                 .isInstanceOf(UserAlreadyExistsException.class)
@@ -441,17 +443,31 @@ class UserServiceIT extends BaseITWithMockIdentity {
         return language;
     }
 
-    private UserRequestDTO buildUserRequestDTO(String languageId, String taxIdNumber) {
-        UserRequestDTO dto = new UserRequestDTO();
+    private UserCreateRequestDTO buildUserCreateRequestDTO(String languageId, String taxIdNumber) {
+        UserCreateRequestDTO dto = new UserCreateRequestDTO();
         dto.setFirstname("new firstname");
         dto.setLastname("new lastname");
-        dto.setGender(Gender.F);
+        dto.setGender(GenderDTO.F);
         dto.setLanguageId(languageId);
         dto.setMobileNumber("9999");
         dto.setTaxIdNumber(taxIdNumber);
         dto.setEmail("new@email.com");
         dto.setUsername("new username");
         dto.setPassword("newpassword");
+        dto.setEnabled(false);
+        return dto;
+    }
+
+    private UserUpdateRequestDTO buildUserUpdateRequestDTO(String languageId, String taxIdNumber) {
+        UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
+        dto.setFirstname("new firstname");
+        dto.setLastname("new lastname");
+        dto.setGender(GenderDTO.F);
+        dto.setLanguageId(languageId);
+        dto.setMobileNumber("9999");
+        dto.setTaxIdNumber(taxIdNumber);
+        dto.setEmail("new@email.com");
+        dto.setUsername("new username");
         dto.setEnabled(false);
         return dto;
     }

@@ -1,9 +1,12 @@
 import {Injectable} from '@angular/core';
-import {User, UserRequest} from 'app/modules/user-management/api/models/user';
-import {HttpClient} from '@angular/common/http';
-import {UserCriteria} from 'app/modules/user-management/api/user-criteria';
-import {environment} from 'environments/environment';
 import {forkJoin} from 'rxjs';
+import {UserCriteria} from 'app/modules/user-management/api/user-criteria';
+import {
+  UserApiService,
+  UserCreateRequest,
+  UserResponse,
+  UserUpdateRequest
+} from 'app/modules/user-management/api/generated';
 import {UUID} from 'app/core/api/models/uuid';
 
 @Injectable({
@@ -11,41 +14,35 @@ import {UUID} from 'app/core/api/models/uuid';
 })
 export class UserService {
 
-  private readonly resourceUrl: string;
-
-  constructor(private readonly http: HttpClient) {
-    this.resourceUrl = `${environment.apiUrl}/users`;
-  }
+  constructor(private readonly userApi: UserApiService) {}
 
   getUsers(criteria: UserCriteria) {
-    const params = criteria.toParams();
-    return this.http.get<User[]>(`${this.resourceUrl}`, {
-      params,
-      observe: 'response'
-    });
-  }
-
-  getUserById(id: string) {
-    return this.http.get<User>(`${this.resourceUrl}/${id}`);
-  }
-
-  createUser(user: UserRequest) {
-    return this.http.post<User>(`${this.resourceUrl}`, user);
-  }
-
-  updateUser(id: string, user: UserRequest) {
-    return this.http.put<User>(`${this.resourceUrl}/${id}`, user);
-  }
-
-  deleteUsers(usersToDelete: User[]) {
-    const deleteObservables = usersToDelete.map(u =>
-      this.http.delete<User>(`${this.resourceUrl}/${u.id}`)
+    return this.userApi.getAllUsers(
+      criteria.filter.text,
+      criteria.page,
+      criteria.size,
+      criteria.sort ? [criteria.sort] : undefined,
+      'response'
     );
+  }
 
-    return forkJoin(deleteObservables);
+  getUserById(id: UUID) {
+    return this.userApi.getUserByUuid(id);
+  }
+
+  createUser(user: UserCreateRequest) {
+    return this.userApi.createUser(user);
+  }
+
+  updateUser(id: UUID, user: UserUpdateRequest) {
+    return this.userApi.updateUser(id, user);
+  }
+
+  deleteUsers(usersToDelete: UserResponse[]) {
+    return forkJoin(usersToDelete.map(u => this.userApi.deleteUserByUuid(u.id)));
   }
 
   resetPassword(id: UUID) {
-    return this.http.post<void>(`${this.resourceUrl}/${id}/reset-password`, null);
+    return this.userApi.resetPassword(id);
   }
 }

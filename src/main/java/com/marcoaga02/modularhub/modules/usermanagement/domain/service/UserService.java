@@ -11,8 +11,9 @@ import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
 import com.marcoaga02.modularhub.core.domain.service.UserAccountService;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserAlreadyExistsException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserNotFoundException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.UserMapper;
@@ -86,7 +87,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseDTO createUser(UserRequestDTO dto) {
+    public UserResponseDTO createUser(UserCreateRequestDTO dto) {
         Language language = findLanguageOrElseThrow(dto.getLanguageId());
 
         if (existsActiveUserWithSameTaxIdNumber(dto.getTaxIdNumber())) {
@@ -129,7 +130,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseDTO updateUser(String uuid, UserRequestDTO dto) {
+    public UserResponseDTO updateUser(String uuid, UserUpdateRequestDTO dto) {
         User user = userRepository.findByUuidAndDeletedOnIsNull(uuid)
                 .orElseThrow(() -> new UserNotFoundException(uuid));
 

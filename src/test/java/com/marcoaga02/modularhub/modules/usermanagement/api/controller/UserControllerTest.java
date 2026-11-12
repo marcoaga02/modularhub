@@ -1,8 +1,9 @@
 package com.marcoaga02.modularhub.modules.usermanagement.api.controller;
 
-import com.marcoaga02.modularhub.core.domain.model.Gender;
+import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
 import com.marcoaga02.modularhub.core.util.constant.PaginationHeaders;
-import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserNotFoundException;
 import com.marcoaga02.modularhub.modules.usermanagement.domain.service.UserService;
@@ -91,7 +92,7 @@ class UserControllerTest {
 
     @Test
     void createUser_shouldReturnCreated() throws Exception {
-        UserRequestDTO request = buildCreateRequestDTO();
+        UserCreateRequestDTO request = buildCreateRequestDTO();
 
         when(userService.createUser(any())).thenReturn(dto);
 
@@ -112,7 +113,7 @@ class UserControllerTest {
 
     @Test
     void updateUser_shouldReturnOk_whenValidRequest() throws Exception {
-        UserRequestDTO request = buildUpdateRequestDTO();
+        UserUpdateRequestDTO request = buildUpdateRequestDTO();
 
         when(userService.updateUser(eq("user-uuid"), any())).thenReturn(dto);
 
@@ -126,7 +127,7 @@ class UserControllerTest {
     @Test
     void updateUser_shouldReturn404_whenUserNotFound() throws Exception {
         final String uuid = "not-existing";
-        UserRequestDTO request = buildUpdateRequestDTO();
+        UserUpdateRequestDTO request = buildUpdateRequestDTO();
 
         when(userService.updateUser(eq(uuid), any()))
                 .thenThrow(new UserNotFoundException(uuid));
@@ -181,11 +182,11 @@ class UserControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    private UserRequestDTO buildUpdateRequestDTO() {
-        UserRequestDTO request = new UserRequestDTO();
+    private UserUpdateRequestDTO buildUpdateRequestDTO() {
+        UserUpdateRequestDTO request = new UserUpdateRequestDTO();
         request.setFirstname("new firstname");
         request.setLastname("new lastname");
-        request.setGender(Gender.F);
+        request.setGender(GenderDTO.F);
         request.setLanguageId("lang-uuid");
         request.setTaxIdNumber("TAXID01");
         request.setEmail("new@mock.it");
@@ -194,11 +195,11 @@ class UserControllerTest {
         return request;
     }
 
-    private UserRequestDTO buildCreateRequestDTO() {
-        UserRequestDTO request = new UserRequestDTO();
+    private UserCreateRequestDTO buildCreateRequestDTO() {
+        UserCreateRequestDTO request = new UserCreateRequestDTO();
         request.setFirstname("Mario");
         request.setLastname("Rossi");
-        request.setGender(Gender.M);
+        request.setGender(GenderDTO.M);
         request.setLanguageId("lang-uuid");
         request.setTaxIdNumber("TAXID01");
         request.setEmail("mario@mock.it");

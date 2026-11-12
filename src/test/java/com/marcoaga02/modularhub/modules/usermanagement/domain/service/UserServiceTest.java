@@ -1,5 +1,6 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
+import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
 import com.marcoaga02.modularhub.core.api.dto.*;
 import com.marcoaga02.modularhub.core.api.exception.BadRequestException;
 import com.marcoaga02.modularhub.core.api.exception.ConflictException;
@@ -16,7 +17,8 @@ import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
 import com.marcoaga02.modularhub.core.domain.service.UserAccountService;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserManagementExceptionCodes;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserAlreadyExistsException;
@@ -137,7 +139,7 @@ class UserServiceTest {
         userResponseDTO1.setId(user1.getUuid());
         userResponseDTO1.setFirstname("Mario");
         userResponseDTO1.setLastname("Rossi");
-        userResponseDTO1.setGender(Gender.M.name());
+        userResponseDTO1.setGender(GenderDTO.M);
         userResponseDTO1.setLanguage(languageResponseDTO);
         userResponseDTO1.setMobileNumber("0000");
         userResponseDTO1.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
@@ -159,7 +161,7 @@ class UserServiceTest {
         userResponseDTO2.setId(user1.getUuid());
         userResponseDTO2.setFirstname("Vittoria");
         userResponseDTO2.setLastname("Bianci");
-        userResponseDTO2.setGender(Gender.F.name());
+        userResponseDTO2.setGender(GenderDTO.F);
         userResponseDTO2.setLanguage(languageResponseDTO);
         userResponseDTO2.setMobileNumber("1111");
         userResponseDTO2.setTaxIdNumber(TAX_ID_NUMBER_USER_2);
@@ -412,7 +414,7 @@ class UserServiceTest {
     void createUser_shouldCreateAndReturnDTO_whenTaxIdNumberNotExists() {
         final String identityId = "identityId";
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserCreateRequestDTO dto = buildUserCreateRequestDTO();
 
         when(languageRepository.findByUuid("LANG_ID_01"))
                 .thenReturn(Optional.of(language));
@@ -478,7 +480,7 @@ class UserServiceTest {
 
         mockSuccessfulCreation(identityId);
 
-        userService.createUser(buildUserRequestDTO());
+        userService.createUser(buildUserCreateRequestDTO());
 
         completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
 
@@ -491,7 +493,7 @@ class UserServiceTest {
 
         mockSuccessfulCreation(identityId);
 
-        userService.createUser(buildUserRequestDTO());
+        userService.createUser(buildUserCreateRequestDTO());
 
         completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
 
@@ -510,7 +512,7 @@ class UserServiceTest {
         when(userRepository.saveAndFlush(any(User.class)))
                 .thenThrow(dbError);
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserCreateRequestDTO dto = buildUserCreateRequestDTO();
 
         assertThatThrownBy(() -> userService.createUser(dto)).isSameAs(dbError);
 
@@ -520,7 +522,7 @@ class UserServiceTest {
 
     @Test
     void createUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
-        UserRequestDTO dto = new UserRequestDTO();
+        UserCreateRequestDTO dto = new UserCreateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setLanguageId("LANG_ID_01");
 
@@ -550,7 +552,7 @@ class UserServiceTest {
 
     @Test
     void createUser_shouldThrowUserAlreadyExistsException_whenUsernameAlreadyExists() {
-        UserRequestDTO dto = new UserRequestDTO();
+        UserCreateRequestDTO dto = new UserCreateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setUsername("existing.username");
         dto.setLanguageId("LANG_ID_01");
@@ -583,7 +585,7 @@ class UserServiceTest {
 
     @Test
     void createUser_shouldThrowUserAlreadyExistsException_whenEmailAlreadyExists() {
-        UserRequestDTO dto = new UserRequestDTO();
+        UserCreateRequestDTO dto = new UserCreateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setUsername("new.username");
         dto.setEmail("existing@email.it");
@@ -621,7 +623,7 @@ class UserServiceTest {
     void createUser_shouldThrowLanguageNotFoundException_whenInvalidLanguageId() {
         final String languageId = "INVALID-LANG";
 
-        UserRequestDTO dto = new UserRequestDTO();
+        UserCreateRequestDTO dto = new UserCreateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setLanguageId(languageId);
 
@@ -652,7 +654,7 @@ class UserServiceTest {
         final String identityId = "identityId";
         user1.setIdentityId(identityId);
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setUsername(USERNAME_USER_1);
         dto.setEmail(EMAIL_USER_1);
@@ -700,7 +702,7 @@ class UserServiceTest {
 
     @Test
     void updateUser_shouldThrowNotFoundException_whenUserNotFound() {
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
 
         final String uuid = "not-existing";
         when(userRepository.findByUuidAndDeletedOnIsNull(uuid))
@@ -720,14 +722,14 @@ class UserServiceTest {
         verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(any());
         verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(userMapper, never()).updateEntity(any(), any());
+        verify(userMapper, never()).updateEntity(any(UserUpdateRequestDTO.class), any());
         verify(identityService, never()).updateUser(any(), any());
         verify(userMapper, never()).toDto(any());
     }
 
     @Test
     void updateUser_shouldThrowLanguageNotFoundException_whenInvalidLanguage() {
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         dto.setLanguageId("INVALID-LANG");
 
         when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
@@ -749,7 +751,7 @@ class UserServiceTest {
         verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(any());
         verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(userMapper, never()).updateEntity(any(), any());
+        verify(userMapper, never()).updateEntity(any(UserUpdateRequestDTO.class), any());
         verify(identityService, never()).updateUser(any(), any());
         verify(userMapper, never()).toDto(any());
     }
@@ -758,7 +760,7 @@ class UserServiceTest {
     void updateUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
         final String taxIdNumber = TAX_ID_NUMBER_USER_2;
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         dto.setTaxIdNumber(taxIdNumber);
         dto.setUsername(USERNAME_USER_1);
         dto.setEmail(EMAIL_USER_1);
@@ -784,7 +786,7 @@ class UserServiceTest {
         verify(userRepository).findByTaxIdNumberAndDeletedOnIsNull(taxIdNumber);
         verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(userMapper, never()).updateEntity(any(), any());
+        verify(userMapper, never()).updateEntity(any(UserUpdateRequestDTO.class), any());
         verify(identityService, never()).updateUser(any(), any());
         verify(userMapper, never()).toDto(any());
     }
@@ -794,7 +796,7 @@ class UserServiceTest {
         final String identityId = "identityId";
         user1.setIdentityId(identityId);
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         dto.setUsername(USERNAME_USER_1);
         dto.setEmail(EMAIL_USER_1);
 
@@ -845,7 +847,7 @@ class UserServiceTest {
     void updateUser_shouldThrowUserAlreadyExistsException_whenUsernameAlreadyExists() {
         final String username = USERNAME_USER_2;
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setUsername(username);
         dto.setEmail(EMAIL_USER_1);
@@ -871,7 +873,7 @@ class UserServiceTest {
         verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(anyString());
         verify(userRepository).findByUsernameAndDeletedOnIsNull(username);
         verify(userRepository, never()).findByEmailAndDeletedOnIsNull(any());
-        verify(userMapper, never()).updateEntity(any(), any());
+        verify(userMapper, never()).updateEntity(any(UserUpdateRequestDTO.class), any());
         verify(identityService, never()).updateUser(any(), any());
         verify(userMapper, never()).toDto(any());
     }
@@ -881,7 +883,7 @@ class UserServiceTest {
         final String identityId = "identityId";
         user1.setIdentityId(identityId);
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setEmail(EMAIL_USER_1);
 
@@ -932,7 +934,7 @@ class UserServiceTest {
     void updateUser_shouldThrowUserAlreadyExistsException_whenEmailAlreadyExists() {
         final String email = EMAIL_USER_2;
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setUsername(USERNAME_USER_1);
         dto.setEmail(email);
@@ -958,7 +960,7 @@ class UserServiceTest {
         verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(anyString());
         verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
         verify(userRepository).findByEmailAndDeletedOnIsNull(email);
-        verify(userMapper, never()).updateEntity(any(), any());
+        verify(userMapper, never()).updateEntity(any(UserUpdateRequestDTO.class), any());
         verify(identityService, never()).updateUser(any(), any());
         verify(userMapper, never()).toDto(any());
     }
@@ -968,7 +970,7 @@ class UserServiceTest {
         final String identityId = "identityId";
         user1.setIdentityId(identityId);
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setUsername(USERNAME_USER_1);
 
@@ -1109,7 +1111,7 @@ class UserServiceTest {
     void updateUser_shouldPropagateException_whenIdentityUpdateFails() {
         final RuntimeException identityError = new RuntimeException("identity error");
 
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
         dto.setUsername(USERNAME_USER_1);
         dto.setEmail(EMAIL_USER_1);
@@ -1140,11 +1142,11 @@ class UserServiceTest {
                 .forEach(synchronization -> synchronization.afterCompletion(status));
     }
 
-    private UserRequestDTO buildUserRequestDTO() {
-        UserRequestDTO dto = new UserRequestDTO();
+    private UserCreateRequestDTO buildUserCreateRequestDTO() {
+        UserCreateRequestDTO dto = new UserCreateRequestDTO();
         dto.setFirstname("new firstname");
         dto.setLastname("new lastname");
-        dto.setGender(Gender.F);
+        dto.setGender(GenderDTO.F);
         dto.setLanguageId("LANG_ID_01");
         dto.setMobileNumber("9999");
         dto.setTaxIdNumber("TAX_ID_NEW");
@@ -1152,6 +1154,21 @@ class UserServiceTest {
         dto.setUsername("new username");
         dto.setEnabled(false);
         dto.setPassword("password");
+        dto.setGroupIds(List.of("group-id"));
+        return dto;
+    }
+
+    private UserUpdateRequestDTO buildUserUpdateRequestDTO() {
+        UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
+        dto.setFirstname("new firstname");
+        dto.setLastname("new lastname");
+        dto.setGender(GenderDTO.F);
+        dto.setLanguageId("LANG_ID_01");
+        dto.setMobileNumber("9999");
+        dto.setTaxIdNumber("TAX_ID_NEW");
+        dto.setEmail("new@email.com");
+        dto.setUsername("new username");
+        dto.setEnabled(false);
         dto.setGroupIds(List.of("group-id"));
         return dto;
     }

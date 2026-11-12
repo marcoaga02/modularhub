@@ -1,6 +1,7 @@
 package com.marcoaga02.modularhub.core.api.mapper;
 
 import com.marcoaga02.modularhub.core.api.dto.AccountDTO;
+import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
@@ -44,10 +45,10 @@ class AccountMapperTest {
         assertThat(dto.getEmail()).isEqualTo("mario@test.com");
         assertThat(dto.getFirstName()).isEqualTo("Mario");
         assertThat(dto.getLastName()).isEqualTo("Rossi");
-        assertThat(dto.getGender()).isEqualTo(Gender.M);
+        assertThat(dto.getGender()).isEqualTo(GenderDTO.M);
         assertThat(dto.getMobileNumber()).isEqualTo("0000");
         assertThat(dto.getTaxIdNumber()).isEqualTo("TAX");
-        assertThat(dto.getRoles()).isNull();
+        assertThat(dto.getRoles()).isEmpty();
         assertThat(dto.getPreferences().getLanguage().getId()).isEqualTo(language.getUuid());
         assertThat(dto.getPreferences().getLanguage().getCode()).isEqualTo("it-IT");
     }

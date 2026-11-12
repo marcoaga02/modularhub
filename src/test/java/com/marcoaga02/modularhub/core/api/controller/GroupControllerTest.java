@@ -38,8 +38,8 @@ class GroupControllerTest {
     @Test
     void getAllGroups_shouldReturnOkWithAllGroups_whenGroupsArePresent() throws Exception {
         List<IdentityGroupDTO> groups = List.of(
-                new IdentityGroupDTO("1", "Admin", "Administrators Group"),
-                new IdentityGroupDTO("2", "User", "Users Group")
+                new IdentityGroupDTO().id("1").name("Admin").description("Administrators Group"),
+                new IdentityGroupDTO().id("2").name("User").description("Users Group")
         );
 
         when(groupService.getAllGroups()).thenReturn(groups);

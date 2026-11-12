@@ -1,7 +1,7 @@
 import {Component, effect, input, signal} from '@angular/core';
 import {NgClass, TitleCasePipe, UpperCasePipe} from '@angular/common';
 import {TranslatePipe} from '@ngx-translate/core';
-import {User} from 'app/modules/user-management/api/models/user';
+import {UserResponse} from 'app/modules/user-management/api/generated';
 import {UserService} from 'app/modules/user-management/api/services/user.service';
 import {retry} from 'rxjs';
 import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
@@ -9,6 +9,7 @@ import {ProgressSpinner} from 'primeng/progressspinner';
 import {Avatar, AvatarPassThroughOptions} from 'primeng/avatar';
 import {Tag} from 'primeng/tag';
 import {LocalizedDatePipe} from 'app/core/utils/pipes/localized-date-pipe';
+import {UUID} from 'app/core/api/models/uuid';
 
 @Component({
   selector: 'app-user-detail',
@@ -27,9 +28,9 @@ import {LocalizedDatePipe} from 'app/core/utils/pipes/localized-date-pipe';
 })
 export class UserDetailComponent {
   readonly isOpen = input(false);
-  readonly userId = input<string>();
+  readonly userId = input<UUID>();
 
-  protected readonly user = signal<User | null>(null);
+  protected readonly user = signal<UserResponse | null>(null);
   protected readonly loading = signal(false);
   protected avatarPT: AvatarPassThroughOptions = {
     label: {
@@ -63,11 +64,11 @@ export class UserDetailComponent {
     });
   }
 
-  protected getFullName(user: User) {
+  protected getFullName(user: UserResponse) {
     return `${user.firstname} ${user.lastname}`;
   }
 
-  protected getInitials(user: User): string {
+  protected getInitials(user: UserResponse): string {
     return `${user.firstname?.[0] ?? ''}${user.lastname?.[0] ?? ''}`.toUpperCase();
   }
 }

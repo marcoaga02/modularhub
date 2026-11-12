@@ -23,13 +23,52 @@
           "serviceFileSuffix": ".api.service"
         },
         "typeMappings": {
-          "UUID": "UUID"
+          "UUID": "UUID",
+          "set": "Array"
         },
         "importMappings": {
           "UUID": "app/core/api/models/uuid"
         },
         "modelNameMappings": {
           "Error": "ApiError"
+        }
+      },
+      "user-management": {
+        "generatorName": "typescript-angular",
+        "inputSpec": "../openapi/user-management.yaml",
+        "output": "src/app/modules/user-management/api/generated",
+        "globalProperty": {
+          "supportingFiles": "",
+          "models": "",
+          "apis": ""
+        },
+        "additionalProperties": {
+          "ngVersion": "21.2.0",
+          "fileNaming": "kebab-case",
+          "providedIn": "root",
+          "stringEnums": true,
+          "supportsES6": true,
+          "serviceSuffix": "ApiService",
+          "serviceFileSuffix": ".api.service"
+        },
+        "typeMappings": {
+          "UUID": "UUID",
+          "set": "Array"
+        },
+        "importMappings": {
+          "UUID": "app/core/api/models/uuid",
+          "ApiError": "app/core/api/generated",
+          "Gender": "app/core/api/generated",
+          "Audit": "app/core/api/generated",
+          "LanguageResponse": "app/core/api/generated",
+          "IdentityGroup": "app/core/api/generated"
+        },
+        "schemaMappings": {
+          "Error": "ApiError",
+          "Gender": "Gender",
+          "Audit": "Audit",
+          "LanguageResponse": "LanguageResponse",
+          "IdentityGroup": "IdentityGroup"
         }
       }
     }

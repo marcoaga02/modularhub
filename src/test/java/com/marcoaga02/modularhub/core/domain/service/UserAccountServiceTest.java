@@ -155,7 +155,7 @@ class UserAccountServiceTest {
         when(accountPreferencesMapper.toDto(existing.getPreferences())).thenReturn(expected);
 
         AccountPreferencesResponseDTO result =
-                userAccountService.updatePreferences(jwt, new AccountPreferencesUpdateDTO("lang-id"));
+                userAccountService.updatePreferences(jwt, new AccountPreferencesUpdateDTO().languageId("lang-id"));
 
         assertThat(result).isSameAs(expected);
         assertThat(existing.getPreferences().getLanguage()).isSameAs(newLanguage);
@@ -171,7 +171,7 @@ class UserAccountServiceTest {
         when(userRepository.save(existing)).thenReturn(existing);
         when(languageRepository.findByUuid("missing")).thenReturn(Optional.empty());
 
-        AccountPreferencesUpdateDTO dto = new AccountPreferencesUpdateDTO("missing");
+        AccountPreferencesUpdateDTO dto = new AccountPreferencesUpdateDTO().languageId("missing");
 
         assertThatThrownBy(() -> userAccountService.updatePreferences(jwt, dto))
                 .isInstanceOf(LanguageNotFoundException.class)

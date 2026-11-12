@@ -7,8 +7,71 @@ servers:
 security:
   - bearerAuth: [ ]
 tags:
+  - name: Account
+  - name: Group
   - name: Language
+  - name: Plugin
 paths:
+  /account:
+    get:
+      tags:
+        - Account
+      operationId: getCurrentAccount
+      responses:
+        '200':
+          description: Account of the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          $ref: 'common.yaml#/components/responses/Unauthorized'
+        '500':
+          $ref: 'common.yaml#/components/responses/InternalServerError'
+  /account/preferences:
+    put:
+      tags:
+        - Account
+      operationId: updatePreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountPreferencesUpdate'
+      responses:
+        '200':
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountPreferencesResponse'
+        '400':
+          $ref: 'common.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: 'common.yaml#/components/responses/Unauthorized'
+        '500':
+          $ref: 'common.yaml#/components/responses/InternalServerError'
+  /groups:
+    get:
+      tags:
+        - Group
+      operationId: getAllGroups
+      responses:
+        '200':
+          description: Groups of the identity provider
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IdentityGroup'
+        '401':
+          $ref: 'common.yaml#/components/responses/Unauthorized'
+        '500':
+          $ref: 'common.yaml#/components/responses/InternalServerError'
+        '503':
+          $ref: 'common.yaml#/components/responses/ServiceUnavailable'
   /languages:
     get:
       tags:
@@ -27,6 +90,24 @@ paths:
           $ref: 'common.yaml#/components/responses/Unauthorized'
         '500':
           $ref: 'common.yaml#/components/responses/InternalServerError'
+  /plugins:
+    get:
+      tags:
+        - Plugin
+      operationId: getAuthorizedPlugins
+      responses:
+        '200':
+          description: Plugins the authenticated user is allowed to use
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plugin'
+        '401':
+          $ref: 'common.yaml#/components/responses/Unauthorized'
+        '500':
+          $ref: 'common.yaml#/components/responses/InternalServerError'
 components:
   securitySchemes:
     bearerAuth:
@@ -34,6 +115,26 @@ components:
   schemas:
     Error:
       $ref: 'common.yaml#/components/schemas/Error'
+    Gender:
+      type: string
+      enum:
+        - M
+        - F
+    Audit:
+      type: object
+      required:
+        - createdOn
+      properties:
+        createdOn:
+          type: string
+          format: date-time
+        updatedOn:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        updatedBy:
+          type: string
     LanguageResponse:
       type: object
       required:
@@ -53,3 +154,86 @@ components:
           example: Italiano
         isDefault:
           type: boolean
+    IdentityGroup:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: ADMIN
+        description:
+          type: string
+    Plugin:
+      type: object
+      required:
+        - path
+        - name
+        - description
+      properties:
+        path:
+          type: string
+          example: user-management
+        name:
+          type: string
+          description: i18n key of the plugin name
+        description:
+          type: string
+          description: i18n key of the plugin description
+        icon:
+          type: string
+          description: PrimeIcons class
+          example: pi pi-users
+    Account:
+      type: object
+      required:
+        - identityId
+        - email
+        - username
+        - firstName
+        - lastName
+        - roles
+        - preferences
+      properties:
+        identityId:
+          type: string
+        email:
+          type: string
+        username:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        roles:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        preferences:
+          $ref: '#/components/schemas/AccountPreferencesResponse'
+        gender:
+          $ref: '#/components/schemas/Gender'
+        mobileNumber:
+          type: string
+        taxIdNumber:
+          type: string
+    AccountPreferencesResponse:
+      type: object
+      required:
+        - language
+      properties:
+        language:
+          $ref: '#/components/schemas/LanguageResponse'
+    AccountPreferencesUpdate:
+      type: object
+      required:
+        - languageId
+      properties:
+        languageId:
+          type: string
+          format: uuid

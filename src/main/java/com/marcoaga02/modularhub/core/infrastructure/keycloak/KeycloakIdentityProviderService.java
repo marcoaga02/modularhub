@@ -127,14 +127,14 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
     @Override
     public List<IdentityGroupDTO> getGroups() {
         return execute(() -> realm().groups().groups().stream()
-                .map(g -> new IdentityGroupDTO(g.getId(), g.getName(), g.getDescription()))
+                .map(this::toGroupDTO)
                 .toList());
     }
 
     @Override
     public List<IdentityGroupDTO> getUserGroups(String userId) {
         return execute(() -> realm().users().get(userId).groups().stream()
-                .map(g -> new IdentityGroupDTO(g.getId(), g.getName(), g.getDescription()))
+                .map(this::toGroupDTO)
                 .toList());
     }
 
@@ -220,5 +220,12 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
             case 409 -> new IdentityConflictException(message, cause);
             default -> new IdentityProviderUnavailableException(message, cause);
         };
+    }
+
+    private IdentityGroupDTO toGroupDTO(GroupRepresentation group) {
+        return new IdentityGroupDTO()
+                .id(group.getId())
+                .name(group.getName())
+                .description(group.getDescription());
     }
 }

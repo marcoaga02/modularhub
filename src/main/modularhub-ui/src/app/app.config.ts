@@ -23,12 +23,13 @@ import {provideTranslateService} from '@ngx-translate/core';
 import {provideTranslateHttpLoader} from '@ngx-translate/http-loader';
 import {MessageService} from 'primeng/api';
 import {PluginService} from 'app/core/api/services/plugin.service';
-import {Plugin} from 'app/core/api/models/plugin';
+import {Plugin} from 'app/core/api/generated';
 import {PLUGIN_REGISTRY} from 'app/plugin-registry';
 import {OAuthService, OAuthStorage, provideOAuthClient} from 'angular-oauth2-oidc';
 import {AccountService} from 'app/core/api/services/account.service';
 import {environment} from 'environments/environment';
 import {ApiError, provideApi} from 'app/core/api/generated';
+import {provideApi as provideUserManagementApi} from 'app/modules/user-management/api/generated';
 import {registerLocaleData} from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import localeEn from '@angular/common/locales/en';
@@ -156,6 +157,7 @@ export const appConfig: ApplicationConfig = {
     ),
     provideOAuthClient(),
     provideApi(environment.apiUrl),
+    provideUserManagementApi(environment.apiUrl),
     provideTranslateService({
       loader: provideTranslateHttpLoader({
         prefix: './i18n/',

@@ -321,6 +321,25 @@
                             <modelPackage>com.marcoaga02.modularhub.core.api.dto</modelPackage>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>openapi-user-management</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${openapi.dir}/user-management.yaml</inputSpec>
+                            <output>${project.build.directory}/generated-sources/openapi/user-management</output>
+                            <apiPackage>com.marcoaga02.modularhub.modules.usermanagement.api.openapi</apiPackage>
+                            <modelPackage>com.marcoaga02.modularhub.modules.usermanagement.api.dto</modelPackage>
+                            <schemaMappings>
+                                <schemaMapping>Error=com.marcoaga02.modularhub.core.api.dto.ErrorDTO</schemaMapping>
+                                <schemaMapping>Gender=com.marcoaga02.modularhub.core.api.dto.GenderDTO</schemaMapping>
+                                <schemaMapping>Audit=com.marcoaga02.modularhub.core.api.dto.AuditDTO</schemaMapping>
+                                <schemaMapping>LanguageResponse=com.marcoaga02.modularhub.core.api.dto.LanguageResponseDTO</schemaMapping>
+                                <schemaMapping>IdentityGroup=com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO</schemaMapping>
+                            </schemaMappings>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>

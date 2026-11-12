@@ -41,15 +41,14 @@ class AccountControllerTest {
         AccountPreferencesResponseDTO preferences = new AccountPreferencesResponseDTO();
         preferences.setLanguage(language);
 
-        accountDTO = AccountDTO.builder()
+        accountDTO = new AccountDTO()
                 .identityId("identity-123")
                 .email("mario@example.com")
                 .username("mario.rossi")
                 .firstName("Mario")
                 .lastName("Rossi")
                 .roles(Set.of("ROLE_USER"))
-                .preferences(preferences)
-                .build();
+                .preferences(preferences);
     }
 
     @Test

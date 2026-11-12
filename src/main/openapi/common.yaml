@@ -9,6 +9,52 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 20
+    Sort:
+      name: sort
+      in: query
+      required: false
+      description: Sort criteria in the format property,(asc|desc)
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+  headers:
+    TotalCount:
+      description: Total number of elements
+      schema:
+        type: integer
+        format: int64
+    TotalPages:
+      description: Total number of pages
+      schema:
+        type: integer
+    CurrentPage:
+      description: Current page number
+      schema:
+        type: integer
+    PageSize:
+      description: Page size
+      schema:
+        type: integer
   responses:
     BadRequest:
       description: Invalid request or domain rule violated by the request

@@ -1,10 +1,12 @@
 package com.marcoaga02.modularhub.modules.usermanagement.api.mapper;
 
+import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
 import com.marcoaga02.modularhub.core.api.mapper.LanguageMapper;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
-import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.core.domain.model.User;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,7 @@ class UserMapperTest {
 
         assertThat(dto.getFirstname()).isEqualTo("firstname");
         assertThat(dto.getLastname()).isEqualTo("lastname");
-        assertThat(dto.getGender()).isEqualTo(Gender.M.name());
+        assertThat(dto.getGender()).isEqualTo(GenderDTO.M);
         assertThat(dto.getLanguage()).isNotNull();
         assertThat(dto.getLanguage().getId()).isEqualTo(user.getPreferences().getLanguage().getUuid());
         assertThat(dto.getLanguage().getCode()).isEqualTo("it-IT");
@@ -60,7 +62,7 @@ class UserMapperTest {
 
     @Test
     void updateEntity_shouldUpdateAllFields() {
-        UserRequestDTO dto = buildUserRequestDTO();
+        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO();
         User existing = buildUser();
         String originalUuid = existing.getUuid();
         AccountPreferences originalPreferences = existing.getPreferences();
@@ -89,11 +91,42 @@ class UserMapperTest {
     }
 
     @Test
+    void updateEntity_shouldUpdateAllFields_whenDtoIsCreateRequest() {
+        UserCreateRequestDTO dto = buildUserCreateRequestDTO();
+        User user = new User();
+
+        User result = userMapper.updateEntity(dto, user);
+        assertThat(result).isSameAs(user);
+
+        assertThat(user.getFirstname()).isEqualTo("Mario");
+        assertThat(user.getLastname()).isEqualTo("Rossi");
+        assertThat(user.getGender()).isEqualTo(Gender.M);
+        assertThat(user.getMobileNumber()).isEqualTo("1234");
+        assertThat(user.getTaxIdNumber()).isEqualTo("NEW2");
+        assertThat(user.getEmail()).isEqualTo("mario@email.com");
+        assertThat(user.getUsername()).isEqualTo("mario");
+        assertThat(user.getEnabled()).isTrue();
+        assertThat(user.getIdentityId()).isNull();
+        assertThat(user.getPreferences()).isNull();
+    }
+
+    @Test
+    void updateEntity_shouldReturnUnmodifiedUser_whenCreateRequestIsNull() {
+        User existing = buildUser();
+
+        User result = userMapper.updateEntity((UserCreateRequestDTO) null, existing);
+        assertThat(result).isSameAs(existing);
+
+        assertThat(existing.getFirstname()).isEqualTo("firstname");
+        assertThat(existing.getEmail()).isEqualTo("user@email.com");
+    }
+
+    @Test
     void updateEntity_shouldReturnUnmodifiedUser_whenInputDtoIsNull() {
         User existing = buildUser();
         String originalUuid = existing.getUuid();
 
-        User result = userMapper.updateEntity(null, existing);
+        User result = userMapper.updateEntity((UserUpdateRequestDTO) null, existing);
         assertThat(result).isNotNull();
         assertThat(result).isSameAs(existing);
 
@@ -143,20 +176,34 @@ class UserMapperTest {
         return user;
     }
 
-    private UserRequestDTO buildUserRequestDTO() {
-        UserRequestDTO dto = new UserRequestDTO();
+    private UserUpdateRequestDTO buildUserUpdateRequestDTO() {
+        UserUpdateRequestDTO dto = new UserUpdateRequestDTO();
         dto.setFirstname("new firstname");
         dto.setLastname("new lastname");
-        dto.setGender(Gender.F);
+        dto.setGender(GenderDTO.F);
         dto.setLanguageId("lang-uuid");
         dto.setMobileNumber("9999");
         dto.setTaxIdNumber("NEW1");
         dto.setEmail("new@email.com");
         dto.setUsername("new username");
-        dto.setPassword("new password");
         dto.setGroupIds(List.of("group1", "group2"));
         dto.setEnabled(false);
         return dto;
     }
 
+    private UserCreateRequestDTO buildUserCreateRequestDTO() {
+        UserCreateRequestDTO dto = new UserCreateRequestDTO();
+        dto.setFirstname("Mario");
+        dto.setLastname("Rossi");
+        dto.setGender(GenderDTO.M);
+        dto.setLanguageId("lang-uuid");
+        dto.setMobileNumber("1234");
+        dto.setTaxIdNumber("NEW2");
+        dto.setEmail("mario@email.com");
+        dto.setUsername("mario");
+        dto.setPassword("password");
+        dto.setGroupIds(List.of("group1"));
+        dto.setEnabled(true);
+        return dto;
+    }
 }

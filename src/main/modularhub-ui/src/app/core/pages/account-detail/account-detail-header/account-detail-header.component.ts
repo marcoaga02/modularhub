@@ -3,7 +3,7 @@ import {Avatar, AvatarPassThroughOptions} from "primeng/avatar";
 import {AccountService} from 'app/core/api/services/account.service';
 import {retry} from 'rxjs';
 import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
-import {Account} from 'app/core/api/models/account';
+import {Account} from 'app/core/api/generated';
 
 @Component({
   selector: 'app-profile-dialog-header',

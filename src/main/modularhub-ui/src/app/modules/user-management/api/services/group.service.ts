@@ -1,21 +1,15 @@
 import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {Group} from 'app/core/api/models/group';
-import {environment} from 'environments/environment';
+import {GroupApiService} from 'app/core/api/generated';
 
 @Injectable({
   providedIn: 'root',
 })
 export class GroupService {
 
-  private readonly resourceUrl: string;
-
-  constructor(private readonly http: HttpClient) {
-    this.resourceUrl = `${environment.apiUrl}/groups`;
-  }
+  constructor(private readonly groupApi: GroupApiService) {}
 
   getGroups() {
-    return this.http.get<Group[]>(`${this.resourceUrl}`);
+    return this.groupApi.getAllGroups();
   }
 
 }

@@ -1,12 +1,9 @@
 import {Injectable} from '@angular/core';
 import {TranslateService} from '@ngx-translate/core';
-import {HttpClient} from '@angular/common/http';
 import {OAuthService} from 'angular-oauth2-oidc';
-import {environment} from 'environments/environment';
-import {Account} from 'app/core/api/models/account';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {Role} from 'app/core/api/models/role';
-import {AccountPreferences, AccountPreferencesRequest} from 'app/core/api/models/account-preferences';
+import {Account, AccountApiService, AccountPreferencesUpdate} from 'app/core/api/generated';
 
 @Injectable({
   providedIn: 'root',
@@ -15,23 +12,20 @@ export class AccountService {
 
   private readonly accountSubject = new BehaviorSubject<Account | null>(null);
 
-  private readonly resourceUrl: string;
   private account?: Account;
 
   constructor(
-    private readonly http: HttpClient,
+    private readonly accountApi: AccountApiService,
     private readonly translateService: TranslateService,
     private readonly oauthService: OAuthService,
-  ) {
-    this.resourceUrl = `${environment.apiUrl}/account`;
-  }
+  ) {}
 
   load(): void {
     if (!this.oauthService.hasValidAccessToken()) {
       return;
     }
 
-    this.http.get<Account>(this.resourceUrl).subscribe({
+    this.accountApi.getCurrentAccount().subscribe({
       next: (account: Account) => {
         this.onSuccess(account);
       },
@@ -69,7 +63,7 @@ export class AccountService {
       roles = [roles];
     }
 
-    return this.account.roles.some((r: Role) => roles.includes(r));
+    return this.account.roles.some(r => roles.includes(r as Role));
   }
 
   async reload() {
@@ -78,7 +72,7 @@ export class AccountService {
     });
   }
 
-  updateCurrentAccountPreferences(preferences: AccountPreferencesRequest) {
-    return this.http.put<AccountPreferences>(`${this.resourceUrl}/preferences`, preferences);
+  updateCurrentAccountPreferences(preferences: AccountPreferencesUpdate) {
+    return this.accountApi.updatePreferences(preferences);
   }
 }

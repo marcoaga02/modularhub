@@ -23,12 +23,11 @@ public class PluginRegistryService {
 
         return plugins.stream()
                 .filter(p -> userRoles.containsAll(p.getRequiredRoles()))
-                .map(p -> new PluginDTO(
-                        p.getPath(),
-                        p.getName(),
-                        p.getDescription(),
-                        p.getIcon()
-                ))
+                .map(p -> new PluginDTO()
+                        .path(p.getPath())
+                        .name(p.getName())
+                        .description(p.getDescription())
+                        .icon(p.getIcon()))
                 .toList();
     }
 

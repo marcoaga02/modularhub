@@ -2,7 +2,7 @@ import {Component, Signal} from '@angular/core';
 import {NgClass} from '@angular/common';
 import {Button} from 'primeng/button';
 import {PluginService} from 'app/core/api/services/plugin.service';
-import {Plugin} from 'app/core/api/models/plugin';
+import {Plugin} from 'app/core/api/generated';
 import {Router} from '@angular/router';
 import {Tooltip} from 'primeng/tooltip';
 import {TranslatePipe, TranslateService} from '@ngx-translate/core';

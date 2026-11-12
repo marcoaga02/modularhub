@@ -1,7 +1,7 @@
 import {Component, signal} from '@angular/core';
 import {TableModule, TablePassThrough} from 'primeng/table';
 import {UserService} from 'app/modules/user-management/api/services/user.service';
-import {User} from 'app/modules/user-management/api/models/user';
+import {UserResponse} from 'app/modules/user-management/api/generated';
 import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
 import {BehaviorSubject, debounceTime, retry, Subject} from 'rxjs';
 import {TranslatePipe, TranslateService} from '@ngx-translate/core';
@@ -23,7 +23,7 @@ import {UserDetailComponent} from 'app/modules/user-management/pages/user-detail
 import {FormsModule} from '@angular/forms';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {AccountService} from 'app/core/api/services/account.service';
-import {Account} from 'app/core/api/models/account';
+import {Account} from 'app/core/api/generated';
 import {Tooltip} from 'primeng/tooltip';
 
 @Component({
@@ -59,8 +59,8 @@ export class UserListComponent {
   protected loading = signal(true);
   private currentAccount?: Account;
 
-  protected users: User[] = [];
-  protected selectedUsers: User[] = [];
+  protected users: UserResponse[] = [];
+  protected selectedUsers: UserResponse[] = [];
   protected totalRecords = 0;
   protected first: number = 0;
 
@@ -146,7 +146,7 @@ export class UserListComponent {
     this.openUserFormDialog(this.selectedUsers[0]);
   }
 
-  private openUserFormDialog(user?: User) {
+  private openUserFormDialog(user?: UserResponse) {
     let header: string;
     let detail: string;
 
@@ -172,7 +172,7 @@ export class UserListComponent {
       templates: {
         footer: UserFormFooterComponent,
       }
-    })?.onClose.subscribe((result: User) => {
+    })?.onClose.subscribe((result: UserResponse) => {
       if (!result) {
         return;
       }
