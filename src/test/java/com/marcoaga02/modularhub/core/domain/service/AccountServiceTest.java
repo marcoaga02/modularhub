@@ -7,6 +7,7 @@ import com.marcoaga02.modularhub.core.api.mapper.AccountMapper;
 import com.marcoaga02.modularhub.core.domain.model.User;
 import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -45,148 +46,166 @@ class AccountServiceTest {
         SecurityContextHolder.clearContext();
     }
 
-    @Test
-    void getCurrentAccount_shouldReturnSyncedAccountWithRoles() {
-        Jwt jwt = mockAuthentication(Map.of("sub", "uuid-123"), List.of("ROLE"));
+    @Nested
+    class GetCurrentAccount {
 
-        User user = new User();
-        AccountDTO accountDTO = new AccountDTO()
-                .identityId("uuid-123")
-                .username("mario.rossi");
+        @Test
+        void getCurrentAccount_shouldReturnSyncedAccountWithRoles() {
+            Jwt jwt = mockAuthentication(Map.of("sub", "uuid-123"), List.of("ROLE"));
 
-        when(userAccountService.syncUser(jwt)).thenReturn(user);
-        when(accountMapper.toDto(user)).thenReturn(accountDTO);
+            User user = new User();
+            AccountDTO accountDTO = new AccountDTO()
+                    .identityId("uuid-123")
+                    .username("mario.rossi");
 
-        AccountDTO account = accountService.getCurrentAccount();
+            when(userAccountService.syncUser(jwt)).thenReturn(user);
+            when(accountMapper.toDto(user)).thenReturn(accountDTO);
 
-        assertThat(account).isSameAs(accountDTO);
-        assertThat(account.getIdentityId()).isEqualTo("uuid-123");
-        assertThat(account.getUsername()).isEqualTo("mario.rossi");
-        assertThat(account.getRoles()).containsExactly("ROLE");
+            AccountDTO account = accountService.getCurrentAccount();
 
-        verify(userAccountService).syncUser(jwt);
-        verify(accountMapper).toDto(user);
+            assertThat(account).isSameAs(accountDTO);
+            assertThat(account.getIdentityId()).isEqualTo("uuid-123");
+            assertThat(account.getUsername()).isEqualTo("mario.rossi");
+            assertThat(account.getRoles()).containsExactly("ROLE");
+
+            verify(userAccountService).syncUser(jwt);
+            verify(accountMapper).toDto(user);
+        }
+        @Test
+        void getCurrentAccount_shouldThrowIllegalStateException_whenNoJwtAuthentication() {
+            SecurityContextHolder.clearContext();
+            assertThatThrownBy(() -> accountService.getCurrentAccount())
+                    .isInstanceOf(InternalStateException.class)
+                    .satisfies(e -> {
+                        InternalStateException ex = (InternalStateException) e;
+                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
+                        assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
+                    });
+        }
     }
 
-    @Test
-    void getCurrentAccount_shouldThrowIllegalStateException_whenNoJwtAuthentication() {
-        SecurityContextHolder.clearContext();
-        assertThatThrownBy(() -> accountService.getCurrentAccount())
-                .isInstanceOf(InternalStateException.class)
-                .satisfies(e -> {
-                    InternalStateException ex = (InternalStateException) e;
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
-                    assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
-                });
+    @Nested
+    class GetRoles {
+
+        @Test
+        void getRoles_shouldReturnRolesWithoutPrefix() {
+            mockAuthentication(Map.of("sub", "uuid-123"), List.of("ADMIN", "USER"));
+
+            Set<String> roles = accountService.getRoles();
+
+            assertThat(roles).containsExactlyInAnyOrder("ADMIN", "USER");
+        }
+        @Test
+        void getRoles_shouldReturnEmptySet_whenNoRoles() {
+            mockAuthentication(Map.of("sub", "uuid-123"), List.of());
+
+            Set<String> roles = accountService.getRoles();
+
+            assertThat(roles).isEmpty();
+        }
+        @Test
+        void getRoles_shouldThrowIllegalStateException_whenNoJwtAuthentication() {
+            SecurityContextHolder.clearContext();
+            assertThatThrownBy(() -> accountService.getRoles())
+                    .isInstanceOf(InternalStateException.class)
+                    .satisfies(e -> {
+                        InternalStateException ex = (InternalStateException) e;
+                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
+                        assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
+                    });
+        }
     }
 
-    @Test
-    void getRoles_shouldReturnRolesWithoutPrefix() {
-        mockAuthentication(Map.of("sub", "uuid-123"), List.of("ADMIN", "USER"));
+    @Nested
+    class HasRole {
 
-        Set<String> roles = accountService.getRoles();
-
-        assertThat(roles).containsExactlyInAnyOrder("ADMIN", "USER");
+        @Test
+        void hasRole_shouldReturnTrue_whenRoleExists() {
+            mockAuthentication(Map.of("sub", "uuid-123"), List.of("ROLE"));
+            assertThat(accountService.hasRole("ROLE")).isTrue();
+        }
+        @Test
+        void hasRole_shouldReturnFalse_whenRoleNotExists() {
+            mockAuthentication(Map.of("sub", "uuid-123"), List.of());
+            assertThat(accountService.hasRole("ROLE")).isFalse();
+        }
     }
 
-    @Test
-    void getRoles_shouldReturnEmptySet_whenNoRoles() {
-        mockAuthentication(Map.of("sub", "uuid-123"), List.of());
+    @Nested
+    class HasAnyRole {
 
-        Set<String> roles = accountService.getRoles();
-
-        assertThat(roles).isEmpty();
+        @Test
+        void hasAnyRole_shouldReturnTrue_whenAtLeastOneRoleExists() {
+            mockAuthentication(Map.of("sub", "uuid-123"), List.of("ROLE"));
+            assertThat(accountService.hasAnyRole("ROLE", "ADMIN")).isTrue();
+        }
     }
 
-    @Test
-    void getRoles_shouldThrowIllegalStateException_whenNoJwtAuthentication() {
-        SecurityContextHolder.clearContext();
-        assertThatThrownBy(() -> accountService.getRoles())
-                .isInstanceOf(InternalStateException.class)
-                .satisfies(e -> {
-                    InternalStateException ex = (InternalStateException) e;
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
-                    assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
-                });
+    @Nested
+    class UpdateCurrentAccountPreferences {
+
+        @Test
+        void updateCurrentAccountPreferences_shouldReturnUpdatedPreferences() {
+            Jwt jwt = mockAuthentication(Map.of("sub", "uuid-123"), List.of());
+
+            AccountPreferencesUpdateDTO dto = new AccountPreferencesUpdateDTO();
+            dto.setLanguageId("lang-456");
+
+            LanguageResponseDTO language = new LanguageResponseDTO();
+            language.setId("lang-456");
+            language.setCode("en-US");
+            language.setLabel("English");
+
+            AccountPreferencesResponseDTO expected = new AccountPreferencesResponseDTO();
+            expected.setLanguage(language);
+
+            when(userAccountService.updatePreferences(jwt, dto)).thenReturn(expected);
+
+            AccountPreferencesResponseDTO result = accountService.updateCurrentAccountPreferences(dto);
+
+            assertThat(result).isEqualTo(expected);
+            verify(userAccountService).updatePreferences(jwt, dto);
+        }
+        @Test
+        void updateCurrentAccountPreferences_shouldThrowInternalStateException_whenNoJwtAuthentication() {
+            SecurityContextHolder.clearContext();
+
+            AccountPreferencesUpdateDTO dto = new AccountPreferencesUpdateDTO();
+            dto.setLanguageId("lang-456");
+
+            assertThatThrownBy(() -> accountService.updateCurrentAccountPreferences(dto))
+                    .isInstanceOf(InternalStateException.class)
+                    .satisfies(e -> {
+                        InternalStateException ex = (InternalStateException) e;
+                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
+                        assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
+                    });
+        }
     }
 
-    @Test
-    void hasRole_shouldReturnTrue_whenRoleExists() {
-        mockAuthentication(Map.of("sub", "uuid-123"), List.of("ROLE"));
-        assertThat(accountService.hasRole("ROLE")).isTrue();
-    }
+    @Nested
+    class GetCurrentIdentityId {
 
-    @Test
-    void hasRole_shouldReturnFalse_whenRoleNotExists() {
-        mockAuthentication(Map.of("sub", "uuid-123"), List.of());
-        assertThat(accountService.hasRole("ROLE")).isFalse();
-    }
+        @Test
+        void getCurrentIdentityId_shouldReturnCurrentIdentityId_whenValid() {
+            String currentId = "current-id";
+            mockAuthentication(Map.of("sub", currentId), List.of());
 
-    @Test
-    void hasAnyRole_shouldReturnTrue_whenAtLeastOneRoleExists() {
-        mockAuthentication(Map.of("sub", "uuid-123"), List.of("ROLE"));
-        assertThat(accountService.hasAnyRole("ROLE", "ADMIN")).isTrue();
-    }
+            String result = accountService.getCurrentIdentityId();
 
-    @Test
-    void updateCurrentAccountPreferences_shouldReturnUpdatedPreferences() {
-        Jwt jwt = mockAuthentication(Map.of("sub", "uuid-123"), List.of());
-
-        AccountPreferencesUpdateDTO dto = new AccountPreferencesUpdateDTO();
-        dto.setLanguageId("lang-456");
-
-        LanguageResponseDTO language = new LanguageResponseDTO();
-        language.setId("lang-456");
-        language.setCode("en-US");
-        language.setLabel("English");
-
-        AccountPreferencesResponseDTO expected = new AccountPreferencesResponseDTO();
-        expected.setLanguage(language);
-
-        when(userAccountService.updatePreferences(jwt, dto)).thenReturn(expected);
-
-        AccountPreferencesResponseDTO result = accountService.updateCurrentAccountPreferences(dto);
-
-        assertThat(result).isEqualTo(expected);
-        verify(userAccountService).updatePreferences(jwt, dto);
-    }
-
-    @Test
-    void updateCurrentAccountPreferences_shouldThrowInternalStateException_whenNoJwtAuthentication() {
-        SecurityContextHolder.clearContext();
-
-        AccountPreferencesUpdateDTO dto = new AccountPreferencesUpdateDTO();
-        dto.setLanguageId("lang-456");
-
-        assertThatThrownBy(() -> accountService.updateCurrentAccountPreferences(dto))
-                .isInstanceOf(InternalStateException.class)
-                .satisfies(e -> {
-                    InternalStateException ex = (InternalStateException) e;
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
-                    assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
-                });
-    }
-
-    @Test
-    void getCurrentIdentityId_shouldReturnCurrentIdentityId_whenValid() {
-        String currentId = "current-id";
-        mockAuthentication(Map.of("sub", currentId), List.of());
-
-        String result = accountService.getCurrentIdentityId();
-
-        assertThat(result).isEqualTo(currentId);
-    }
-
-    @Test
-    void getCurrentIdentityId_shouldThrowIllegalStateException_whenNoJwtAuthentication() {
-        SecurityContextHolder.clearContext();
-        assertThatThrownBy(() -> accountService.getCurrentIdentityId())
-                .isInstanceOf(InternalStateException.class)
-                .satisfies(e -> {
-                    InternalStateException ex = (InternalStateException) e;
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
-                    assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
-                });
+            assertThat(result).isEqualTo(currentId);
+        }
+        @Test
+        void getCurrentIdentityId_shouldThrowIllegalStateException_whenNoJwtAuthentication() {
+            SecurityContextHolder.clearContext();
+            assertThatThrownBy(() -> accountService.getCurrentIdentityId())
+                    .isInstanceOf(InternalStateException.class)
+                    .satisfies(e -> {
+                        InternalStateException ex = (InternalStateException) e;
+                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
+                        assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
+                    });
+        }
     }
 
     private Jwt mockAuthentication(Map<String, Object> claims, List<String> roles) {

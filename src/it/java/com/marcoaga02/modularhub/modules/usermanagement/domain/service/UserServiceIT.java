@@ -25,6 +25,7 @@ import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserA
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserNotFoundException;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -135,267 +136,280 @@ class UserServiceIT extends BaseITWithMockIdentity {
         entityManager.clear();
     }
 
-    @Test
-    void getAllUsers_shouldReturnAllUsers_whenCriteriaIsNull() {
-        Page<UserResponseDTO> result = userService.getAllUsers(
-                null,
-                PageRequest.of(0, 10)
-        );
+    @Nested
+    class GetAllUsers {
 
-        assertThat(result.getTotalElements()).isEqualTo(3);
-        assertThat(result.getNumber()).isZero();
-        assertThat(result.getTotalPages()).isEqualTo(1);
+        @Test
+        void getAllUsers_shouldReturnAllUsers_whenCriteriaIsNull() {
+            Page<UserResponseDTO> result = userService.getAllUsers(
+                    null,
+                    PageRequest.of(0, 10)
+            );
 
-        assertThat(result.getContent()).hasSize(3);
-        assertThat(result.getContent())
-                .extracting(UserResponseDTO::getId)
-                .containsExactlyInAnyOrder(
-                        enabledUser.getUuid(),
-                        disabledUser.getUuid(),
-                        anotherUser.getUuid()
-                );
+            assertThat(result.getTotalElements()).isEqualTo(3);
+            assertThat(result.getNumber()).isZero();
+            assertThat(result.getTotalPages()).isEqualTo(1);
+
+            assertThat(result.getContent()).hasSize(3);
+            assertThat(result.getContent())
+                    .extracting(UserResponseDTO::getId)
+                    .containsExactlyInAnyOrder(
+                            enabledUser.getUuid(),
+                            disabledUser.getUuid(),
+                            anotherUser.getUuid()
+                    );
+        }
+        @Test
+        void getAllUsers_shouldReturnOnlyOneUser_whenPageSizeIsOne() {
+            Page<UserResponseDTO> result = userService.getAllUsers(
+                    null,
+                    PageRequest.of(0, 1, Sort.by("firstname").ascending())
+            );
+
+            assertThat(result.getTotalElements()).isEqualTo(3);
+            assertThat(result.getTotalPages()).isEqualTo(3);
+            assertThat(result.getNumber()).isZero();
+            assertThat(result.getSize()).isEqualTo(1);
+
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent())
+                    .extracting(UserResponseDTO::getId)
+                    .containsExactly(
+                            enabledUser.getUuid()
+                    );
+        }
+        @Test
+        void getAllUsers_shouldReturnTwoUsers_whenPageSizeIsTwo() {
+            Page<UserResponseDTO> result = userService.getAllUsers(
+                    null,
+                    PageRequest.of(0, 2, Sort.by("firstname").ascending())
+            );
+
+            assertThat(result.getTotalElements()).isEqualTo(3);
+            assertThat(result.getTotalPages()).isEqualTo(2);
+            assertThat(result.getNumber()).isZero();
+            assertThat(result.getSize()).isEqualTo(2);
+
+            assertThat(result.getContent()).hasSize(2);
+            assertThat(result.getContent())
+                    .extracting(UserResponseDTO::getId)
+                    .containsExactly(
+                            enabledUser.getUuid(),
+                            disabledUser.getUuid()
+                    );
+        }
+        @Test
+        void getAllUsers_shouldReturnCorrectUsers_whenPageNumberRefersToTheSecondPage() {
+            Page<UserResponseDTO> result = userService.getAllUsers(
+                    null,
+                    PageRequest.of(1, 2, Sort.by("firstname").ascending())
+            );
+
+            assertThat(result.getTotalElements()).isEqualTo(3);
+            assertThat(result.getTotalPages()).isEqualTo(2);
+            assertThat(result.getNumber()).isEqualTo(1);
+            assertThat(result.getSize()).isEqualTo(2);
+
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent())
+                    .extracting(UserResponseDTO::getId)
+                    .containsExactly(anotherUser.getUuid());
+        }
     }
 
-    @Test
-    void getAllUsers_shouldReturnOnlyOneUser_whenPageSizeIsOne() {
-        Page<UserResponseDTO> result = userService.getAllUsers(
-                null,
-                PageRequest.of(0, 1, Sort.by("firstname").ascending())
-        );
+    @Nested
+    class GetUserByUuid {
 
-        assertThat(result.getTotalElements()).isEqualTo(3);
-        assertThat(result.getTotalPages()).isEqualTo(3);
-        assertThat(result.getNumber()).isZero();
-        assertThat(result.getSize()).isEqualTo(1);
+        @Test
+        void getUserByUuid_shouldReturnUser_whenUserExists() {
+            when(identityService.getUserById(any()))
+                    .thenReturn(new IdentityUserResponseDTO());
 
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent())
-                .extracting(UserResponseDTO::getId)
-                .containsExactly(
-                        enabledUser.getUuid()
-                );
+            UserResponseDTO result = userService.getUserByUuid(enabledUser.getUuid());
+
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(enabledUser.getUuid());
+        }
+        @Test
+        void getUserByUuid_shouldThrowNotFoundException_whenUserNotFound() {
+            assertThatThrownBy(() -> userService.getUserByUuid("non-existing-uuid"))
+                    .isInstanceOf(UserNotFoundException.class)
+                    .satisfies(e -> {
+                        UserNotFoundException ex = (UserNotFoundException) e;
+                        assertThat(ex).isInstanceOf(NotFoundException.class);
+                        assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                        assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
+                    });
+        }
     }
 
-    @Test
-    void getAllUsers_shouldReturnTwoUsers_whenPageSizeIsTwo() {
-        Page<UserResponseDTO> result = userService.getAllUsers(
-                null,
-                PageRequest.of(0, 2, Sort.by("firstname").ascending())
-        );
+    @Nested
+    class CreateUser {
 
-        assertThat(result.getTotalElements()).isEqualTo(3);
-        assertThat(result.getTotalPages()).isEqualTo(2);
-        assertThat(result.getNumber()).isZero();
-        assertThat(result.getSize()).isEqualTo(2);
+        @Test
+        void createUser_shouldCreateAndReturnDTO_whenValid() {
+            UserCreateRequestDTO dto = buildUserCreateRequestDTO(lang1.getUuid(), "NEW_TAX_ID");
 
-        assertThat(result.getContent()).hasSize(2);
-        assertThat(result.getContent())
-                .extracting(UserResponseDTO::getId)
-                .containsExactly(
-                        enabledUser.getUuid(),
-                        disabledUser.getUuid()
-                );
+            UserResponseDTO result = userService.createUser(dto);
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isNotNull();
+            assertThat(result.getTaxIdNumber()).isEqualTo("NEW_TAX_ID");
+            assertThat(result.getLanguage().getId()).isEqualTo(lang1.getUuid());
+
+            entityManager.flush();
+            entityManager.clear();
+
+            User saved = userRepository.findByUuidAndDeletedOnIsNull(result.getId()).orElseThrow();
+            assertThat(saved.getPreferences().getLanguage().getUuid()).isEqualTo(lang1.getUuid());
+        }
+        @Test
+        void createUser_shouldThrowLanguageNotFoundException_whenInvalidLanguageId() {
+            UserCreateRequestDTO dto = buildUserCreateRequestDTO("NON-EXIST-LANG", "NEW_TAX_ID");
+
+            assertThatThrownBy(() -> userService.createUser(dto))
+                    .isInstanceOf(LanguageNotFoundException.class)
+                    .satisfies(e -> {
+                        LanguageNotFoundException ex = (LanguageNotFoundException) e;
+                        assertThat(ex).isInstanceOf(BadRequestException.class);
+                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND);
+                        assertThat(ex.getMessage()).isEqualTo("Language not found: NON-EXIST-LANG");
+                    });
+        }
+        @Test
+        void createUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
+            UserCreateRequestDTO dto = buildUserCreateRequestDTO(lang1.getUuid(), TAX_ID_NUMBER);
+
+            assertThatThrownBy(() -> userService.createUser(dto))
+                    .isInstanceOf(UserAlreadyExistsException.class)
+                    .satisfies(e -> {
+                        UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
+                        assertThat(ex).isInstanceOf(ConflictException.class);
+                        assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID);
+                        assertThat(ex.getMessage()).isEqualTo("User with the same taxIdNumber already exists");
+                    });
+        }
     }
 
-    @Test
-    void getAllUsers_shouldReturnCorrectUsers_whenPageNumberRefersToTheSecondPage() {
-        Page<UserResponseDTO> result = userService.getAllUsers(
-                null,
-                PageRequest.of(1, 2, Sort.by("firstname").ascending())
-        );
+    @Nested
+    class UpdateUser {
 
-        assertThat(result.getTotalElements()).isEqualTo(3);
-        assertThat(result.getTotalPages()).isEqualTo(2);
-        assertThat(result.getNumber()).isEqualTo(1);
-        assertThat(result.getSize()).isEqualTo(2);
+        @Test
+        void updateUser_shouldUpdateAndReturnDTO_whenValidRequest() {
+            UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang2.getUuid(), enabledUser.getTaxIdNumber());
 
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent())
-                .extracting(UserResponseDTO::getId)
-                .containsExactly(anotherUser.getUuid());
+            UserResponseDTO result = userService.updateUser(enabledUser.getUuid(), dto);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(enabledUser.getUuid());
+            assertThat(result.getFirstname()).isEqualTo("new firstname");
+            assertThat(result.getLastname()).isEqualTo("new lastname");
+            assertThat(result.getGender()).isEqualTo(GenderDTO.F);
+            assertThat(result.getMobileNumber()).isEqualTo("9999");
+            assertThat(result.getTaxIdNumber()).isEqualTo(enabledUser.getTaxIdNumber());
+            assertThat(result.getEmail()).isEqualTo("new@email.com");
+            assertThat(result.getEnabled()).isFalse();
+            assertThat(result.getLanguage().getId()).isEqualTo(lang2.getUuid());
+        }
+        @Test
+        void updateUser_shouldUpdateAndReturnDTO_whenTaxIdNumberChangedAndNotExists() {
+            UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang1.getUuid(), "TAX_ID_NEW");
+
+            UserResponseDTO result = userService.updateUser(enabledUser.getUuid(), dto);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(enabledUser.getUuid());
+            assertThat(result.getTaxIdNumber()).isEqualTo("TAX_ID_NEW");
+        }
+        @Test
+        void updateUser_shouldThrowNotFoundException_whenUserNotFound() {
+            UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang1.getUuid(), "TAX_ID_NEW");
+
+            assertThatThrownBy(() -> userService.updateUser("non-existing-uuid", dto))
+                    .isInstanceOf(UserNotFoundException.class)
+                    .satisfies(e -> {
+                        UserNotFoundException ex = (UserNotFoundException) e;
+                        assertThat(ex).isInstanceOf(NotFoundException.class);
+                        assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                        assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
+                    });
+        }
+        @Test
+        void updateUser_shouldThrowLanguageNotFoundException_whenInvalidLanguage() {
+            UserUpdateRequestDTO dto = buildUserUpdateRequestDTO("NON-EXIST-LANG", enabledUser.getTaxIdNumber());
+
+            assertThatThrownBy(() -> userService.updateUser(enabledUser.getUuid(), dto))
+                    .isInstanceOf(LanguageNotFoundException.class)
+                    .satisfies(e -> {
+                        LanguageNotFoundException ex = (LanguageNotFoundException) e;
+                        assertThat(ex).isInstanceOf(BadRequestException.class);
+                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND);
+                        assertThat(ex.getMessage()).isEqualTo("Language not found: NON-EXIST-LANG");
+                    });
+        }
+        @Test
+        void updateUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
+            UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang1.getUuid(), anotherUser.getTaxIdNumber());
+
+            assertThatThrownBy(() -> userService.updateUser(enabledUser.getUuid(), dto))
+                    .isInstanceOf(UserAlreadyExistsException.class)
+                    .satisfies(e -> {
+                        UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
+                        assertThat(ex).isInstanceOf(ConflictException.class);
+                        assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID);
+                        assertThat(ex.getMessage()).isEqualTo("User with the same taxIdNumber already exists");
+                    });
+        }
     }
 
-    @Test
-    void getUserByUuid_shouldReturnUser_whenUserExists() {
-        when(identityService.getUserById(any()))
-                .thenReturn(new IdentityUserResponseDTO());
+    @Nested
+    class DeleteUser {
 
-        UserResponseDTO result = userService.getUserByUuid(enabledUser.getUuid());
+        @Test
+        void deleteUser_shouldSoftDelete_whenUserExists() {
+            when(accountService.getCurrentIdentityId())
+                    .thenReturn("current-id");
 
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(enabledUser.getUuid());
+            User existing = userRepository.findByUuidAndDeletedOnIsNull(enabledUser.getUuid())
+                    .orElseThrow();
+
+            assertThat(existing.getDeletedOn()).isNull();
+
+            userService.deleteUser(enabledUser.getUuid());
+
+            entityManager.flush();
+            entityManager.clear();
+
+            User deleted = userRepository.findById(enabledUser.getId()).orElseThrow();
+            assertThat(deleted.getDeletedBy()).isEqualTo("current-id");
+            assertThat(deleted.getDeletedOn()).isNotNull();
+        }
+        @Test
+        void deleteUser_shouldThrowNotFoundException_whenUserNotFound() {
+            assertThatThrownBy(() -> userService.deleteUser("non-existing-uuid"))
+                    .isInstanceOf(UserNotFoundException.class)
+                    .satisfies(e -> {
+                        UserNotFoundException ex = (UserNotFoundException) e;
+                        assertThat(ex).isInstanceOf(NotFoundException.class);
+                        assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                        assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
+                    });
+        }
     }
 
-    @Test
-    void getUserByUuid_shouldThrowNotFoundException_whenUserNotFound() {
-        assertThatThrownBy(() -> userService.getUserByUuid("non-existing-uuid"))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex).isInstanceOf(NotFoundException.class);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
-                    assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
-                });
-    }
+    @Nested
+    class ResetPassword {
 
-    @Test
-    void createUser_shouldCreateAndReturnDTO_whenValid() {
-        UserCreateRequestDTO dto = buildUserCreateRequestDTO(lang1.getUuid(), "NEW_TAX_ID");
-
-        UserResponseDTO result = userService.createUser(dto);
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isNotNull();
-        assertThat(result.getTaxIdNumber()).isEqualTo("NEW_TAX_ID");
-        assertThat(result.getLanguage().getId()).isEqualTo(lang1.getUuid());
-
-        entityManager.flush();
-        entityManager.clear();
-
-        User saved = userRepository.findByUuidAndDeletedOnIsNull(result.getId()).orElseThrow();
-        assertThat(saved.getPreferences().getLanguage().getUuid()).isEqualTo(lang1.getUuid());
-    }
-
-    @Test
-    void createUser_shouldThrowLanguageNotFoundException_whenInvalidLanguageId() {
-        UserCreateRequestDTO dto = buildUserCreateRequestDTO("NON-EXIST-LANG", "NEW_TAX_ID");
-
-        assertThatThrownBy(() -> userService.createUser(dto))
-                .isInstanceOf(LanguageNotFoundException.class)
-                .satisfies(e -> {
-                    LanguageNotFoundException ex = (LanguageNotFoundException) e;
-                    assertThat(ex).isInstanceOf(BadRequestException.class);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND);
-                    assertThat(ex.getMessage()).isEqualTo("Language not found: NON-EXIST-LANG");
-                });
-    }
-
-    @Test
-    void createUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
-        UserCreateRequestDTO dto = buildUserCreateRequestDTO(lang1.getUuid(), TAX_ID_NUMBER);
-
-        assertThatThrownBy(() -> userService.createUser(dto))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .satisfies(e -> {
-                    UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex).isInstanceOf(ConflictException.class);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID);
-                    assertThat(ex.getMessage()).isEqualTo("User with the same taxIdNumber already exists");
-                });
-    }
-
-    @Test
-    void updateUser_shouldUpdateAndReturnDTO_whenValidRequest() {
-        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang2.getUuid(), enabledUser.getTaxIdNumber());
-
-        UserResponseDTO result = userService.updateUser(enabledUser.getUuid(), dto);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(enabledUser.getUuid());
-        assertThat(result.getFirstname()).isEqualTo("new firstname");
-        assertThat(result.getLastname()).isEqualTo("new lastname");
-        assertThat(result.getGender()).isEqualTo(GenderDTO.F);
-        assertThat(result.getMobileNumber()).isEqualTo("9999");
-        assertThat(result.getTaxIdNumber()).isEqualTo(enabledUser.getTaxIdNumber());
-        assertThat(result.getEmail()).isEqualTo("new@email.com");
-        assertThat(result.getEnabled()).isFalse();
-        assertThat(result.getLanguage().getId()).isEqualTo(lang2.getUuid());
-    }
-
-    @Test
-    void updateUser_shouldUpdateAndReturnDTO_whenTaxIdNumberChangedAndNotExists() {
-        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang1.getUuid(), "TAX_ID_NEW");
-
-        UserResponseDTO result = userService.updateUser(enabledUser.getUuid(), dto);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(enabledUser.getUuid());
-        assertThat(result.getTaxIdNumber()).isEqualTo("TAX_ID_NEW");
-    }
-
-    @Test
-    void updateUser_shouldThrowNotFoundException_whenUserNotFound() {
-        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang1.getUuid(), "TAX_ID_NEW");
-
-        assertThatThrownBy(() -> userService.updateUser("non-existing-uuid", dto))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex).isInstanceOf(NotFoundException.class);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
-                    assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
-                });
-    }
-
-    @Test
-    void updateUser_shouldThrowLanguageNotFoundException_whenInvalidLanguage() {
-        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO("NON-EXIST-LANG", enabledUser.getTaxIdNumber());
-
-        assertThatThrownBy(() -> userService.updateUser(enabledUser.getUuid(), dto))
-                .isInstanceOf(LanguageNotFoundException.class)
-                .satisfies(e -> {
-                    LanguageNotFoundException ex = (LanguageNotFoundException) e;
-                    assertThat(ex).isInstanceOf(BadRequestException.class);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND);
-                    assertThat(ex.getMessage()).isEqualTo("Language not found: NON-EXIST-LANG");
-                });
-    }
-
-    @Test
-    void updateUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
-        UserUpdateRequestDTO dto = buildUserUpdateRequestDTO(lang1.getUuid(), anotherUser.getTaxIdNumber());
-
-        assertThatThrownBy(() -> userService.updateUser(enabledUser.getUuid(), dto))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .satisfies(e -> {
-                    UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex).isInstanceOf(ConflictException.class);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID);
-                    assertThat(ex.getMessage()).isEqualTo("User with the same taxIdNumber already exists");
-                });
-    }
-
-    @Test
-    void deleteUser_shouldSoftDelete_whenUserExists() {
-        when(accountService.getCurrentIdentityId())
-                .thenReturn("current-id");
-
-        User existing = userRepository.findByUuidAndDeletedOnIsNull(enabledUser.getUuid())
-                .orElseThrow();
-
-        assertThat(existing.getDeletedOn()).isNull();
-
-        userService.deleteUser(enabledUser.getUuid());
-
-        entityManager.flush();
-        entityManager.clear();
-
-        User deleted = userRepository.findById(enabledUser.getId()).orElseThrow();
-        assertThat(deleted.getDeletedBy()).isEqualTo("current-id");
-        assertThat(deleted.getDeletedOn()).isNotNull();
-    }
-
-    @Test
-    void deleteUser_shouldThrowNotFoundException_whenUserNotFound() {
-        assertThatThrownBy(() -> userService.deleteUser("non-existing-uuid"))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex).isInstanceOf(NotFoundException.class);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
-                    assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
-                });
-    }
-
-    @Test
-    void resetPassword_shouldThrowNotFoundException_whenUserNotFound() {
-        assertThatThrownBy(() -> userService.resetPassword("non-existing-uuid"))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex).isInstanceOf(NotFoundException.class);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
-                    assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
-                });
+        @Test
+        void resetPassword_shouldThrowNotFoundException_whenUserNotFound() {
+            assertThatThrownBy(() -> userService.resetPassword("non-existing-uuid"))
+                    .isInstanceOf(UserNotFoundException.class)
+                    .satisfies(e -> {
+                        UserNotFoundException ex = (UserNotFoundException) e;
+                        assertThat(ex).isInstanceOf(NotFoundException.class);
+                        assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                        assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
+                    });
+        }
     }
 
     private User createAndSaveUser(

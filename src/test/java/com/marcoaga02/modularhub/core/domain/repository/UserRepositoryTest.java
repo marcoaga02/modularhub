@@ -7,6 +7,7 @@ import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.model.User;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -68,122 +69,132 @@ class UserRepositoryTest extends BaseRepositoryTest {
         entityManager.clear();
     }
 
-    @Test
-    void findByUuidAndDeletedOnIsNull_shouldReturnUser_whenIsPresent() {
-        Optional<User> result = userRepository.findByUuidAndDeletedOnIsNull(enabledUser1.getUuid());
+    @Nested
+    class FindByUuidAndDeletedOnIsNull {
 
-        assertThat(result).isPresent();
-        assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
-        assertThat(result.get().getDeletedOn()).isNull();
+        @Test
+        void findByUuidAndDeletedOnIsNull_shouldReturnUser_whenIsPresent() {
+            Optional<User> result = userRepository.findByUuidAndDeletedOnIsNull(enabledUser1.getUuid());
+
+            assertThat(result).isPresent();
+            assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
+            assertThat(result.get().getDeletedOn()).isNull();
+        }
+        @Test
+        void findByUuidAndDeletedOnIsNull_shouldReturnEmpty_whenInvalidUuid() {
+            Optional<User> result = userRepository.findByUuidAndDeletedOnIsNull("invalid-uuid");
+
+            assertThat(result).isEmpty();
+        }
+        @Test
+        void findByUuidAndDeletedOnIsNull_shouldReturnEmpty_whenDeletedOnIsNotNull() {
+            Optional<User> result = userRepository.findByUuidAndDeletedOnIsNull(deletedUser.getUuid());
+
+            assertThat(result).isEmpty();
+        }
     }
 
-    @Test
-    void findByUuidAndDeletedOnIsNull_shouldReturnEmpty_whenInvalidUuid() {
-        Optional<User> result = userRepository.findByUuidAndDeletedOnIsNull("invalid-uuid");
+    @Nested
+    class FindByTaxIdNumberAndDeletedOnIsNull {
 
-        assertThat(result).isEmpty();
+        @Test
+        void findByTaxIdNumberAndDeletedOnIsNull_shouldReturnUser_whenIsPresent() {
+            Optional<User> result = userRepository.findByTaxIdNumberAndDeletedOnIsNull(enabledUser1.getTaxIdNumber());
+
+            assertThat(result).isPresent();
+            assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
+            assertThat(result.get().getDeletedOn()).isNull();
+        }
+        @Test
+        void findByTaxIdNumberAndDeletedOnIsNull_shouldReturnEmpty_whenInvalidTaxIdNumber() {
+            Optional<User> result = userRepository.findByTaxIdNumberAndDeletedOnIsNull("invalid-uuid");
+
+            assertThat(result).isEmpty();
+        }
+        @Test
+        void findByTaxIdNumberAndDeletedOnIsNull_shouldReturnEmpty_whenDeletedOnIsNotNull() {
+            Optional<User> result = userRepository.findByTaxIdNumberAndDeletedOnIsNull(deletedUser.getTaxIdNumber());
+
+            assertThat(result).isEmpty();
+        }
     }
 
-    @Test
-    void findByUuidAndDeletedOnIsNull_shouldReturnEmpty_whenDeletedOnIsNotNull() {
-        Optional<User> result = userRepository.findByUuidAndDeletedOnIsNull(deletedUser.getUuid());
+    @Nested
+    class FindByUsernameAndDeletedOnIsNull {
 
-        assertThat(result).isEmpty();
+        @Test
+        void findByUsernameAndDeletedOnIsNull_shouldReturnUser_whenIsPresent() {
+            Optional<User> result = userRepository.findByUsernameAndDeletedOnIsNull(enabledUser1.getUsername());
+
+            assertThat(result).isPresent();
+            assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
+            assertThat(result.get().getDeletedOn()).isNull();
+        }
+        @Test
+        void findByUsernameAndDeletedOnIsNull_shouldReturnEmpty_whenInvalidUsername() {
+            Optional<User> result = userRepository.findByUsernameAndDeletedOnIsNull("invalid-username");
+
+            assertThat(result).isEmpty();
+        }
+        @Test
+        void findByUsernameAndDeletedOnIsNull_shouldReturnEmpty_whenDeletedOnIsNotNull() {
+            Optional<User> result = userRepository.findByUsernameAndDeletedOnIsNull(deletedUser.getUsername());
+
+            assertThat(result).isEmpty();
+        }
     }
 
-    @Test
-    void findByTaxIdNumberAndDeletedOnIsNull_shouldReturnUser_whenIsPresent() {
-        Optional<User> result = userRepository.findByTaxIdNumberAndDeletedOnIsNull(enabledUser1.getTaxIdNumber());
+    @Nested
+    class FindByEmailAndDeletedOnIsNull {
 
-        assertThat(result).isPresent();
-        assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
-        assertThat(result.get().getDeletedOn()).isNull();
+        @Test
+        void findByEmailAndDeletedOnIsNull_shouldReturnUser_whenIsPresent() {
+            Optional<User> result = userRepository.findByEmailAndDeletedOnIsNull(enabledUser1.getEmail());
+
+            assertThat(result).isPresent();
+            assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
+            assertThat(result.get().getDeletedOn()).isNull();
+        }
+        @Test
+        void findByEmailAndDeletedOnIsNull_shouldReturnEmpty_whenInvalidEmail() {
+            Optional<User> result = userRepository.findByEmailAndDeletedOnIsNull("invalid-email");
+
+            assertThat(result).isEmpty();
+        }
+        @Test
+        void findByEmailAndDeletedOnIsNull_shouldReturnEmpty_whenDeletedOnIsNotNull() {
+            Optional<User> result = userRepository.findByEmailAndDeletedOnIsNull(deletedUser.getEmail());
+
+            assertThat(result).isEmpty();
+        }
     }
 
-    @Test
-    void findByTaxIdNumberAndDeletedOnIsNull_shouldReturnEmpty_whenInvalidTaxIdNumber() {
-        Optional<User> result = userRepository.findByTaxIdNumberAndDeletedOnIsNull("invalid-uuid");
+    @Nested
+    class FindByIdentity {
 
-        assertThat(result).isEmpty();
-    }
+        @Test
+        void findByIdentity_shouldReturnUser_whenIsPresent() {
+            Optional<User> result = userRepository.findByIdentityId(enabledUser1.getIdentityId());
 
-    @Test
-    void findByTaxIdNumberAndDeletedOnIsNull_shouldReturnEmpty_whenDeletedOnIsNotNull() {
-        Optional<User> result = userRepository.findByTaxIdNumberAndDeletedOnIsNull(deletedUser.getTaxIdNumber());
+            assertThat(result).isPresent();
+            assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
+            assertThat(result.get().getIdentityId()).isEqualTo(enabledUser1.getIdentityId());
+        }
+        @Test
+        void findByIdentity_shouldReturnUserWithPreferences_whenSavedInCascade() {
+            Optional<User> result = userRepository.findByIdentityId(enabledUser1.getIdentityId());
 
-        assertThat(result).isEmpty();
-    }
+            assertThat(result).isPresent();
+            assertThat(result.get().getPreferences()).isNotNull();
+            assertThat(result.get().getPreferences().getUuid()).isEqualTo(enabledUser1.getPreferences().getUuid());
+            assertThat(result.get().getPreferences().getLanguage().getUuid()).isEqualTo(language.getUuid());
+        }
+        @Test
+        void findByIdentity_shouldReturnEmpty_whenInvalidUuid() {
+            Optional<User> result = userRepository.findByIdentityId("invalid-identity-id");
 
-    @Test
-    void findByUsernameAndDeletedOnIsNull_shouldReturnUser_whenIsPresent() {
-        Optional<User> result = userRepository.findByUsernameAndDeletedOnIsNull(enabledUser1.getUsername());
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
-        assertThat(result.get().getDeletedOn()).isNull();
-    }
-
-    @Test
-    void findByUsernameAndDeletedOnIsNull_shouldReturnEmpty_whenInvalidUsername() {
-        Optional<User> result = userRepository.findByUsernameAndDeletedOnIsNull("invalid-username");
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void findByUsernameAndDeletedOnIsNull_shouldReturnEmpty_whenDeletedOnIsNotNull() {
-        Optional<User> result = userRepository.findByUsernameAndDeletedOnIsNull(deletedUser.getUsername());
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void findByEmailAndDeletedOnIsNull_shouldReturnUser_whenIsPresent() {
-        Optional<User> result = userRepository.findByEmailAndDeletedOnIsNull(enabledUser1.getEmail());
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
-        assertThat(result.get().getDeletedOn()).isNull();
-    }
-
-    @Test
-    void findByEmailAndDeletedOnIsNull_shouldReturnEmpty_whenInvalidEmail() {
-        Optional<User> result = userRepository.findByEmailAndDeletedOnIsNull("invalid-email");
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void findByEmailAndDeletedOnIsNull_shouldReturnEmpty_whenDeletedOnIsNotNull() {
-        Optional<User> result = userRepository.findByEmailAndDeletedOnIsNull(deletedUser.getEmail());
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void findByIdentity_shouldReturnUser_whenIsPresent() {
-        Optional<User> result = userRepository.findByIdentityId(enabledUser1.getIdentityId());
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getUuid()).isEqualTo(enabledUser1.getUuid());
-        assertThat(result.get().getIdentityId()).isEqualTo(enabledUser1.getIdentityId());
-    }
-
-    @Test
-    void findByIdentity_shouldReturnUserWithPreferences_whenSavedInCascade() {
-        Optional<User> result = userRepository.findByIdentityId(enabledUser1.getIdentityId());
-
-        assertThat(result).isPresent();
-        assertThat(result.get().getPreferences()).isNotNull();
-        assertThat(result.get().getPreferences().getUuid()).isEqualTo(enabledUser1.getPreferences().getUuid());
-        assertThat(result.get().getPreferences().getLanguage().getUuid()).isEqualTo(language.getUuid());
-    }
-
-    @Test
-    void findByIdentity_shouldReturnEmpty_whenInvalidUuid() {
-        Optional<User> result = userRepository.findByIdentityId("invalid-identity-id");
-
-        assertThat(result).isEmpty();
+            assertThat(result).isEmpty();
+        }
     }
 
     private User createUser(

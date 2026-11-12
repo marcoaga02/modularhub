@@ -8,6 +8,7 @@ import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.ForbiddenException;
 import com.marcoaga02.modularhub.core.api.exception.account.SelfDeletionException;
 import com.marcoaga02.modularhub.core.spi.IdentityProviderService;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -34,115 +35,6 @@ class IdentityServiceTest {
     private IdentityService identityService;
 
     @Test
-    void createUser_shouldCreateUser_whenPasswordIsNotBlank() {
-        IdentityUserCreateRequestDTO user = createIdentityUserCreateRequestDto(
-                "mrossi",
-                "rossi@email.it",
-                "Mario",
-                "Rossi",
-                true,
-                true,
-                "Password123!",
-                List.of("group1", "group2")
-        );
-
-        when(identityProvider.createUser(any()))
-                .thenReturn("user-id");
-
-        String userId = identityService.createUser(user);
-
-        assertThat(userId).isEqualTo("user-id");
-        verify(identityProvider).createUser(user);
-        verify(identityProvider).updatePassword("user-id", "Password123!");
-    }
-
-    @Test
-    void createUser_shouldCreateUser_whenPasswordIsBlank() {
-        IdentityUserCreateRequestDTO user = createIdentityUserCreateRequestDto(
-                "mrossi",
-                "rossi@email.it",
-                "Mario",
-                "Rossi",
-                true,
-                true,
-                "",
-                List.of("group1", "group2")
-        );
-
-        when(identityProvider.createUser(any()))
-                .thenReturn("user-id");
-
-        String userId = identityService.createUser(user);
-
-        assertThat(userId).isEqualTo("user-id");
-        verify(identityProvider).createUser(user);
-        verify(identityProvider, never()).updatePassword(any(), anyString());
-    }
-
-    @Test
-    void createUser_shouldCreateUser_whenPasswordIsNull() {
-        IdentityUserCreateRequestDTO user = createIdentityUserCreateRequestDto(
-                "mrossi",
-                "rossi@email.it",
-                "Mario",
-                "Rossi",
-                true,
-                true,
-                null,
-                List.of("group1", "group2")
-        );
-
-        when(identityProvider.createUser(any()))
-                .thenReturn("user-id");
-
-        String userId = identityService.createUser(user);
-
-        assertThat(userId).isEqualTo("user-id");
-        verify(identityProvider).createUser(user);
-        verify(identityProvider, never()).updatePassword(any(), anyString());
-    }
-
-    @Test
-    void createUser_shouldDeleteCreatedUserAndRethrow_whenPasswordUpdateFails() {
-        IdentityUserCreateRequestDTO user = createIdentityUserCreateRequestDto(
-                "mrossi",
-                "rossi@email.it",
-                "Mario",
-                "Rossi",
-                true,
-                true,
-                "Password123!",
-                List.of()
-        );
-        RuntimeException passwordError = new RuntimeException("password error");
-
-        when(identityProvider.createUser(any()))
-                .thenReturn("user-id");
-        doThrow(passwordError).when(identityProvider).updatePassword("user-id", "Password123!");
-
-        assertThatThrownBy(() -> identityService.createUser(user)).isSameAs(passwordError);
-
-        verify(identityProvider).deleteUser("user-id");
-    }
-
-    @Test
-    void rollbackCreatedUser_shouldDeleteUserWithoutSelfDeletionCheck() {
-        identityService.rollbackCreatedUser("user-id");
-
-        verify(identityProvider).deleteUser("user-id");
-        verifyNoInteractions(accountService);
-    }
-
-    @Test
-    void rollbackCreatedUser_shouldNotThrow_whenDeletionFails() {
-        doThrow(new RuntimeException("delete error")).when(identityProvider).deleteUser("user-id");
-
-        identityService.rollbackCreatedUser("user-id");
-
-        verify(identityProvider).deleteUser("user-id");
-    }
-
-    @Test
     void updateUser_shoudUpdateUser() {
         IdentityUserUpdateRequestDTO user = createIdentityUserUpdateRequestDto(
                     "mrossi",
@@ -160,113 +52,238 @@ class IdentityServiceTest {
         verify(identityProvider).updateUser(userId, user);
     }
 
-    @Test
-    void getUserById_shouldReturnUser() {
-        final String identityId = "identity-id";
-        IdentityGroupDTO groupDTO1 = createIdentityGroupDTO("group-id1", "first group", "first group description");
-        IdentityGroupDTO groupDTO2 = createIdentityGroupDTO("group-id2", "second group", "second group description");
+    @Nested
+    class CreateUser {
 
-        IdentityUserResponseDTO userResponseDTO = createIdentityUserResponseDto(
-                identityId,
-                "mrossi",
-                "rossi@email.it",
-                "Mario",
-                "Rossi",
-                true,
-                List.of(groupDTO1, groupDTO2)
-        );
+        @Test
+        void createUser_shouldCreateUser_whenPasswordIsNotBlank() {
+            IdentityUserCreateRequestDTO user = createIdentityUserCreateRequestDto(
+                    "mrossi",
+                    "rossi@email.it",
+                    "Mario",
+                    "Rossi",
+                    true,
+                    true,
+                    "Password123!",
+                    List.of("group1", "group2")
+            );
 
-        when(identityProvider.getUserById(identityId)).thenReturn(userResponseDTO);
+            when(identityProvider.createUser(any()))
+                    .thenReturn("user-id");
 
-        IdentityUserResponseDTO result = identityService.getUserById(identityId);
+            String userId = identityService.createUser(user);
 
-        assertThat(result).isEqualTo(userResponseDTO);
-        verify(identityProvider).getUserById(identityId);
+            assertThat(userId).isEqualTo("user-id");
+            verify(identityProvider).createUser(user);
+            verify(identityProvider).updatePassword("user-id", "Password123!");
+        }
+        @Test
+        void createUser_shouldCreateUser_whenPasswordIsBlank() {
+            IdentityUserCreateRequestDTO user = createIdentityUserCreateRequestDto(
+                    "mrossi",
+                    "rossi@email.it",
+                    "Mario",
+                    "Rossi",
+                    true,
+                    true,
+                    "",
+                    List.of("group1", "group2")
+            );
+
+            when(identityProvider.createUser(any()))
+                    .thenReturn("user-id");
+
+            String userId = identityService.createUser(user);
+
+            assertThat(userId).isEqualTo("user-id");
+            verify(identityProvider).createUser(user);
+            verify(identityProvider, never()).updatePassword(any(), anyString());
+        }
+        @Test
+        void createUser_shouldCreateUser_whenPasswordIsNull() {
+            IdentityUserCreateRequestDTO user = createIdentityUserCreateRequestDto(
+                    "mrossi",
+                    "rossi@email.it",
+                    "Mario",
+                    "Rossi",
+                    true,
+                    true,
+                    null,
+                    List.of("group1", "group2")
+            );
+
+            when(identityProvider.createUser(any()))
+                    .thenReturn("user-id");
+
+            String userId = identityService.createUser(user);
+
+            assertThat(userId).isEqualTo("user-id");
+            verify(identityProvider).createUser(user);
+            verify(identityProvider, never()).updatePassword(any(), anyString());
+        }
+        @Test
+        void createUser_shouldDeleteCreatedUserAndRethrow_whenPasswordUpdateFails() {
+            IdentityUserCreateRequestDTO user = createIdentityUserCreateRequestDto(
+                    "mrossi",
+                    "rossi@email.it",
+                    "Mario",
+                    "Rossi",
+                    true,
+                    true,
+                    "Password123!",
+                    List.of()
+            );
+            RuntimeException passwordError = new RuntimeException("password error");
+
+            when(identityProvider.createUser(any()))
+                    .thenReturn("user-id");
+            doThrow(passwordError).when(identityProvider).updatePassword("user-id", "Password123!");
+
+            assertThatThrownBy(() -> identityService.createUser(user)).isSameAs(passwordError);
+
+            verify(identityProvider).deleteUser("user-id");
+        }
     }
 
+    @Nested
+    class RollbackCreatedUser {
 
-    @Test
-    void deleteUser_shouldDeleteUser_whenValid() {
-        final String userId = "user-id";
+        @Test
+        void rollbackCreatedUser_shouldDeleteUserWithoutSelfDeletionCheck() {
+            identityService.rollbackCreatedUser("user-id");
+
+            verify(identityProvider).deleteUser("user-id");
+            verifyNoInteractions(accountService);
+        }
+        @Test
+        void rollbackCreatedUser_shouldNotThrow_whenDeletionFails() {
+            doThrow(new RuntimeException("delete error")).when(identityProvider).deleteUser("user-id");
+
+            identityService.rollbackCreatedUser("user-id");
+
+            verify(identityProvider).deleteUser("user-id");
+        }
+    }
+
+    @Nested
+    class GetUserById {
+
+        @Test
+        void getUserById_shouldReturnUser() {
+            final String identityId = "identity-id";
+            IdentityGroupDTO groupDTO1 = createIdentityGroupDTO("group-id1", "first group", "first group description");
+            IdentityGroupDTO groupDTO2 = createIdentityGroupDTO("group-id2", "second group", "second group description");
+
+            IdentityUserResponseDTO userResponseDTO = createIdentityUserResponseDto(
+                    identityId,
+                    "mrossi",
+                    "rossi@email.it",
+                    "Mario",
+                    "Rossi",
+                    true,
+                    List.of(groupDTO1, groupDTO2)
+            );
+
+            when(identityProvider.getUserById(identityId)).thenReturn(userResponseDTO);
+
+            IdentityUserResponseDTO result = identityService.getUserById(identityId);
+
+            assertThat(result).isEqualTo(userResponseDTO);
+            verify(identityProvider).getUserById(identityId);
+        }
+    }
+
+    @Nested
+    class DeleteUser {
+
+        @Test
+        void deleteUser_shouldDeleteUser_whenValid() {
+            final String userId = "user-id";
         
-        when(accountService.getCurrentIdentityId())
-                .thenReturn("another-id");
+            when(accountService.getCurrentIdentityId())
+                    .thenReturn("another-id");
 
-        identityService.deleteUser(userId);
+            identityService.deleteUser(userId);
 
-        verify(accountService).getCurrentIdentityId();
-        verify(identityProvider).deleteUser(userId);
+            verify(accountService).getCurrentIdentityId();
+            verify(identityProvider).deleteUser(userId);
+        }
+        @Test
+        void deleteUser_shouldDeleteUser_whenDeletingTheCurrentUser() {
+            final String userId = "user-id";
+
+            when(accountService.getCurrentIdentityId())
+                    .thenReturn(userId);
+
+            assertThatThrownBy(() -> identityService.deleteUser(userId))
+                    .isInstanceOf(SelfDeletionException.class)
+                    .satisfies(e -> {
+                        SelfDeletionException ex = (SelfDeletionException) e;
+                        assertThat(ex).isInstanceOf(ForbiddenException.class);
+                        assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Account.SELF_DELETION);
+                        assertThat(ex.getMessage()).isEqualTo("Account attempted to delete itself: user-id");
+                    });
+
+            verify(accountService).getCurrentIdentityId();
+            verify(identityProvider, never()).deleteUser(anyString());
+        }
     }
 
-    @Test
-    void deleteUser_shouldDeleteUser_whenDeletingTheCurrentUser() {
-        final String userId = "user-id";
+    @Nested
+    class ResetPassword {
 
-        when(accountService.getCurrentIdentityId())
-                .thenReturn(userId);
+        @Test
+        void resetPassword_shouldResetPassword() {
+            final String userId = "user-id";
 
-        assertThatThrownBy(() -> identityService.deleteUser(userId))
-                .isInstanceOf(SelfDeletionException.class)
-                .satisfies(e -> {
-                    SelfDeletionException ex = (SelfDeletionException) e;
-                    assertThat(ex).isInstanceOf(ForbiddenException.class);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Account.SELF_DELETION);
-                    assertThat(ex.getMessage()).isEqualTo("Account attempted to delete itself: user-id");
-                });
+            identityService.resetPassword(userId);
 
-        verify(accountService).getCurrentIdentityId();
-        verify(identityProvider, never()).deleteUser(anyString());
+            verify(identityProvider).resetPassword(userId);
+        }
     }
 
-    @Test
-    void resetPassword_shouldResetPassword() {
-        final String userId = "user-id";
+    @Nested
+    class GetGroups {
 
-        identityService.resetPassword(userId);
+        @Test
+        void getGroups_shouldReturnEmptyList_whenNoGroupIsPresent() {
+            when(identityProvider.getGroups()).thenReturn(List.of());
 
-        verify(identityProvider).resetPassword(userId);
-    }
+            List<IdentityGroupDTO> result = identityService.getGroups();
 
-    @Test
-    void getGroups_shouldReturnEmptyList_whenNoGroupIsPresent() {
-        when(identityProvider.getGroups()).thenReturn(List.of());
+            assertThat(result).isEmpty();
 
-        List<IdentityGroupDTO> result = identityService.getGroups();
+            verify(identityProvider).getGroups();
+        }
+        @Test
+        void getGroups_shouldReturnGroup_whenOneGroupIsPresent() {
+            IdentityGroupDTO groupDto = createIdentityGroupDTO("group-id1", "first group", "first group description");
 
-        assertThat(result).isEmpty();
+            when(identityProvider.getGroups()).thenReturn(List.of(groupDto));
 
-        verify(identityProvider).getGroups();
-    }
+            List<IdentityGroupDTO> result = identityService.getGroups();
 
-    @Test
-    void getGroups_shouldReturnGroup_whenOneGroupIsPresent() {
-        IdentityGroupDTO groupDto = createIdentityGroupDTO("group-id1", "first group", "first group description");
+            assertThat(result)
+                    .hasSize(1)
+                    .containsExactly(groupDto);
 
-        when(identityProvider.getGroups()).thenReturn(List.of(groupDto));
+            verify(identityProvider).getGroups();
+        }
+        @Test
+        void getGroups_shouldReturnAllGroups_whenMultipleGroupsArePresent() {
+            IdentityGroupDTO firstGroupDto = createIdentityGroupDTO("group-id1", "first group", "first group description");
+            IdentityGroupDTO secondGroupDto = createIdentityGroupDTO("group-id2", "second group",  "second group description");
 
-        List<IdentityGroupDTO> result = identityService.getGroups();
+            when(identityProvider.getGroups()).thenReturn(List.of(firstGroupDto, secondGroupDto));
 
-        assertThat(result)
-                .hasSize(1)
-                .containsExactly(groupDto);
+            List<IdentityGroupDTO> result = identityService.getGroups();
 
-        verify(identityProvider).getGroups();
-    }
+            assertThat(result)
+                    .hasSize(2)
+                    .containsExactlyInAnyOrder(firstGroupDto, secondGroupDto);
 
-    @Test
-    void getGroups_shouldReturnAllGroups_whenMultipleGroupsArePresent() {
-        IdentityGroupDTO firstGroupDto = createIdentityGroupDTO("group-id1", "first group", "first group description");
-        IdentityGroupDTO secondGroupDto = createIdentityGroupDTO("group-id2", "second group",  "second group description");
-
-        when(identityProvider.getGroups()).thenReturn(List.of(firstGroupDto, secondGroupDto));
-
-        List<IdentityGroupDTO> result = identityService.getGroups();
-
-        assertThat(result)
-                .hasSize(2)
-                .containsExactlyInAnyOrder(firstGroupDto, secondGroupDto);
-
-        verify(identityProvider).getGroups();
+            verify(identityProvider).getGroups();
+        }
     }
 
     private IdentityUserCreateRequestDTO createIdentityUserCreateRequestDto(
