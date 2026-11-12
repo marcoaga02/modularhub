@@ -28,9 +28,14 @@ services:
       KC_DB_USERNAME: modularhub
       KC_DB_PASSWORD: modularhub
       MODULARHUB_BACKEND_CLIENT_SECRET: ${MODULARHUB_BACKEND_CLIENT_SECRET:?MODULARHUB_BACKEND_CLIENT_SECRET is required}
-      MODULARHUB_SMTP_FROM: ${MODULARHUB_SMTP_FROM:-}
+      MODULARHUB_SMTP_HOST: ${MODULARHUB_SMTP_HOST:-mailpit}
+      MODULARHUB_SMTP_PORT: ${MODULARHUB_SMTP_PORT:-1025}
+      MODULARHUB_SMTP_FROM: ${MODULARHUB_SMTP_FROM:-noreply@modularhub.local}
+      MODULARHUB_SMTP_AUTH: ${MODULARHUB_SMTP_AUTH:-false}
       MODULARHUB_SMTP_USER: ${MODULARHUB_SMTP_USER:-}
       MODULARHUB_SMTP_PASSWORD: ${MODULARHUB_SMTP_PASSWORD:-}
+      MODULARHUB_SMTP_STARTTLS: ${MODULARHUB_SMTP_STARTTLS:-false}
+      MODULARHUB_SMTP_SSL: ${MODULARHUB_SMTP_SSL:-false}
     command: start-dev --import-realm
     volumes:
       - ./keycloak/import:/opt/keycloak/data/import:ro
@@ -39,6 +44,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    container_name: modularhub-mailpit
+    ports:
+      - '8025:8025'
+      - '1025:1025'
 
 volumes:
   postgres_data:
