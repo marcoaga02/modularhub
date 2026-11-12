@@ -4,9 +4,12 @@ import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
-import com.marcoaga02.modularhub.core.api.exception.IdentityProviderException;
-import com.marcoaga02.modularhub.core.api.exception.InvalidArgumentException;
+import com.marcoaga02.modularhub.core.api.exception.ApplicationException;
+import com.marcoaga02.modularhub.core.api.exception.identity.IdentityProviderUnavailableException;
+import com.marcoaga02.modularhub.core.api.exception.identity.IdentityConflictException;
+import com.marcoaga02.modularhub.core.api.exception.identity.IdentityResourceNotFoundException;
 import com.marcoaga02.modularhub.core.spi.IdentityProviderService;
+import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.admin.client.CreatedResponseUtil;
@@ -138,7 +141,7 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
     @Override
     public void updatePassword(String userId, String password) {
         if (!StringUtils.hasText(password)) {
-            throw new InvalidArgumentException("Password must not be blank");
+            throw new IllegalArgumentException("Password must not be blank");
         }
 
         CredentialRepresentation credential =
@@ -190,7 +193,7 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
                 family == Response.Status.Family.SERVER_ERROR) {
 
             String errorMessage = response.readEntity(String.class);
-            throw new IdentityProviderException(response.getStatus(), errorMessage);
+            throw toApplicationException(response.getStatus(), errorMessage, null);
         }
     }
 
@@ -198,15 +201,24 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
         try {
             return action.get();
         } catch (WebApplicationException e) {
-            throw new IdentityProviderException(e.getResponse().getStatus(), e.getMessage(), e);
+            throw toApplicationException(e.getResponse().getStatus(), e.getMessage(), e);
+        } catch (ProcessingException e) {
+            throw new IdentityProviderUnavailableException(e.getMessage(), e);
         }
     }
 
     private void execute(Runnable action) {
-        try {
+        execute(() -> {
             action.run();
-        } catch (WebApplicationException e) {
-            throw new IdentityProviderException(e.getResponse().getStatus(), e.getMessage(), e);
-        }
+            return null;
+        });
+    }
+
+    private ApplicationException toApplicationException(int status, String message, Throwable cause) {
+        return switch (status) {
+            case 404 -> new IdentityResourceNotFoundException(message, cause);
+            case 409 -> new IdentityConflictException(message, cause);
+            default -> new IdentityProviderUnavailableException(message, cause);
+        };
     }
 }

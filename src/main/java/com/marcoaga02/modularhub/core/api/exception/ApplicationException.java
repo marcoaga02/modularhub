@@ -1,35 +1,25 @@
 package com.marcoaga02.modularhub.core.api.exception;
 
 import lombok.Getter;
-import org.springframework.http.HttpStatus;
+
+import java.util.Map;
 
 @Getter
 public abstract class ApplicationException extends RuntimeException {
 
     private final String errorCode;
-    private final HttpStatus httpStatus;
-    private final String logMessage;
 
-    protected ApplicationException(
-            String errorCode,
-            HttpStatus httpStatus,
-            String logMessage
-    ) {
-        super(logMessage);
+    private final transient Map<String, Object> params;
+
+    protected ApplicationException(String message, String errorCode, Map<String, Object> params) {
+        super(message);
         this.errorCode = errorCode;
-        this.httpStatus = httpStatus;
-        this.logMessage = logMessage;
+        this.params = params;
     }
 
-    protected ApplicationException(
-            String errorCode,
-            HttpStatus httpStatus,
-            String logMessage,
-            Throwable cause
-    ) {
-        super(logMessage, cause);
+    protected ApplicationException(String message, String errorCode, Map<String, Object> params, Throwable cause) {
+        super(message, cause);
         this.errorCode = errorCode;
-        this.httpStatus = httpStatus;
-        this.logMessage = logMessage;
+        this.params = params;
     }
 }

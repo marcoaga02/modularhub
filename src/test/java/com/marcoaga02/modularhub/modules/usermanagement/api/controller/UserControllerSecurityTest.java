@@ -1,6 +1,9 @@
 package com.marcoaga02.modularhub.modules.usermanagement.api.controller;
 
+import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.config.CorsProperties;
+import com.marcoaga02.modularhub.core.config.ErrorResponseAccessDeniedHandler;
+import com.marcoaga02.modularhub.core.config.ErrorResponseAuthenticationEntryPoint;
 import com.marcoaga02.modularhub.core.config.MethodSecurityConfig;
 import com.marcoaga02.modularhub.core.config.SecurityConfig;
 import com.marcoaga02.modularhub.modules.usermanagement.domain.service.UserService;
@@ -21,10 +24,13 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, MethodSecurityConfig.class, CorsProperties.class, UserPermissions.class})
+@Import({SecurityConfig.class, MethodSecurityConfig.class, CorsProperties.class, UserPermissions.class,
+        ErrorResponseAuthenticationEntryPoint.class, ErrorResponseAccessDeniedHandler.class})
 class UserControllerSecurityTest {
 
     @Autowired
@@ -49,7 +55,8 @@ class UserControllerSecurityTest {
     void getAllUsers_shouldReturnForbidden_whenUserLacksUserManagementRole() throws Exception {
         mockMvc.perform(get("/users")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_SOME_OTHER_ROLE"))))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Access.DENIED));
 
         verifyNoInteractions(userService);
     }
@@ -57,7 +64,10 @@ class UserControllerSecurityTest {
     @Test
     void getAllUsers_shouldReturnUnauthorized_whenNotAuthenticated() throws Exception {
         mockMvc.perform(get("/users"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists("WWW-Authenticate"))
+                .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Access.UNAUTHORIZED))
+                .andExpect(jsonPath("$.timestamp").exists());
 
         verifyNoInteractions(userService);
     }

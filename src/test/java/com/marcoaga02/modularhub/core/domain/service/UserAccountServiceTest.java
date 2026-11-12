@@ -4,7 +4,7 @@ import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesUpdateDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.InternalStateException;
-import com.marcoaga02.modularhub.core.api.exception.LanguageNotFoundException;
+import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.api.mapper.AccountPreferencesMapper;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Language;
@@ -133,8 +133,8 @@ class UserAccountServiceTest {
                 .isInstanceOf(InternalStateException.class)
                 .satisfies(e -> {
                     InternalStateException ex = (InternalStateException) e;
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.INTERNAL_ERROR);
-                    assertThat(ex.getLogMessage()).isEqualTo("No default language configured");
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
+                    assertThat(ex.getMessage()).isEqualTo("No default language configured");
                 });
 
         verify(userRepository, never()).save(any());
@@ -176,7 +176,7 @@ class UserAccountServiceTest {
         assertThatThrownBy(() -> userAccountService.updatePreferences(jwt, dto))
                 .isInstanceOf(LanguageNotFoundException.class)
                 .satisfies(e -> assertThat(((LanguageNotFoundException) e).getErrorCode())
-                        .isEqualTo(ExceptionCodes.LANGUAGE_NOT_FOUND));
+                        .isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND));
 
         verifyNoInteractions(accountPreferencesMapper);
     }

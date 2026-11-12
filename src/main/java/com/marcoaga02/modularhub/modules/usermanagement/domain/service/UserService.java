@@ -1,7 +1,7 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
 import com.marcoaga02.modularhub.core.api.dto.*;
-import com.marcoaga02.modularhub.core.api.exception.LanguageNotFoundException;
+import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.model.User;
@@ -13,8 +13,8 @@ import com.marcoaga02.modularhub.core.domain.service.UserAccountService;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserAlreadyExistsException;
-import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserNotFoundException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserAlreadyExistsException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserNotFoundException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.UserMapper;
 import com.marcoaga02.modularhub.modules.usermanagement.domain.repository.specification.UserSpecification;
 import org.springframework.data.domain.Page;

@@ -7,8 +7,8 @@ import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
-import com.marcoaga02.modularhub.core.api.exception.IdentityProviderException;
-import com.marcoaga02.modularhub.core.api.exception.InvalidArgumentException;
+import com.marcoaga02.modularhub.core.api.exception.identity.IdentityConflictException;
+import com.marcoaga02.modularhub.core.api.exception.identity.IdentityResourceNotFoundException;
 import dasniko.testcontainers.keycloak.KeycloakContainer;
 import jakarta.ws.rs.WebApplicationException;
 import org.junit.jupiter.api.AfterEach;
@@ -24,7 +24,6 @@ import org.keycloak.representations.idm.GroupRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -244,7 +243,7 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     }
 
     @Test
-    void createUser_shouldThrowIdentityProviderException_whenUsernameAlreadyExists() {
+    void createUser_shouldThrowIdentityConflictException_whenUsernameAlreadyExists() {
         IdentityUserCreateRequestDTO dto = getCreateRequestDTO(
                 "duplicate",
                 "first@example.com",
@@ -269,12 +268,11 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
         );
 
         assertThatThrownBy(() -> keycloakService.createUser(duplicate))
-                .isInstanceOf(IdentityProviderException.class)
+                .isInstanceOf(IdentityConflictException.class)
                 .satisfies(e -> {
-                    IdentityProviderException ex = (IdentityProviderException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IDENTITY_PROVIDER_ERROR);
-                    assertThat(ex.getLogMessage()).isNotBlank();
+                    IdentityConflictException ex = (IdentityConflictException) e;
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.CONFLICT);
+                    assertThat(ex.getMessage()).isNotBlank();
                 });
     }
 
@@ -292,7 +290,7 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
         );
 
         assertThatThrownBy(() -> keycloakService.createUser(dto))
-                .isInstanceOf(IdentityProviderException.class);
+                .isInstanceOf(IdentityResourceNotFoundException.class);
 
         assertThat(adminClient.realm(REALM).users().search("orphan.user", true)).isEmpty();
     }
@@ -436,7 +434,7 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     }
 
     @Test
-    void updateUser_shouldThrowIdentityProviderException_whenInvalidUserId() {
+    void updateUser_shouldThrowIdentityResourceNotFoundException_whenInvalidUserId() {
         IdentityUserUpdateRequestDTO updateDto = getUpdateRequestDTO(
                 "updated.username",
                 "updated@example.com",
@@ -447,12 +445,11 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
         );
 
         assertThatThrownBy(() -> keycloakService.updateUser("invalid-uuid", updateDto))
-                .isInstanceOf(IdentityProviderException.class)
+                .isInstanceOf(IdentityResourceNotFoundException.class)
                 .satisfies(e -> {
-                    IdentityProviderException ex = (IdentityProviderException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IDENTITY_PROVIDER_ERROR);
-                    assertThat(ex.getLogMessage()).isNotBlank();
+                    IdentityResourceNotFoundException ex = (IdentityResourceNotFoundException) e;
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.NOT_FOUND);
+                    assertThat(ex.getMessage()).isNotBlank();
                 });
     }
 
@@ -482,14 +479,13 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     }
 
     @Test
-    void deleteUser_shouldThrowIdentityProviderException_whenInvalidUserId() {
+    void deleteUser_shouldThrowIdentityResourceNotFoundException_whenInvalidUserId() {
         assertThatThrownBy(() -> keycloakService.deleteUser("invalid-uuid"))
-                .isInstanceOf(IdentityProviderException.class)
+                .isInstanceOf(IdentityResourceNotFoundException.class)
                 .satisfies(e -> {
-                    IdentityProviderException ex = (IdentityProviderException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IDENTITY_PROVIDER_ERROR);
-                    assertThat(ex.getLogMessage()).isNotBlank();
+                    IdentityResourceNotFoundException ex = (IdentityResourceNotFoundException) e;
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.NOT_FOUND);
+                    assertThat(ex.getMessage()).isNotBlank();
                 });
     }
 
@@ -528,13 +524,12 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     }
 
     @Test
-    void getUserById_shouldThrowIdentityProviderException_whenInvalidUserId() {
+    void getUserById_shouldThrowIdentityResourceNotFoundException_whenInvalidUserId() {
         assertThatThrownBy(() -> keycloakService.getUserById("invalid-uuid"))
-                .isInstanceOf(IdentityProviderException.class)
+                .isInstanceOf(IdentityResourceNotFoundException.class)
                 .satisfies(e -> {
-                    IdentityProviderException ex = (IdentityProviderException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IDENTITY_PROVIDER_ERROR);
+                    IdentityResourceNotFoundException ex = (IdentityResourceNotFoundException) e;
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.NOT_FOUND);
                     assertThat(ex.getCause()).isInstanceOf(WebApplicationException.class);
                 });
     }
@@ -595,13 +590,12 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
     }
 
     @Test
-    void getUserGroups_shouldThrowIdentityProviderException_whenInvalidUserId() {
+    void getUserGroups_shouldThrowIdentityResourceNotFoundException_whenInvalidUserId() {
         assertThatThrownBy(() -> keycloakService.getUserGroups("invalid-uuid"))
-                .isInstanceOf(IdentityProviderException.class)
+                .isInstanceOf(IdentityResourceNotFoundException.class)
                 .satisfies(e -> {
-                    IdentityProviderException ex = (IdentityProviderException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IDENTITY_PROVIDER_ERROR);
+                    IdentityResourceNotFoundException ex = (IdentityResourceNotFoundException) e;
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.IdentityProvider.NOT_FOUND);
                     assertThat(ex.getCause()).isInstanceOf(WebApplicationException.class);
                 });
     }
@@ -642,13 +636,8 @@ class KeycloakIdentityProviderServiceIT extends BaseIT {
         ));
 
         assertThatThrownBy(() -> keycloakService.updatePassword(userId, password))
-                .isInstanceOf(InvalidArgumentException.class)
-                .satisfies(e -> {
-                    InvalidArgumentException ex = (InvalidArgumentException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.INTERNAL_ERROR);
-                    assertThat(ex.getLogMessage()).isEqualTo("Password must not be blank");
-                });
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Password must not be blank");
     }
 
     private IdentityUserCreateRequestDTO getCreateRequestDTO(

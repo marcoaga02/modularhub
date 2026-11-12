@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.26.0",
+    "generators": {
+      "core": {
+        "generatorName": "typescript-angular",
+        "inputSpec": "../openapi/core.yaml",
+        "output": "src/app/core/api/generated",
+        "globalProperty": {
+          "supportingFiles": "",
+          "models": "",
+          "apis": ""
+        },
+        "additionalProperties": {
+          "ngVersion": "21.2.0",
+          "fileNaming": "kebab-case",
+          "providedIn": "root",
+          "stringEnums": true,
+          "supportsES6": true,
+          "serviceSuffix": "ApiService",
+          "serviceFileSuffix": ".api.service"
+        },
+        "typeMappings": {
+          "UUID": "UUID"
+        },
+        "importMappings": {
+          "UUID": "app/core/api/models/uuid"
+        },
+        "modelNameMappings": {
+          "Error": "ApiError"
+        }
+      }
+    }
+  }
+}

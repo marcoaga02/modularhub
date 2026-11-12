@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -77,9 +76,8 @@ class AccountServiceTest {
                 .isInstanceOf(InternalStateException.class)
                 .satisfies(e -> {
                     InternalStateException ex = (InternalStateException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.INTERNAL_ERROR);
-                    assertThat(ex.getLogMessage()).isEqualTo("No JWT authentication found in security context");
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
+                    assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
                 });
     }
 
@@ -108,9 +106,8 @@ class AccountServiceTest {
                 .isInstanceOf(InternalStateException.class)
                 .satisfies(e -> {
                     InternalStateException ex = (InternalStateException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.INTERNAL_ERROR);
-                    assertThat(ex.getLogMessage()).isEqualTo("No JWT authentication found in security context");
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
+                    assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
                 });
     }
 
@@ -166,9 +163,8 @@ class AccountServiceTest {
                 .isInstanceOf(InternalStateException.class)
                 .satisfies(e -> {
                     InternalStateException ex = (InternalStateException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.INTERNAL_ERROR);
-                    assertThat(ex.getLogMessage()).isEqualTo("No JWT authentication found in security context");
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
+                    assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
                 });
     }
 
@@ -189,9 +185,8 @@ class AccountServiceTest {
                 .isInstanceOf(InternalStateException.class)
                 .satisfies(e -> {
                     InternalStateException ex = (InternalStateException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.INTERNAL_ERROR);
-                    assertThat(ex.getLogMessage()).isEqualTo("No JWT authentication found in security context");
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Internal.ERROR);
+                    assertThat(ex.getMessage()).isEqualTo("No JWT authentication found in security context");
                 });
     }
 

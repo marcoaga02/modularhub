@@ -16,7 +16,9 @@
   },
   "exception": {
     "identity-provider": {
-      "error": "Identity provider error: please try again later"
+      "error": "Identity provider error: please try again later",
+      "not-found": "Item not found on the identity provider",
+      "conflict": "The identity provider already contains an item with the same data"
     },
     "internal": {
       "error": "Internal server error: please try again later"
@@ -38,7 +40,17 @@
       }
     },
     "validation": {
-      "invalid-fields": "The following fields are invalid: {{fields}}"
+      "invalid-fields": "The following fields are invalid: {{fields}}",
+      "invalid-request": "Invalid request"
+    },
+    "access": {
+      "unauthorized": "Session expired or invalid: please log in again",
+      "denied": "You are not allowed to perform this operation"
+    },
+    "generic": {
+      "not-found": "Resource not found",
+      "method-not-allowed": "Operation not allowed",
+      "concurrent-modification": "The data was modified by another user: reload and try again"
     }
   },
   "general": {

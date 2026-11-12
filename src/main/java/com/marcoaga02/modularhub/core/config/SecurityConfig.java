@@ -26,8 +26,16 @@ public class SecurityConfig {
 
     private final CorsProperties corsProperties;
 
-    public SecurityConfig(CorsProperties corsProperties) {
+    private final ErrorResponseAuthenticationEntryPoint authenticationEntryPoint;
+
+    private final ErrorResponseAccessDeniedHandler accessDeniedHandler;
+
+    public SecurityConfig(CorsProperties corsProperties,
+                          ErrorResponseAuthenticationEntryPoint authenticationEntryPoint,
+                          ErrorResponseAccessDeniedHandler accessDeniedHandler) {
         this.corsProperties = corsProperties;
+        this.authenticationEntryPoint = authenticationEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
     }
 
     @Bean
@@ -38,8 +46,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth.anyRequest().authenticated()
                 )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
                 );
 
         return http.build();

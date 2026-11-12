@@ -28,7 +28,7 @@ import {PLUGIN_REGISTRY} from 'app/plugin-registry';
 import {OAuthService, OAuthStorage, provideOAuthClient} from 'angular-oauth2-oidc';
 import {AccountService} from 'app/core/api/services/account.service';
 import {environment} from 'environments/environment';
-import {CustomError} from 'app/core/api/models/custom-error';
+import {ApiError, provideApi} from 'app/core/api/generated';
 import {registerLocaleData} from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import localeEn from '@angular/common/locales/en';
@@ -105,9 +105,11 @@ function errorHandlerInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn)
 
   return next(req).pipe(
     catchError((e: HttpErrorResponse) => {
-      const error = e.error as CustomError;
-      const errorCode = error.errorCode ?? 'exception.internal.error';
-      const fields = error.fields?.length ? error.fields.join(', ') : undefined;
+      const error = e.error as ApiError | null;
+      const errorCode = error?.errorCode ?? 'exception.internal.error';
+      const invalidFields: unknown = error?.params?.['fields'];
+      const fields =
+        Array.isArray(invalidFields) && invalidFields.length ? invalidFields.join(', ') : undefined;
 
       messageService.add({
         severity: 'error',
@@ -153,6 +155,7 @@ export const appConfig: ApplicationConfig = {
       withInterceptors([oAuthInterceptor, errorHandlerInterceptor])
     ),
     provideOAuthClient(),
+    provideApi(environment.apiUrl),
     provideTranslateService({
       loader: provideTranslateHttpLoader({
         prefix: './i18n/',

@@ -1,8 +1,8 @@
-import {Language} from 'app/core/api/models/language';
+import {LanguageResponse} from 'app/core/api/generated';
 import {UUID} from 'app/core/api/models/uuid';
 
 export interface AccountPreferences {
-  language: Language
+  language: LanguageResponse
 }
 
 export interface AccountPreferencesRequest {

@@ -1,0 +1,55 @@
+openapi: 3.0.3
+info:
+  title: ModularHub Core API
+  version: 0.0.1
+servers:
+  - url: http://localhost:8080/api
+security:
+  - bearerAuth: [ ]
+tags:
+  - name: Language
+paths:
+  /languages:
+    get:
+      tags:
+        - Language
+      operationId: getLanguages
+      responses:
+        '200':
+          description: Available languages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LanguageResponse'
+        '401':
+          $ref: 'common.yaml#/components/responses/Unauthorized'
+        '500':
+          $ref: 'common.yaml#/components/responses/InternalServerError'
+components:
+  securitySchemes:
+    bearerAuth:
+      $ref: 'common.yaml#/components/securitySchemes/bearerAuth'
+  schemas:
+    Error:
+      $ref: 'common.yaml#/components/schemas/Error'
+    LanguageResponse:
+      type: object
+      required:
+        - id
+        - code
+        - label
+        - isDefault
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: it-IT
+        label:
+          type: string
+          example: Italiano
+        isDefault:
+          type: boolean

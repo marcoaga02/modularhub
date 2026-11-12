@@ -1,0 +1,73 @@
+openapi: 3.0.3
+info:
+  title: ModularHub Common
+  version: 0.0.1
+paths: { }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Invalid request or domain rule violated by the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, invalid or expired token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Authenticated user not allowed to perform the operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Request in conflict with the current state of the data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: A system the server depends on is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      required:
+        - timestamp
+        - errorCode
+        - params
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        errorCode:
+          type: string
+          description: i18n key translated by the frontend
+          example: exception.model.user.not-found
+        params:
+          type: object
+          additionalProperties: true
+          description: Parameters of the i18n message

@@ -5,14 +5,14 @@ import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
-import com.marcoaga02.modularhub.core.api.exception.SelfDeletionException;
+import com.marcoaga02.modularhub.core.api.exception.ForbiddenException;
+import com.marcoaga02.modularhub.core.api.exception.account.SelfDeletionException;
 import com.marcoaga02.modularhub.core.spi.IdentityProviderService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -209,9 +209,9 @@ class IdentityServiceTest {
                 .isInstanceOf(SelfDeletionException.class)
                 .satisfies(e -> {
                     SelfDeletionException ex = (SelfDeletionException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.SELF_DELETION);
-                    assertThat(ex.getLogMessage()).isEqualTo("Account with identityId 'user-id' attempted to delete their own account");
+                    assertThat(ex).isInstanceOf(ForbiddenException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Account.SELF_DELETION);
+                    assertThat(ex.getMessage()).isEqualTo("Account attempted to delete itself: user-id");
                 });
 
         verify(accountService).getCurrentIdentityId();

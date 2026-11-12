@@ -1,5 +1,5 @@
 import {Gender} from 'app/core/api/models/gender';
-import {Language} from 'app/core/api/models/language';
+import {LanguageResponse} from 'app/core/api/generated';
 import {Group} from 'app/core/api/models/group';
 import {UUID} from 'app/core/api/models/uuid';
 import {Audit} from 'app/core/api/models/audit';
@@ -9,7 +9,7 @@ export interface User {
   firstname: string,
   lastname: string,
   gender: Gender,
-  language?: Language,
+  language?: LanguageResponse,
   mobileNumber?: string,
   taxIdNumber: string,
 

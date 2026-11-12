@@ -1,15 +1,14 @@
 package com.marcoaga02.modularhub.core.api.exception;
 
-import org.springframework.http.HttpStatus;
+import java.util.Map;
 
 public abstract class BadRequestException extends ApplicationException {
 
-    protected BadRequestException(String errorCode, String logMessage) {
-        super(errorCode, HttpStatus.BAD_REQUEST, logMessage);
+    protected BadRequestException(String message, String errorCode, Map<String, Object> params) {
+        super(message, errorCode, params);
     }
 
-    protected BadRequestException(String errorCode, String logMessage, Throwable cause) {
-        super(errorCode, HttpStatus.BAD_REQUEST, logMessage, cause);
+    protected BadRequestException(String message, String errorCode, Map<String, Object> params, Throwable cause) {
+        super(message, errorCode, params, cause);
     }
 }
-

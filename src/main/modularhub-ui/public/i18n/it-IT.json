@@ -16,7 +16,9 @@
   },
   "exception": {
     "identity-provider": {
-      "error": "Errore del provider dell'identità: riprovare più tardi"
+      "error": "Errore del provider dell'identità: riprovare più tardi",
+      "not-found": "Elemento non trovato sul provider dell'identità",
+      "conflict": "Il provider dell'identità contiene già un elemento con gli stessi dati"
     },
     "internal": {
       "error": "Errore interno al server: riprovare più tardi"
@@ -38,7 +40,17 @@
       }
     },
     "validation": {
-      "invalid-fields": "I seguenti campi non sono validi: {{fields}}"
+      "invalid-fields": "I seguenti campi non sono validi: {{fields}}",
+      "invalid-request": "Richiesta non valida"
+    },
+    "access": {
+      "unauthorized": "Sessione scaduta o non valida: effettuare di nuovo l'accesso",
+      "denied": "Non hai i permessi per eseguire questa operazione"
+    },
+    "generic": {
+      "not-found": "Risorsa non trovata",
+      "method-not-allowed": "Operazione non consentita",
+      "concurrent-modification": "I dati sono stati modificati da un altro utente: ricaricare e riprovare"
     }
   },
   "general": {

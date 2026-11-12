@@ -8,7 +8,7 @@ import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
 import {Select} from 'primeng/select';
 import {TranslatePipe} from '@ngx-translate/core';
 import {LanguageService} from 'app/modules/user-management/api/services/language.service';
-import {Language} from 'app/core/api/models/language';
+import {LanguageResponse} from 'app/core/api/generated';
 import {Button} from 'primeng/button';
 
 type LanguageWithValue = {
@@ -47,7 +47,7 @@ export class AccountPreferencesComponent {
     forkJoin([
       this.languageService.getLanguages().pipe(
         retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
-      ) as Observable<Language[]>,
+      ) as Observable<LanguageResponse[]>,
       this.accountService.getObservableAccount().pipe(
         first(),
         retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),

@@ -27,6 +27,8 @@
         <coveralls.version>5.0.0</coveralls.version>
         <surefire-report.version>3.5.5</surefire-report.version>
         <buildhelper.version>3.6.0</buildhelper.version>
+        <openapi-generator.version>7.26.0</openapi-generator.version>
+        <openapi.dir>${project.basedir}/src/main/openapi</openapi.dir>
         <keycloak.version>26.0.8</keycloak.version>
         <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
         <node.version>v22.20.0</node.version>
@@ -270,6 +272,57 @@
         </pluginManagement>
 
         <plugins>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>${openapi-generator.version}</version>
+                <configuration>
+                    <generatorName>spring</generatorName>
+                    <cleanupOutput>true</cleanupOutput>
+                    <modelNameSuffix>DTO</modelNameSuffix>
+                    <typeMappings>
+                        <typeMapping>UUID=String</typeMapping>
+                    </typeMappings>
+                    <importMappings>
+                        <importMapping>UUID=java.lang.String</importMapping>
+                    </importMappings>
+                    <generateApiTests>false</generateApiTests>
+                    <generateApiDocumentation>false</generateApiDocumentation>
+                    <generateModelTests>false</generateModelTests>
+                    <generateModelDocumentation>false</generateModelDocumentation>
+                    <generateSupportingFiles>false</generateSupportingFiles>
+                    <configOptions>
+                        <interfaceOnly>true</interfaceOnly>
+                        <skipDefaultInterface>true</skipDefaultInterface>
+                        <useSpringBoot4>true</useSpringBoot4>
+                        <useJackson3>true</useJackson3>
+                        <useJspecify>true</useJspecify>
+                        <useTags>true</useTags>
+                        <useBeanValidation>true</useBeanValidation>
+                        <openApiNullable>false</openApiNullable>
+                        <documentationProvider>none</documentationProvider>
+                        <annotationLibrary>none</annotationLibrary>
+                        <generatedConstructorWithRequiredArgs>false</generatedConstructorWithRequiredArgs>
+                        <generateJsonIncludeAnnotations>false</generateJsonIncludeAnnotations>
+                        <generateJsonSetterNullsAnnotations>false</generateJsonSetterNullsAnnotations>
+                        <hideGenerationTimestamp>true</hideGenerationTimestamp>
+                    </configOptions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>openapi-core</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${openapi.dir}/core.yaml</inputSpec>
+                            <output>${project.build.directory}/generated-sources/openapi/core</output>
+                            <apiPackage>com.marcoaga02.modularhub.core.api.openapi</apiPackage>
+                            <modelPackage>com.marcoaga02.modularhub.core.api.dto</modelPackage>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>

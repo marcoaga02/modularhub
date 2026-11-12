@@ -6,11 +6,20 @@ public final class UserManagementExceptionCodes {
         /* This utility class should not be instantiated */
     }
 
-    public static final String USER_NOT_FOUND = "exception.model.user.not-found";
+    public static final class Model {
 
-    public static final String USER_TAX_ID_ALREADY_EXISTS = "exception.model.user.already-exists.tax-id";
+        private Model() {
+        }
 
-    public static final String USER_USERNAME_ALREADY_EXISTS = "exception.model.user.already-exists.username";
+        public static final class User {
 
-    public static final String USER_EMAIL_ALREADY_EXISTS = "exception.model.user.already-exists.email";
+            public static final String NOT_FOUND = "exception.model.user.not-found";
+            public static final String ALREADY_EXISTS_TAX_ID = "exception.model.user.already-exists.tax-id";
+            public static final String ALREADY_EXISTS_USERNAME = "exception.model.user.already-exists.username";
+            public static final String ALREADY_EXISTS_EMAIL = "exception.model.user.already-exists.email";
+
+            private User() {
+            }
+        }
+    }
 }

@@ -3,21 +3,24 @@ package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 import com.marcoaga02.modularhub.ModularhubApplication;
 import com.marcoaga02.modularhub.config.BaseITWithMockIdentity;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
+import com.marcoaga02.modularhub.core.api.exception.BadRequestException;
+import com.marcoaga02.modularhub.core.api.exception.ConflictException;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
-import com.marcoaga02.modularhub.core.api.exception.LanguageNotFoundException;
+import com.marcoaga02.modularhub.core.api.exception.NotFoundException;
+import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.User;
 import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
+import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserAlreadyExistsException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserManagementExceptionCodes;
-import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserNotFoundException;
-import com.marcoaga02.modularhub.core.domain.model.User;
-import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserAlreadyExistsException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserNotFoundException;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +29,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -228,9 +230,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 .isInstanceOf(UserNotFoundException.class)
                 .satisfies(e -> {
                     UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'non-existing-uuid' not found");
+                    assertThat(ex).isInstanceOf(NotFoundException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
                 });
     }
 
@@ -259,9 +261,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 .isInstanceOf(LanguageNotFoundException.class)
                 .satisfies(e -> {
                     LanguageNotFoundException ex = (LanguageNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.LANGUAGE_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("Language with uuid 'NON-EXIST-LANG' not found");
+                    assertThat(ex).isInstanceOf(BadRequestException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("Language not found: NON-EXIST-LANG");
                 });
     }
 
@@ -273,9 +275,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .satisfies(e -> {
                     UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_TAX_ID_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with taxIdNumber 'USR_1' already exists");
+                    assertThat(ex).isInstanceOf(ConflictException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID);
+                    assertThat(ex.getMessage()).isEqualTo("User with the same taxIdNumber already exists");
                 });
     }
 
@@ -316,9 +318,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 .isInstanceOf(UserNotFoundException.class)
                 .satisfies(e -> {
                     UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'non-existing-uuid' not found");
+                    assertThat(ex).isInstanceOf(NotFoundException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
                 });
     }
 
@@ -330,9 +332,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 .isInstanceOf(LanguageNotFoundException.class)
                 .satisfies(e -> {
                     LanguageNotFoundException ex = (LanguageNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.LANGUAGE_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("Language with uuid 'NON-EXIST-LANG' not found");
+                    assertThat(ex).isInstanceOf(BadRequestException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("Language not found: NON-EXIST-LANG");
                 });
     }
 
@@ -344,9 +346,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .satisfies(e -> {
                     UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_TAX_ID_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with taxIdNumber 'USR_3' already exists");
+                    assertThat(ex).isInstanceOf(ConflictException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID);
+                    assertThat(ex.getMessage()).isEqualTo("User with the same taxIdNumber already exists");
                 });
     }
 
@@ -376,9 +378,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 .isInstanceOf(UserNotFoundException.class)
                 .satisfies(e -> {
                     UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'non-existing-uuid' not found");
+                    assertThat(ex).isInstanceOf(NotFoundException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
                 });
     }
 
@@ -388,9 +390,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                 .isInstanceOf(UserNotFoundException.class)
                 .satisfies(e -> {
                     UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'non-existing-uuid' not found");
+                    assertThat(ex).isInstanceOf(NotFoundException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("User not found: non-existing-uuid");
                 });
     }
 

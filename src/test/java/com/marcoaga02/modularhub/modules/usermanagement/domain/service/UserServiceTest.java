@@ -1,24 +1,27 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
 import com.marcoaga02.modularhub.core.api.dto.*;
+import com.marcoaga02.modularhub.core.api.exception.BadRequestException;
+import com.marcoaga02.modularhub.core.api.exception.ConflictException;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
-import com.marcoaga02.modularhub.core.api.exception.LanguageNotFoundException;
+import com.marcoaga02.modularhub.core.api.exception.NotFoundException;
+import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.User;
 import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
+import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
 import com.marcoaga02.modularhub.core.domain.service.UserAccountService;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserAlreadyExistsException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserManagementExceptionCodes;
-import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserNotFoundException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserAlreadyExistsException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserNotFoundException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.UserMapper;
-import com.marcoaga02.modularhub.core.domain.model.User;
-import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import org.apache.logging.log4j.util.Strings;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +38,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpStatus;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -396,9 +398,9 @@ class UserServiceTest {
                 .isInstanceOf(UserNotFoundException.class)
                 .satisfies(e -> {
                     UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'not-existing' not found");
+                    assertThat(ex).isInstanceOf(NotFoundException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("User not found: not-existing");
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
@@ -531,9 +533,9 @@ class UserServiceTest {
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .satisfies(e -> {
                     UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_TAX_ID_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with taxIdNumber 'TAX_ID_01' already exists");
+                    assertThat(ex).isInstanceOf(ConflictException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID);
+                    assertThat(ex.getMessage()).isEqualTo("User with the same taxIdNumber already exists");
                 });
 
         verify(languageRepository).findByUuid("LANG_ID_01");
@@ -564,9 +566,9 @@ class UserServiceTest {
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .satisfies(e -> {
                     UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_USERNAME_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with username 'existing.username' already exists");
+                    assertThat(ex).isInstanceOf(ConflictException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_USERNAME);
+                    assertThat(ex.getMessage()).isEqualTo("User with the same username already exists");
                 });
 
         verify(languageRepository).findByUuid("LANG_ID_01");
@@ -600,9 +602,9 @@ class UserServiceTest {
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .satisfies(e -> {
                     UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_EMAIL_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with email 'existing@email.it' already exists");
+                    assertThat(ex).isInstanceOf(ConflictException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_EMAIL);
+                    assertThat(ex.getMessage()).isEqualTo("User with the same email already exists");
                 });
 
         verify(languageRepository).findByUuid("LANG_ID_01");
@@ -630,9 +632,9 @@ class UserServiceTest {
                 .isInstanceOf(LanguageNotFoundException.class)
                 .satisfies(e -> {
                     LanguageNotFoundException ex = (LanguageNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.LANGUAGE_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("Language with uuid 'INVALID-LANG' not found");
+                    assertThat(ex).isInstanceOf(BadRequestException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("Language not found: INVALID-LANG");
                 });
 
         verify(languageRepository).findByUuid(languageId);
@@ -708,9 +710,9 @@ class UserServiceTest {
                 .isInstanceOf(UserNotFoundException.class)
                 .satisfies(e -> {
                     UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'not-existing' not found");
+                    assertThat(ex).isInstanceOf(NotFoundException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("User not found: not-existing");
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
@@ -737,9 +739,9 @@ class UserServiceTest {
                 .isInstanceOf(LanguageNotFoundException.class)
                 .satisfies(e -> {
                     LanguageNotFoundException ex = (LanguageNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.LANGUAGE_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("Language with uuid 'INVALID-LANG' not found");
+                    assertThat(ex).isInstanceOf(BadRequestException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("Language not found: INVALID-LANG");
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
@@ -772,9 +774,9 @@ class UserServiceTest {
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .satisfies(e -> {
                     UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_TAX_ID_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with taxIdNumber 'TAX_ID_02' already exists");
+                    assertThat(ex).isInstanceOf(ConflictException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID);
+                    assertThat(ex.getMessage()).isEqualTo("User with the same taxIdNumber already exists");
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
@@ -859,9 +861,9 @@ class UserServiceTest {
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .satisfies(e -> {
                     UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_USERNAME_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with username 'username2' already exists");
+                    assertThat(ex).isInstanceOf(ConflictException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_USERNAME);
+                    assertThat(ex.getMessage()).isEqualTo("User with the same username already exists");
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
@@ -946,9 +948,9 @@ class UserServiceTest {
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .satisfies(e -> {
                     UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_EMAIL_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with email 'vittoria@mock.it' already exists");
+                    assertThat(ex).isInstanceOf(ConflictException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_EMAIL);
+                    assertThat(ex.getMessage()).isEqualTo("User with the same email already exists");
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
@@ -1062,9 +1064,9 @@ class UserServiceTest {
                 .isInstanceOf(UserNotFoundException.class)
                 .satisfies(e -> {
                     UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'non-existing' not found");
+                    assertThat(ex).isInstanceOf(NotFoundException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("User not found: non-existing");
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
@@ -1094,9 +1096,9 @@ class UserServiceTest {
                 .isInstanceOf(UserNotFoundException.class)
                 .satisfies(e -> {
                     UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'not-existing' not found");
+                    assertThat(ex).isInstanceOf(NotFoundException.class);
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                    assertThat(ex.getMessage()).isEqualTo("User not found: not-existing");
                 });
 
         verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
