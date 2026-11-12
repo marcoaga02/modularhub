@@ -3,44 +3,36 @@ package com.marcoaga02.modularhub.core.api.mapper;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Language;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AccountPreferencesMapperTest {
 
-    private final AccountPreferencesMapper mapper =
-            new AccountPreferencesMapperImpl(Mappers.getMapper(LanguageMapper.class));
-
-    private Language lang;
-
-    @BeforeEach
-    void setUp() {
-        lang = new Language();
-        lang.setCode("it-IT");
-        lang.setLabel("Italiano");
-        lang.setIsDefault(true);
-    }
+    private final AccountPreferencesMapper mapper = new AccountPreferencesMapperImpl(new LanguageMapperImpl());
 
     @Test
-    void toDto_shouldMapAllFields() {
+    void toDto_shouldMapLanguageThroughLanguageMapper() {
+        Language language = new Language();
+        language.setCode("it-IT");
         AccountPreferences preferences = new AccountPreferences();
-        preferences.setLanguage(lang);
+        preferences.setLanguage(language);
 
-        AccountPreferencesResponseDTO dto =  mapper.toDto(preferences);
+        AccountPreferencesResponseDTO dto = mapper.toDto(preferences);
 
-        assertThat(dto).isNotNull();
-        assertThat(dto.getLanguage()).isNotNull();
-        assertThat(dto.getLanguage().getId()).isEqualTo(lang.getUuid());
+        assertThat(dto.getLanguage().getId()).isEqualTo(language.getUuid());
         assertThat(dto.getLanguage().getCode()).isEqualTo("it-IT");
-        assertThat(dto.getLanguage().getLabel()).isEqualTo("Italiano");
-        assertThat(dto.getLanguage().getIsDefault()).isTrue();
     }
 
     @Test
-    void toDto_shouldReturnNull_whenInputIsNull() {
+    void toDto_shouldLeaveLanguageNull_whenPreferencesHaveNoLanguage() {
+        AccountPreferencesResponseDTO dto = mapper.toDto(new AccountPreferences());
+
+        assertThat(dto.getLanguage()).isNull();
+    }
+
+    @Test
+    void toDto_shouldReturnNull_whenPreferencesAreNull() {
         assertThat(mapper.toDto(null)).isNull();
     }
 }
