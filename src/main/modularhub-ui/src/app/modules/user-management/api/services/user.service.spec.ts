@@ -8,10 +8,11 @@ import {
   provideApi,
   UserCreateRequest,
   UserResponse,
+  UserSortField,
   UserUpdateRequest
 } from 'app/modules/user-management/api/generated';
 import {Gender} from 'app/core/api/generated';
-import {UserCriteria, UserSortField} from 'app/modules/user-management/api/user-criteria';
+import {UserCriteria} from 'app/modules/user-management/api/user-criteria';
 import {UUID} from 'app/core/api/models/uuid';
 import {HttpHeader} from 'app/core/api/http-header';
 

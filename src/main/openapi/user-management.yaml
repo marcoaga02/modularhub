@@ -185,6 +185,13 @@ components:
         type: string
         format: uuid
   schemas:
+    UserSortField:
+      type: string
+      description: User properties accepted by the sort parameter of getAllUsers
+      enum:
+        - firstname
+        - lastname
+        - email
     UserCreateRequest:
       type: object
       required:

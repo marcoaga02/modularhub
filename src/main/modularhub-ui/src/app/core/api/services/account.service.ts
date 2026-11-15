@@ -2,7 +2,6 @@ import {Injectable} from '@angular/core';
 import {TranslateService} from '@ngx-translate/core';
 import {OAuthService} from 'angular-oauth2-oidc';
 import {BehaviorSubject, Observable} from 'rxjs';
-import {Role} from 'app/core/api/models/role';
 import {Account, AccountApiService, AccountPreferencesUpdate} from 'app/core/api/generated';
 
 @Injectable({
@@ -11,8 +10,6 @@ import {Account, AccountApiService, AccountPreferencesUpdate} from 'app/core/api
 export class AccountService {
 
   private readonly accountSubject = new BehaviorSubject<Account | null>(null);
-
-  private account?: Account;
 
   constructor(
     private readonly accountApi: AccountApiService,
@@ -37,12 +34,10 @@ export class AccountService {
 
   private onSuccess(accont: Account) {
     this.translateService.use(accont.preferences.language.code);
-    this.account = accont;
     this.accountSubject.next(accont);
   }
 
   private onError() {
-    this.account = undefined;
     this.accountSubject.next(null);
   }
 
@@ -52,18 +47,6 @@ export class AccountService {
 
   getObservableAccount(): Observable<Account | null> {
     return this.accountSubject.asObservable();
-  }
-
-  hasAnyPermission(roles: Role | Role[]): boolean {
-    if (!this.account?.roles) {
-      return false;
-    }
-
-    if (!Array.isArray(roles)) {
-      roles = [roles];
-    }
-
-    return this.account.roles.some(r => roles.includes(r as Role));
   }
 
   async reload() {

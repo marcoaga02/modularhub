@@ -1,4 +1,5 @@
-import {UserCriteria, UserSortField} from 'app/modules/user-management/api/user-criteria';
+import {UserCriteria} from 'app/modules/user-management/api/user-criteria';
+import {UserSortField} from 'app/modules/user-management/api/generated';
 
 describe('UserCriteria', () => {
 

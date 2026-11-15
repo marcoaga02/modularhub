@@ -82,7 +82,11 @@ On startup Keycloak imports the `modularhub` realm from `keycloak/import/modular
 
 The import only happens if the realm doesn't exist yet: an existing realm is left untouched. To apply changes made to
 the file, delete the `modularhub` realm from the admin console (or the whole `keycloak` database) and restart Keycloak
-with `docker compose restart keycloak`.
+with `docker compose restart keycloak`. The `keycloak` database is created by `init-keycloak-db.sql` only when the
+Postgres volume is initialized for the first time: with an older volume, create it by hand or recreate the volume.
+
+The realm file is covered by `ModularhubRealmIT`, which imports it in the test Keycloak and fails if a role required by
+a plugin is missing from the realm or from the `ADMIN` group.
 
 You can then launch the backend (with `MODULARHUB_BACKEND_CLIENT_SECRET` set, see Configuration above):
 

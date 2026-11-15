@@ -14,6 +14,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
+import org.testcontainers.utility.MountableFile;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -22,6 +23,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,10 +39,14 @@ public abstract class BaseKeycloakIT extends BaseIT {
     protected static final String SECOND_GROUP_NAME = "second-group";
     protected static final String SECOND_GROUP_DESCRIPTION = "second group description";
     protected static final int MIN_PASSWORD_LENGTH = 8;
+    protected static final String MODULARHUB_REALM = "modularhub";
+    protected static final String BACKEND_CLIENT_SECRET = "test-backend-client-secret";
+    protected static final String MAILPIT_HOST = "mailpit";
+    protected static final int MAILPIT_SMTP_PORT = 1025;
 
     private static final String ADMIN = "admin";
-    private static final String MAILPIT_HOST = "mailpit";
-    private static final int MAILPIT_SMTP_PORT = 1025;
+    private static final Path MODULARHUB_REALM_FILE = Path.of("keycloak", "import", "modularhub-realm.json");
+    private static final String KEYCLOAK_IMPORT_DIR = "/opt/keycloak/data/import/";
     private static final int MAILPIT_API_PORT = 8025;
 
     private static final Network NETWORK = Network.newNetwork();
@@ -53,7 +59,19 @@ public abstract class BaseKeycloakIT extends BaseIT {
     private static final KeycloakContainer KEYCLOAK = new KeycloakContainer(TestContainersImages.KEYCLOAK)
             .withNetwork(NETWORK)
             .withAdminUsername(ADMIN)
-            .withAdminPassword(ADMIN);
+            .withAdminPassword(ADMIN)
+            .withCopyFileToContainer(MountableFile.forHostPath(MODULARHUB_REALM_FILE),
+                    KEYCLOAK_IMPORT_DIR + MODULARHUB_REALM_FILE.getFileName())
+            .withEnv(Map.of(
+                    "MODULARHUB_BACKEND_CLIENT_SECRET", BACKEND_CLIENT_SECRET,
+                    "MODULARHUB_SMTP_HOST", MAILPIT_HOST,
+                    "MODULARHUB_SMTP_PORT", String.valueOf(MAILPIT_SMTP_PORT),
+                    "MODULARHUB_SMTP_FROM", "noreply@modularhub.test",
+                    "MODULARHUB_SMTP_AUTH", "false",
+                    "MODULARHUB_SMTP_USER", "",
+                    "MODULARHUB_SMTP_PASSWORD", "",
+                    "MODULARHUB_SMTP_STARTTLS", "false",
+                    "MODULARHUB_SMTP_SSL", "false"));
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
@@ -89,6 +107,10 @@ public abstract class BaseKeycloakIT extends BaseIT {
         realm().users().list().forEach(user -> realm().users().delete(user.getId()).close());
         adminClient.close();
         HTTP_CLIENT.send(mailpitRequest().DELETE().build(), HttpResponse.BodyHandlers.discarding());
+    }
+
+    protected static String keycloakUrl() {
+        return KEYCLOAK.getAuthServerUrl();
     }
 
     protected RealmResource realm() {
