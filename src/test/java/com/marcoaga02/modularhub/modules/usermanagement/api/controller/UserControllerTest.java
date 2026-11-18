@@ -1,6 +1,7 @@
 package com.marcoaga02.modularhub.modules.usermanagement.api.controller;
 
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.GlobalExceptionHandler;
 import com.marcoaga02.modularhub.core.api.exception.account.SelfDeletionException;
@@ -172,6 +173,27 @@ class UserControllerTest extends BaseControllerTest {
         }
 
         @Test
+        void createUser_shouldReturnBadRequestWithInvalidFields_whenLanguageIsMissing() throws Exception {
+            perform(json(post(USERS), createRequest().language(null)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Validation.INVALID_FIELDS))
+                    .andExpect(jsonPath(FIELDS).value("language"));
+
+            verifyNoInteractions(userService);
+        }
+
+        @Test
+        void createUser_shouldReturnBadRequest_whenLanguageIsNotSupported() throws Exception {
+            String body = objectMapper.writeValueAsString(createRequest()).replace("\"en\"", "\"fr\"");
+
+            perform(post(USERS).contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Validation.INVALID_REQUEST));
+
+            verifyNoInteractions(userService);
+        }
+
+        @Test
         void createUser_shouldReturnBadRequest_whenBodyIsMalformed() throws Exception {
             perform(post(USERS).contentType(MediaType.APPLICATION_JSON).content("{"))
                     .andExpect(status().isBadRequest())
@@ -305,7 +327,7 @@ class UserControllerTest extends BaseControllerTest {
                 .firstname("Mario")
                 .lastname("Rossi")
                 .gender(GenderDTO.M)
-                .languageId("language-id")
+                .language(LanguageDTO.EN)
                 .taxIdNumber("TAX")
                 .email("mario@test.com")
                 .username("mario.rossi")
@@ -319,7 +341,7 @@ class UserControllerTest extends BaseControllerTest {
                 .firstname("Mario")
                 .lastname("Rossi")
                 .gender(GenderDTO.M)
-                .languageId("language-id")
+                .language(LanguageDTO.EN)
                 .taxIdNumber("TAX")
                 .email("mario@test.com")
                 .username("mario.rossi")

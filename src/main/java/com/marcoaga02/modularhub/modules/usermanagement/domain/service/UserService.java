@@ -1,11 +1,7 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
 import com.marcoaga02.modularhub.core.api.dto.*;
-import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
-import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
-import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.model.User;
-import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
@@ -36,8 +32,6 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    private final LanguageRepository languageRepository;
-
     private final UserMapper userMapper;
 
     private final IdentityService identityService;
@@ -46,9 +40,8 @@ public class UserService {
 
     private final UserAccountService userAccountService;
 
-    public UserService(UserRepository userRepository, LanguageRepository languageRepository, UserMapper userMapper, IdentityService identityService, AccountService accountService, UserAccountService userAccountService) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, IdentityService identityService, AccountService accountService, UserAccountService userAccountService) {
         this.userRepository = userRepository;
-        this.languageRepository = languageRepository;
         this.userMapper = userMapper;
         this.identityService = identityService;
         this.accountService = accountService;
@@ -88,8 +81,6 @@ public class UserService {
 
     @Transactional
     public UserResponseDTO createUser(UserCreateRequestDTO dto) {
-        Language language = findLanguageOrElseThrow(dto.getLanguageId());
-
         if (existsActiveUserWithSameTaxIdNumber(dto.getTaxIdNumber())) {
             throw UserAlreadyExistsException.taxIdNumber(dto.getTaxIdNumber());
         }
@@ -102,11 +93,7 @@ public class UserService {
             throw UserAlreadyExistsException.email(dto.getEmail());
         }
 
-        AccountPreferences preferences = new AccountPreferences();
-        preferences.setLanguage(language);
-
         User user = new User();
-        user.setPreferences(preferences);
 
         userMapper.updateEntity(dto, user);
 
@@ -134,8 +121,6 @@ public class UserService {
         User user = userRepository.findByUuidAndDeletedOnIsNull(uuid)
                 .orElseThrow(() -> new UserNotFoundException(uuid));
 
-        Language language = findLanguageOrElseThrow(dto.getLanguageId());
-
         if (!Objects.equals(user.getTaxIdNumber(), dto.getTaxIdNumber())
                 && existsActiveUserWithSameTaxIdNumber(dto.getTaxIdNumber())
         ) {
@@ -155,7 +140,6 @@ public class UserService {
         }
 
         userMapper.updateEntity(dto, user);
-        user.getPreferences().setLanguage(language);
         userRepository.saveAndFlush(user);
 
         IdentityUserUpdateRequestDTO userRequestDTO = new IdentityUserUpdateRequestDTO(
@@ -212,10 +196,5 @@ public class UserService {
                 }
             }
         });
-    }
-
-    private Language findLanguageOrElseThrow(String langUuid) {
-        return languageRepository.findByUuid(langUuid)
-                .orElseThrow(() -> new LanguageNotFoundException(langUuid));
     }
 }

@@ -33,6 +33,7 @@
     {
       "name": "ADMIN",
       "path": "/ADMIN",
+      "description": "groups.admin.description",
       "realmRoles": [
         "USER_MANAGEMENT"
       ]
@@ -95,6 +96,9 @@
           "value": "admin",
           "temporary": false
         }
+      ],
+      "realmRoles": [
+        "default-roles-modularhub"
       ],
       "groups": [
         "/ADMIN"

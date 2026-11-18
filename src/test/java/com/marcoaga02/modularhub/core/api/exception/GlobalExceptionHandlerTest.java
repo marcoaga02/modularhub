@@ -6,7 +6,6 @@ import com.marcoaga02.modularhub.core.api.exception.identity.IdentityConflictExc
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityInvalidRequestException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityProviderUnavailableException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityResourceNotFoundException;
-import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpMethod;
@@ -77,13 +76,6 @@ class GlobalExceptionHandlerTest {
                 new IdentityResourceNotFoundException("missing", null));
 
         assertError(response, HttpStatus.NOT_FOUND, ExceptionCodes.IdentityProvider.NOT_FOUND, Map.of());
-    }
-
-    @Test
-    void handleBadRequestException_shouldReturnBadRequest_whenDomainRuleIsViolated() {
-        ResponseEntity<ErrorDTO> response = handler.handleBadRequestException(new LanguageNotFoundException("lang"));
-
-        assertError(response, HttpStatus.BAD_REQUEST, ExceptionCodes.Model.Language.NOT_FOUND, Map.of());
     }
 
     @Test

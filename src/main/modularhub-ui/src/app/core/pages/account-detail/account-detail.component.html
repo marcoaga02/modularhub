@@ -95,12 +95,17 @@
               <p-select
                 formControlName="language"
                 [options]="languages"
-                optionValue="value"
-                optionLabel="label"
                 appendTo="body"
                 class="flex-1"
                 size="small"
-              />
+              >
+                <ng-template #selectedItem let-language>
+                  {{ ('model.language.' + language) | translate }}
+                </ng-template>
+                <ng-template #item let-language>
+                  {{ ('model.language.' + language) | translate }}
+                </ng-template>
+              </p-select>
               <p-button
                 [label]="'general.button.label.save' | translate"
                 size="small"
@@ -121,7 +126,7 @@
               {{ "model.account-preferences.language" | translate }}
             </span>
             <span class="break-all">
-              {{ currentAccount.preferences.language.label }}
+              {{ ('model.language.' + currentAccount.preferences.language) | translate }}
             </span>
           </div>
           <p-button

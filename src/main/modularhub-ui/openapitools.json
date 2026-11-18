@@ -60,14 +60,14 @@
           "ApiError": "app/core/api/generated",
           "Gender": "app/core/api/generated",
           "Audit": "app/core/api/generated",
-          "LanguageResponse": "app/core/api/generated",
+          "Language": "app/core/api/generated",
           "IdentityGroup": "app/core/api/generated"
         },
         "schemaMappings": {
           "Error": "ApiError",
           "Gender": "Gender",
           "Audit": "Audit",
-          "LanguageResponse": "LanguageResponse",
+          "Language": "Language",
           "IdentityGroup": "IdentityGroup"
         }
       }

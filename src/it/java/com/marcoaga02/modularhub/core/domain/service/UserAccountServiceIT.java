@@ -1,16 +1,14 @@
 package com.marcoaga02.modularhub.core.domain.service;
 
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.config.BaseITWithMockIdentity;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesUpdateDTO;
-import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.model.User;
-import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.infrastructure.keycloak.KeycloakClaims;
 import jakarta.persistence.EntityManager;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
 
 import static com.marcoaga02.modularhub.fixture.SecurityFixtures.jwt;
-import static com.marcoaga02.modularhub.fixture.UserFixtures.language;
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Transactional
 class UserAccountServiceIT extends BaseITWithMockIdentity {
@@ -37,20 +33,7 @@ class UserAccountServiceIT extends BaseITWithMockIdentity {
     private UserRepository userRepository;
 
     @Autowired
-    private LanguageRepository languageRepository;
-
-    @Autowired
     private EntityManager entityManager;
-
-    private Language italian;
-
-    private Language english;
-
-    @BeforeEach
-    void setUp() {
-        italian = languageRepository.save(language("it-IT", true));
-        english = languageRepository.save(language("en-US", false));
-    }
 
     @Nested
     class SyncUser {
@@ -64,12 +47,12 @@ class UserAccountServiceIT extends BaseITWithMockIdentity {
             assertThat(saved)
                     .extracting(User::getUsername, User::getFirstname, User::getEnabled)
                     .containsExactly("mario.rossi", "Mario", true);
-            assertThat(saved.getPreferences().getLanguage().getUuid()).isEqualTo(italian.getUuid());
+            assertThat(saved.getPreferences().getLanguage()).isEqualTo(Language.DEFAULT);
         }
 
         @Test
         void syncUser_shouldUpdateClaimsWithoutCreatingAnotherUser_whenUserAlreadyExists() {
-            User existing = user("existing", english);
+            User existing = user("existing", Language.EN);
             existing.setIdentityId(IDENTITY_ID);
             userRepository.save(existing);
             flushAndClear();
@@ -82,7 +65,7 @@ class UserAccountServiceIT extends BaseITWithMockIdentity {
             assertThat(synced)
                     .extracting(User::getUuid, User::getUsername, User::getFirstname, User::getTaxIdNumber)
                     .containsExactly(existing.getUuid(), "renamed", "Renamed", existing.getTaxIdNumber());
-            assertThat(synced.getPreferences().getLanguage().getUuid()).isEqualTo(english.getUuid());
+            assertThat(synced.getPreferences().getLanguage()).isEqualTo(Language.EN);
         }
     }
 
@@ -90,27 +73,18 @@ class UserAccountServiceIT extends BaseITWithMockIdentity {
     class UpdatePreferences {
 
         @Test
-        void updatePreferences_shouldPersistRequestedLanguage_whenLanguageExists() {
+        void updatePreferences_shouldPersistRequestedLanguage_whenRequestIsValid() {
             Jwt jwt = jwtWithClaims("mario.rossi", "Mario");
             userAccountService.syncUser(jwt);
             flushAndClear();
 
             AccountPreferencesResponseDTO result = userAccountService.updatePreferences(jwt,
-                    new AccountPreferencesUpdateDTO().languageId(english.getUuid()));
+                    new AccountPreferencesUpdateDTO().language(LanguageDTO.IT));
             flushAndClear();
 
-            assertThat(result.getLanguage().getId()).isEqualTo(english.getUuid());
+            assertThat(result.getLanguage()).isEqualTo(LanguageDTO.IT);
             User saved = userRepository.findByIdentityId(IDENTITY_ID).orElseThrow();
-            assertThat(saved.getPreferences().getLanguage().getUuid()).isEqualTo(english.getUuid());
-        }
-
-        @Test
-        void updatePreferences_shouldThrowLanguageNotFoundException_whenLanguageDoesNotExist() {
-            Jwt jwt = jwtWithClaims("mario.rossi", "Mario");
-            AccountPreferencesUpdateDTO request = new AccountPreferencesUpdateDTO().languageId("unknown-language");
-
-            assertThatThrownBy(() -> userAccountService.updatePreferences(jwt, request))
-                    .isInstanceOf(LanguageNotFoundException.class);
+            assertThat(saved.getPreferences().getLanguage()).isEqualTo(Language.IT);
         }
     }
 
@@ -119,7 +93,7 @@ class UserAccountServiceIT extends BaseITWithMockIdentity {
 
         @Test
         void resolveFullName_shouldReturnFullNameOfStoredUser_whenIdentityIdExists() {
-            User existing = user("existing", italian);
+            User existing = user("existing", Language.IT);
             existing.setIdentityId(IDENTITY_ID);
             userRepository.save(existing);
             flushAndClear();

@@ -3,8 +3,6 @@ package com.marcoaga02.modularhub.core.domain.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Getter
 @Setter
@@ -23,7 +21,6 @@ public class User extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "gender")
-    @JdbcTypeCode(SqlTypes.VARCHAR)
     private Gender gender;
 
     @Column(name = "mobile_number")

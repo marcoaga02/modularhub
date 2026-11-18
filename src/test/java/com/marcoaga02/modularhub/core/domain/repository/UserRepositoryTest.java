@@ -13,7 +13,6 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 
-import static com.marcoaga02.modularhub.fixture.UserFixtures.language;
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,12 +25,7 @@ class UserRepositoryTest extends BaseRepositoryTest {
     private UserRepository userRepository;
 
     @Autowired
-    private LanguageRepository languageRepository;
-
-    @Autowired
     private EntityManager entityManager;
-
-    private Language language;
 
     private User activeUser;
 
@@ -39,11 +33,9 @@ class UserRepositoryTest extends BaseRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        language = languageRepository.save(language("it-IT", true));
+        activeUser = userRepository.save(user("active", Language.IT));
 
-        activeUser = userRepository.save(user("active", language));
-
-        deletedUser = user("deleted", language);
+        deletedUser = user("deleted", Language.IT);
         deletedUser.setDeletedOn(OffsetDateTime.now());
         userRepository.save(deletedUser);
 
@@ -137,7 +129,7 @@ class UserRepositoryTest extends BaseRepositoryTest {
             assertFound(result);
             assertThat(result.orElseThrow().getPreferences().getUuid())
                     .isEqualTo(activeUser.getPreferences().getUuid());
-            assertThat(result.orElseThrow().getPreferences().getLanguage().getUuid()).isEqualTo(language.getUuid());
+            assertThat(result.orElseThrow().getPreferences().getLanguage()).isEqualTo(Language.IT);
         }
 
         @Test

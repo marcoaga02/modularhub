@@ -1,23 +1,17 @@
 import {Component, inject, signal} from '@angular/core';
 import {AccountService} from 'app/core/api/services/account.service';
-import {first, forkJoin, retry} from 'rxjs';
+import {first, retry} from 'rxjs';
 import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
-import {Account} from 'app/core/api/generated';
+import {Account, Language} from 'app/core/api/generated';
 import {ProgressSpinner} from 'primeng/progressspinner';
 import {UpperCasePipe} from '@angular/common';
 import {TranslatePipe, TranslateService} from '@ngx-translate/core';
-import {UUID} from 'app/core/api/models/uuid';
-import {LanguageService} from 'app/modules/user-management/api/services/language.service';
 import {FormBuilder, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Select} from 'primeng/select';
 import {Button} from 'primeng/button';
 import {AccountPreferencesUpdate} from 'app/core/api/generated';
 import {MessageService} from 'primeng/api';
-
-type LanguageWithValue = {
-  label: string,
-  value: string
-}
+import {LANGUAGES} from 'app/core/utils/constants/languages';
 
 @Component({
   selector: 'app-account-detail',
@@ -38,40 +32,28 @@ export class AccountDetailComponent {
   private readonly formBuilder = inject(FormBuilder);
 
   protected preferencesForm = this.formBuilder.nonNullable.group({
-    language: this.formBuilder.nonNullable.control<UUID | null>(null, Validators.required),
+    language: this.formBuilder.nonNullable.control<Language | null>(null, Validators.required),
   });
 
   protected loading = signal(true);
   protected editing: boolean = false;
 
   protected currentAccount?: Account;
-  protected languages: LanguageWithValue[] = [];
+  protected readonly languages = LANGUAGES;
 
   constructor(
     private readonly messageService: MessageService,
     private readonly translateService: TranslateService,
-    private readonly accountService: AccountService,
-    private readonly languageService: LanguageService
+    private readonly accountService: AccountService
   ) {
-    forkJoin([
-      this.languageService.getLanguages().pipe(
-        retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
-      ),
-      this.accountService.getObservableAccount().pipe(
-        first(),
-        retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
-      )
-    ]).subscribe({
-      next: ([languages, account]) => {
-        if (!account || languages.length === 0) {
+    this.accountService.getObservableAccount().pipe(
+      first(),
+      retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
+    ).subscribe({
+      next: account => {
+        if (!account) {
           return;
         }
-
-        this.languages = languages.map(l => ({
-            label: l.label,
-            value: l.id
-          })
-        );
 
         this.initForm(account);
 
@@ -86,7 +68,7 @@ export class AccountDetailComponent {
 
   private initForm(account: Account) {
     this.preferencesForm.patchValue({
-      language: account.preferences.language.id
+      language: account.preferences.language
     });
 
     this.preferencesForm.disable();
@@ -107,7 +89,7 @@ export class AccountDetailComponent {
   protected onSaveClick() {
     const formValues = this.preferencesForm.getRawValue();
     let preferences: AccountPreferencesUpdate = {
-      languageId: formValues.language!
+      language: formValues.language!
     };
 
     this.accountService.updateCurrentAccountPreferences(preferences).subscribe({

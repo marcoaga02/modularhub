@@ -198,7 +198,7 @@ components:
         - firstname
         - lastname
         - gender
-        - languageId
+        - language
         - taxIdNumber
         - email
         - username
@@ -213,10 +213,8 @@ components:
           x-field-extra-annotation: '@jakarta.validation.constraints.NotBlank'
         gender:
           $ref: 'core.yaml#/components/schemas/Gender'
-        languageId:
-          type: string
-          format: uuid
-          x-field-extra-annotation: '@jakarta.validation.constraints.NotBlank'
+        language:
+          $ref: 'core.yaml#/components/schemas/Language'
         mobileNumber:
           type: string
         taxIdNumber:
@@ -246,7 +244,7 @@ components:
         - firstname
         - lastname
         - gender
-        - languageId
+        - language
         - taxIdNumber
         - email
         - username
@@ -260,10 +258,8 @@ components:
           x-field-extra-annotation: '@jakarta.validation.constraints.NotBlank'
         gender:
           $ref: 'core.yaml#/components/schemas/Gender'
-        languageId:
-          type: string
-          format: uuid
-          x-field-extra-annotation: '@jakarta.validation.constraints.NotBlank'
+        language:
+          $ref: 'core.yaml#/components/schemas/Language'
         mobileNumber:
           type: string
         taxIdNumber:
@@ -306,7 +302,7 @@ components:
         gender:
           $ref: 'core.yaml#/components/schemas/Gender'
         language:
-          $ref: 'core.yaml#/components/schemas/LanguageResponse'
+          $ref: 'core.yaml#/components/schemas/Language'
         mobileNumber:
           type: string
         taxIdNumber:

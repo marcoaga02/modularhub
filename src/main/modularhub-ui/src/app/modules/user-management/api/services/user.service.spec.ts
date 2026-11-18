@@ -11,7 +11,7 @@ import {
   UserSortField,
   UserUpdateRequest
 } from 'app/modules/user-management/api/generated';
-import {Gender} from 'app/core/api/generated';
+import {Gender, Language} from 'app/core/api/generated';
 import {UserCriteria} from 'app/modules/user-management/api/user-criteria';
 import {UUID} from 'app/core/api/models/uuid';
 import {HttpHeader} from 'app/core/api/http-header';
@@ -34,7 +34,7 @@ describe('UserService', () => {
     firstname: 'Mario',
     lastname: 'Rossi',
     gender: Gender.M,
-    languageId: 'lang-id' as UUID,
+    language: Language.En,
     taxIdNumber: 'TAX',
     email: 'mario@test.it',
     username: 'mario',

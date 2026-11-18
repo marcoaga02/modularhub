@@ -3,10 +3,9 @@ package com.marcoaga02.modularhub.core.api.controller;
 import com.marcoaga02.modularhub.core.api.dto.AccountDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesUpdateDTO;
-import com.marcoaga02.modularhub.core.api.dto.LanguageResponseDTO;
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.GlobalExceptionHandler;
-import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.config.BaseControllerTest;
 import org.junit.jupiter.api.Nested;
@@ -19,7 +18,6 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import java.util.Set;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -31,8 +29,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AccountController.class)
 class AccountControllerTest extends BaseControllerTest {
-
-    private static final String LANGUAGE_ID = "language-id";
 
     @MockitoBean
     private AccountService accountService;
@@ -49,7 +45,7 @@ class AccountControllerTest extends BaseControllerTest {
                     .firstName("Mario")
                     .lastName("Rossi")
                     .roles(Set.of("USER_MANAGEMENT"))
-                    .preferences(new AccountPreferencesResponseDTO().language(language()));
+                    .preferences(new AccountPreferencesResponseDTO().language(LanguageDTO.IT));
             when(accountService.getCurrentAccount()).thenReturn(account);
 
             perform(get("/account"))
@@ -61,8 +57,7 @@ class AccountControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$.firstName").value("Mario"))
                     .andExpect(jsonPath("$.lastName").value("Rossi"))
                     .andExpect(jsonPath("$.roles[0]").value("USER_MANAGEMENT"))
-                    .andExpect(jsonPath("$.preferences.language.id").value(LANGUAGE_ID))
-                    .andExpect(jsonPath("$.preferences.language.code").value("it-IT"));
+                    .andExpect(jsonPath("$.preferences.language").value("it"));
 
             verify(accountService).getCurrentAccount();
         }
@@ -73,41 +68,39 @@ class AccountControllerTest extends BaseControllerTest {
 
         @Test
         void updatePreferences_shouldReturnOkWithUpdatedPreferences_whenRequestIsValid() throws Exception {
-            AccountPreferencesUpdateDTO expectedRequest = new AccountPreferencesUpdateDTO().languageId(LANGUAGE_ID);
+            AccountPreferencesUpdateDTO expectedRequest = new AccountPreferencesUpdateDTO().language(LanguageDTO.IT);
             when(accountService.updateCurrentAccountPreferences(expectedRequest))
-                    .thenReturn(new AccountPreferencesResponseDTO().language(language()));
+                    .thenReturn(new AccountPreferencesResponseDTO().language(LanguageDTO.IT));
 
             perform(updatePreferences("""
-                            {"languageId": "%s"}
-                            """.formatted(LANGUAGE_ID)))
+                            {"language": "it"}
+                            """))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.language.id").value(LANGUAGE_ID))
-                    .andExpect(jsonPath("$.language.code").value("it-IT"));
+                    .andExpect(jsonPath("$.language").value("it"));
 
             verify(accountService).updateCurrentAccountPreferences(expectedRequest);
         }
 
         @Test
-        void updatePreferences_shouldReturnBadRequestWithInvalidFields_whenLanguageIdIsMissing() throws Exception {
+        void updatePreferences_shouldReturnBadRequestWithInvalidFields_whenLanguageIsMissing() throws Exception {
             perform(updatePreferences("{}"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Validation.INVALID_FIELDS))
-                    .andExpect(jsonPath("$.params." + GlobalExceptionHandler.FIELDS_PARAM).value("languageId"));
+                    .andExpect(jsonPath("$.params." + GlobalExceptionHandler.FIELDS_PARAM).value("language"));
 
             verifyNoInteractions(accountService);
         }
 
         @Test
-        void updatePreferences_shouldReturnBadRequest_whenLanguageDoesNotExist() throws Exception {
-            when(accountService.updateCurrentAccountPreferences(any()))
-                    .thenThrow(new LanguageNotFoundException(LANGUAGE_ID));
-
+        void updatePreferences_shouldReturnBadRequest_whenLanguageIsNotSupported() throws Exception {
             perform(updatePreferences("""
-                            {"languageId": "%s"}
-                            """.formatted(LANGUAGE_ID)))
+                            {"language": "fr"}
+                            """))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Model.Language.NOT_FOUND));
+                    .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Validation.INVALID_REQUEST));
+
+            verifyNoInteractions(accountService);
         }
 
         private static MockHttpServletRequestBuilder updatePreferences(String body) {
@@ -115,10 +108,6 @@ class AccountControllerTest extends BaseControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(body);
         }
-    }
-
-    private static LanguageResponseDTO language() {
-        return new LanguageResponseDTO().id(LANGUAGE_ID).code("it-IT").label("Italiano").isDefault(true);
     }
 
     private ResultActions perform(MockHttpServletRequestBuilder request) throws Exception {

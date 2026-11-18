@@ -2,15 +2,13 @@ package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
 import com.marcoaga02.modularhub.core.api.dto.AuditDTO;
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
-import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
-import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.model.User;
-import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
@@ -47,7 +45,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static com.marcoaga02.modularhub.fixture.UserFixtures.language;
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -65,7 +62,6 @@ import static org.mockito.Mockito.when;
 class UserServiceTest {
 
     private static final String UNKNOWN_UUID = "unknown-uuid";
-    private static final String LANGUAGE_ID = "language-id";
     private static final String IDENTITY_ID = "identity-id";
     private static final String CURRENT_IDENTITY_ID = "current-identity-id";
     private static final String NEW_TAX_ID = "NEW-TAX";
@@ -76,9 +72,6 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
-
-    @Mock
-    private LanguageRepository languageRepository;
 
     @Mock
     private UserMapper userMapper;
@@ -95,14 +88,12 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
-    private final Language language = language("it-IT", true);
-
     private User existingUser;
 
     @BeforeEach
     void setUp() {
         TransactionSynchronizationManager.initSynchronization();
-        existingUser = user("existing", language("en-US", false));
+        existingUser = user("existing", Language.EN);
         existingUser.setIdentityId(IDENTITY_ID);
     }
 
@@ -117,7 +108,7 @@ class UserServiceTest {
         @Test
         void getAllUsers_shouldReturnMappedPageKeepingPagination_whenUsersMatch() {
             Pageable pageable = PageRequest.of(1, 2);
-            User otherUser = user("other", language);
+            User otherUser = user("other", Language.EN);
             UserResponseDTO existingDto = new UserResponseDTO().id("existing");
             UserResponseDTO otherDto = new UserResponseDTO().id("other");
             when(userRepository.findAll(anySpecification(), eq(pageable)))
@@ -208,7 +199,7 @@ class UserServiceTest {
     class CreateUser {
 
         @Test
-        void createUser_shouldCreateIdentityUserAndPersistUserWithLanguageAndIdentityId_whenRequestIsValid() {
+        void createUser_shouldCreateIdentityUserAndPersistMappedUserWithIdentityId_whenRequestIsValid() {
             UserCreateRequestDTO request = createRequest();
             User persisted = new User();
             UserResponseDTO dto = new UserResponseDTO();
@@ -221,7 +212,6 @@ class UserServiceTest {
             assertThat(result).isSameAs(dto);
             User saved = captureSavedUser();
             assertThat(saved.getIdentityId()).isEqualTo(IDENTITY_ID);
-            assertThat(saved.getPreferences().getLanguage()).isSameAs(language);
             verify(userMapper).updateEntity(request, saved);
         }
 
@@ -283,7 +273,6 @@ class UserServiceTest {
         @Test
         void createUser_shouldNotSaveUser_whenIdentityCreationFails() {
             RuntimeException identityError = new RuntimeException("identity error");
-            mockLanguage();
             when(identityService.createUser(any())).thenThrow(identityError);
             UserCreateRequestDTO request = createRequest();
 
@@ -294,20 +283,7 @@ class UserServiceTest {
         }
 
         @Test
-        void createUser_shouldThrowLanguageNotFoundException_whenLanguageDoesNotExist() {
-            when(languageRepository.findByUuid(LANGUAGE_ID)).thenReturn(Optional.empty());
-            UserCreateRequestDTO request = createRequest();
-
-            assertThatThrownBy(() -> userService.createUser(request))
-                    .isInstanceOfSatisfying(LanguageNotFoundException.class, ex ->
-                            assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND));
-
-            assertNothingCreated();
-        }
-
-        @Test
         void createUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberIsTaken() {
-            mockLanguage();
             when(userRepository.findByTaxIdNumberAndDeletedOnIsNull(NEW_TAX_ID)).thenReturn(Optional.of(existingUser));
             UserCreateRequestDTO request = createRequest();
 
@@ -319,7 +295,6 @@ class UserServiceTest {
 
         @Test
         void createUser_shouldThrowUserAlreadyExistsException_whenUsernameIsTaken() {
-            mockLanguage();
             when(userRepository.findByUsernameAndDeletedOnIsNull(NEW_USERNAME)).thenReturn(Optional.of(existingUser));
             UserCreateRequestDTO request = createRequest();
 
@@ -331,7 +306,6 @@ class UserServiceTest {
 
         @Test
         void createUser_shouldThrowUserAlreadyExistsException_whenEmailIsTaken() {
-            mockLanguage();
             when(userRepository.findByEmailAndDeletedOnIsNull(NEW_EMAIL)).thenReturn(Optional.of(existingUser));
             UserCreateRequestDTO request = createRequest();
 
@@ -342,7 +316,6 @@ class UserServiceTest {
         }
 
         private void mockValidCreation() {
-            mockLanguage();
             when(identityService.createUser(any())).thenReturn(IDENTITY_ID);
         }
 
@@ -363,7 +336,7 @@ class UserServiceTest {
                     .firstname("Mario")
                     .lastname("Rossi")
                     .gender(GenderDTO.M)
-                    .languageId(LANGUAGE_ID)
+                    .language(LanguageDTO.EN)
                     .taxIdNumber(NEW_TAX_ID)
                     .email(NEW_EMAIL)
                     .username(NEW_USERNAME)
@@ -377,17 +350,15 @@ class UserServiceTest {
     class UpdateUser {
 
         @Test
-        void updateUser_shouldUpdateEntityLanguageAndIdentityUser_whenRequestIsValid() {
+        void updateUser_shouldUpdateEntityAndIdentityUser_whenRequestIsValid() {
             UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
             UserResponseDTO dto = new UserResponseDTO();
             mockExistingUser();
-            mockLanguage();
             when(userMapper.toDto(existingUser)).thenReturn(dto);
 
             UserResponseDTO result = userService.updateUser(existingUser.getUuid(), request);
 
             assertThat(result).isSameAs(dto);
-            assertThat(existingUser.getPreferences().getLanguage()).isSameAs(language);
             verify(userMapper).updateEntity(request, existingUser);
             verify(identityService).updateUser(IDENTITY_ID, new IdentityUserUpdateRequestDTO(
                     request.getUsername(), request.getEmail(), "Luigi", "Verdi", false, List.of("group-id")));
@@ -396,7 +367,6 @@ class UserServiceTest {
         @Test
         void updateUser_shouldSaveUserBeforeUpdatingIdentityUser() {
             mockExistingUser();
-            mockLanguage();
 
             userService.updateUser(existingUser.getUuid(), updateRequestKeepingUniqueFields());
 
@@ -408,7 +378,6 @@ class UserServiceTest {
         @Test
         void updateUser_shouldNotCheckDuplicates_whenUniqueFieldsAreUnchanged() {
             mockExistingUser();
-            mockLanguage();
 
             userService.updateUser(existingUser.getUuid(), updateRequestKeepingUniqueFields());
 
@@ -420,7 +389,6 @@ class UserServiceTest {
         @Test
         void updateUser_shouldCheckDuplicatesAndUpdate_whenUniqueFieldsChangeToFreeValues() {
             mockExistingUser();
-            mockLanguage();
 
             userService.updateUser(existingUser.getUuid(), updateRequestChangingUniqueFields());
 
@@ -433,7 +401,6 @@ class UserServiceTest {
         @Test
         void updateUser_shouldThrowUserAlreadyExistsException_whenNewTaxIdNumberIsTaken() {
             mockExistingUser();
-            mockLanguage();
             when(userRepository.findByTaxIdNumberAndDeletedOnIsNull(NEW_TAX_ID)).thenReturn(Optional.of(new User()));
             UserUpdateRequestDTO request = updateRequestChangingUniqueFields();
 
@@ -446,7 +413,6 @@ class UserServiceTest {
         @Test
         void updateUser_shouldThrowUserAlreadyExistsException_whenNewUsernameIsTaken() {
             mockExistingUser();
-            mockLanguage();
             when(userRepository.findByUsernameAndDeletedOnIsNull(NEW_USERNAME)).thenReturn(Optional.of(new User()));
             UserUpdateRequestDTO request = updateRequestChangingUniqueFields();
 
@@ -459,7 +425,6 @@ class UserServiceTest {
         @Test
         void updateUser_shouldThrowUserAlreadyExistsException_whenNewEmailIsTaken() {
             mockExistingUser();
-            mockLanguage();
             when(userRepository.findByEmailAndDeletedOnIsNull(NEW_EMAIL)).thenReturn(Optional.of(new User()));
             UserUpdateRequestDTO request = updateRequestChangingUniqueFields();
 
@@ -476,20 +441,6 @@ class UserServiceTest {
 
             assertUserNotFound(() -> userService.updateUser(UNKNOWN_UUID, request));
 
-            verifyNoInteractions(languageRepository);
-            assertNothingUpdated();
-        }
-
-        @Test
-        void updateUser_shouldThrowLanguageNotFoundException_whenLanguageDoesNotExist() {
-            mockExistingUser();
-            when(languageRepository.findByUuid(LANGUAGE_ID)).thenReturn(Optional.empty());
-            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
-
-            assertThatThrownBy(() -> userService.updateUser(existingUser.getUuid(), request))
-                    .isInstanceOfSatisfying(LanguageNotFoundException.class, ex ->
-                            assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.Model.Language.NOT_FOUND));
-
             assertNothingUpdated();
         }
 
@@ -497,7 +448,6 @@ class UserServiceTest {
         void updateUser_shouldPropagateError_whenIdentityUpdateFails() {
             RuntimeException identityError = new RuntimeException("identity error");
             mockExistingUser();
-            mockLanguage();
             doThrow(identityError).when(identityService).updateUser(eq(IDENTITY_ID), any());
             UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
 
@@ -525,7 +475,7 @@ class UserServiceTest {
                     .firstname("Luigi")
                     .lastname("Verdi")
                     .gender(GenderDTO.M)
-                    .languageId(LANGUAGE_ID)
+                    .language(LanguageDTO.EN)
                     .taxIdNumber(taxIdNumber)
                     .email(email)
                     .username(username)
@@ -597,10 +547,6 @@ class UserServiceTest {
 
     private void mockExistingUser() {
         when(userRepository.findByUuidAndDeletedOnIsNull(existingUser.getUuid())).thenReturn(Optional.of(existingUser));
-    }
-
-    private void mockLanguage() {
-        when(languageRepository.findByUuid(LANGUAGE_ID)).thenReturn(Optional.of(language));
     }
 
     private static void completeTransaction(int status) {

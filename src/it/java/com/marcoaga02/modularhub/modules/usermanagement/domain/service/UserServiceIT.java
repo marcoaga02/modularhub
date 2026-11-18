@@ -1,5 +1,6 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.config.BaseITWithMockIdentity;
 import com.marcoaga02.modularhub.core.api.dto.AuditDTO;
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
@@ -7,11 +8,9 @@ import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
-import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.model.User;
-import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
@@ -37,7 +36,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import static com.marcoaga02.modularhub.fixture.SecurityFixtures.authenticate;
-import static com.marcoaga02.modularhub.fixture.UserFixtures.language;
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,14 +57,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
     private UserRepository userRepository;
 
     @Autowired
-    private LanguageRepository languageRepository;
-
-    @Autowired
     private EntityManager entityManager;
-
-    private Language italian;
-
-    private Language english;
 
     private User first;
 
@@ -78,14 +69,12 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @BeforeEach
     void setUp() {
-        italian = languageRepository.save(language("it-IT", true));
-        english = languageRepository.save(language("en-US", false));
 
-        first = userRepository.save(user("1", italian));
-        second = userRepository.save(user("2", english));
-        third = userRepository.save(user("3", english));
+        first = userRepository.save(user("1", Language.IT));
+        second = userRepository.save(user("2", Language.EN));
+        third = userRepository.save(user("3", Language.EN));
 
-        deleted = user("deleted", italian);
+        deleted = user("deleted", Language.IT);
         deleted.setDeletedOn(OffsetDateTime.now());
         userRepository.save(deleted);
 
@@ -131,7 +120,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
         void getAllUsers_shouldMapLanguageFromPreferences() {
             Page<UserResponseDTO> result = userService.getAllUsers(null, PageRequest.of(0, 1, BY_FIRSTNAME));
 
-            assertThat(result.getContent().getFirst().getLanguage().getId()).isEqualTo(italian.getUuid());
+            assertThat(result.getContent().getFirst().getLanguage()).isEqualTo(LanguageDTO.IT);
         }
     }
 
@@ -148,14 +137,14 @@ class UserServiceIT extends BaseITWithMockIdentity {
             assertThat(result)
                     .extracting(UserResponseDTO::getId, UserResponseDTO::getUsername, UserResponseDTO::getEmail)
                     .containsExactly(first.getUuid(), first.getUsername(), first.getEmail());
-            assertThat(result.getLanguage().getId()).isEqualTo(italian.getUuid());
+            assertThat(result.getLanguage()).isEqualTo(LanguageDTO.IT);
             assertThat(result.getGroups()).containsExactly(group);
         }
 
         @Test
         void getUserByUuid_shouldResolveAuditAuthorsToFullNames_whenAuthorsAreKnownUsers() {
             authenticate(first.getIdentityId());
-            User created = userRepository.save(user("audited", italian));
+            User created = userRepository.save(user("audited", Language.IT));
             flushAndClear();
             when(identityProvider.getUserById(created.getIdentityId())).thenReturn(identityUser(null));
 
@@ -186,8 +175,8 @@ class UserServiceIT extends BaseITWithMockIdentity {
             assertThat(saved)
                     .extracting(User::getIdentityId, User::getUsername, User::getTaxIdNumber, User::getGender)
                     .containsExactly(NEW_IDENTITY_ID, "username-new", "TAX-new", Gender.F);
-            assertThat(saved.getPreferences().getLanguage().getUuid()).isEqualTo(english.getUuid());
-            assertThat(result.getLanguage().getId()).isEqualTo(english.getUuid());
+            assertThat(saved.getPreferences().getLanguage()).isEqualTo(Language.EN);
+            assertThat(result.getLanguage()).isEqualTo(LanguageDTO.EN);
         }
 
         @Test
@@ -238,20 +227,12 @@ class UserServiceIT extends BaseITWithMockIdentity {
                     UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_EMAIL);
         }
 
-        @Test
-        void createUser_shouldThrowLanguageNotFoundException_whenLanguageDoesNotExist() {
-            UserCreateRequestDTO request = createRequest("new").languageId("unknown-language");
-
-            assertThatThrownBy(() -> userService.createUser(request))
-                    .isInstanceOf(LanguageNotFoundException.class);
-        }
-
         private UserCreateRequestDTO createRequest(String key) {
             return new UserCreateRequestDTO()
                     .firstname("firstname-" + key)
                     .lastname("lastname-" + key)
                     .gender(GenderDTO.F)
-                    .languageId(english.getUuid())
+                    .language(LanguageDTO.EN)
                     .mobileNumber("000-" + key)
                     .taxIdNumber("TAX-" + key)
                     .email(key + "@test.com")
@@ -270,7 +251,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
             UserUpdateRequestDTO request = updateRequest(first)
                     .firstname("Luigi")
                     .gender(GenderDTO.F)
-                    .languageId(english.getUuid())
+                    .language(LanguageDTO.EN)
                     .enabled(false);
 
             userService.updateUser(first.getUuid(), request);
@@ -280,7 +261,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
             assertThat(updated)
                     .extracting(User::getFirstname, User::getGender, User::getEnabled, User::getIdentityId)
                     .containsExactly("Luigi", Gender.F, false, first.getIdentityId());
-            assertThat(updated.getPreferences().getLanguage().getUuid()).isEqualTo(english.getUuid());
+            assertThat(updated.getPreferences().getLanguage()).isEqualTo(Language.EN);
         }
 
         @Test
@@ -330,7 +311,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
                     .firstname(user.getFirstname())
                     .lastname(user.getLastname())
                     .gender(GenderDTO.M)
-                    .languageId(italian.getUuid())
+                    .language(LanguageDTO.IT)
                     .mobileNumber(user.getMobileNumber())
                     .taxIdNumber(user.getTaxIdNumber())
                     .email(user.getEmail())

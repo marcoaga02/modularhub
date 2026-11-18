@@ -28,9 +28,6 @@
       "account": {
         "self-deletion": "Impossibile eliminare l'utente corrente"
       },
-      "language": {
-        "not-found": "Lingua non trovata"
-      },
       "user": {
         "already-exists": {
           "email": "Esiste già un utente con la stessa email",
@@ -100,6 +97,10 @@
     "gender": {
       "female": "Femmina",
       "male": "Maschio"
+    },
+    "language": {
+      "en": "Inglese",
+      "it": "Italiano"
     },
     "user": {
       "email": "Email",

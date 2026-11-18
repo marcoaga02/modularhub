@@ -1,5 +1,6 @@
 package com.marcoaga02.modularhub.modules.usermanagement.api.controller;
 
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.config.BaseApiIT;
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
@@ -8,7 +9,6 @@ import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.GlobalExceptionHandler;
 import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.model.User;
-import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.util.constant.PaginationHeaders;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
@@ -27,7 +27,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
-import static com.marcoaga02.modularhub.fixture.UserFixtures.language;
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -57,12 +56,7 @@ class UserApiIT extends BaseApiIT {
     private UserRepository userRepository;
 
     @Autowired
-    private LanguageRepository languageRepository;
-
-    @Autowired
     private ObjectMapper objectMapper;
-
-    private Language italian;
 
     private User admin;
 
@@ -70,15 +64,13 @@ class UserApiIT extends BaseApiIT {
 
     @BeforeEach
     void setUp() {
-        italian = languageRepository.save(language("it-IT", true));
-        admin = userRepository.save(user("admin", italian));
-        mario = userRepository.save(user("mario", italian));
+        admin = userRepository.save(user("admin", Language.IT));
+        mario = userRepository.save(user("mario", Language.IT));
     }
 
     @AfterEach
     void cleanUp() {
         userRepository.deleteAll();
-        languageRepository.deleteAll();
     }
 
     @Nested
@@ -104,7 +96,7 @@ class UserApiIT extends BaseApiIT {
 
         @Test
         void getAllUsers_shouldReturnFilteredSortedPageWithPaginationHeaders() throws Exception {
-            userRepository.save(user("maria", italian));
+            userRepository.save(user("maria", Language.IT));
 
             mockMvc.perform(get(USERS).with(asAdmin())
                             .param("text", "MAR")
@@ -131,7 +123,7 @@ class UserApiIT extends BaseApiIT {
             mockMvc.perform(get(USER, uuid).with(asAdmin()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(uuid))
-                    .andExpect(jsonPath("$.language.id").value(italian.getUuid()))
+                    .andExpect(jsonPath("$.language").value("it"))
                     .andExpect(jsonPath("$.groups[0].name").value("group"))
                     .andExpect(jsonPath("$.audit.createdBy").value(ADMIN_FULL_NAME))
                     .andExpect(jsonPath("$.audit.updatedBy").value(ADMIN_FULL_NAME))
@@ -284,7 +276,7 @@ class UserApiIT extends BaseApiIT {
                 .firstname("firstname-new")
                 .lastname("lastname-new")
                 .gender(GenderDTO.F)
-                .languageId(italian.getUuid())
+                .language(LanguageDTO.IT)
                 .taxIdNumber("TAX-new")
                 .email("new@test.com")
                 .username("username-new")
@@ -298,7 +290,7 @@ class UserApiIT extends BaseApiIT {
                 .firstname(user.getFirstname())
                 .lastname(user.getLastname())
                 .gender(GenderDTO.M)
-                .languageId(italian.getUuid())
+                .language(LanguageDTO.IT)
                 .taxIdNumber(user.getTaxIdNumber())
                 .email(user.getEmail())
                 .username(user.getUsername())

@@ -5,10 +5,15 @@
       <p-select
         formControlName="language"
         [options]="languages"
-        optionValue="value"
-        optionLabel="label"
         appendTo="body"
-      />
+      >
+        <ng-template #selectedItem let-language>
+          {{ ('model.language.' + language) | translate }}
+        </ng-template>
+        <ng-template #item let-language>
+          {{ ('model.language.' + language) | translate }}
+        </ng-template>
+      </p-select>
     </div>
   </div>
 

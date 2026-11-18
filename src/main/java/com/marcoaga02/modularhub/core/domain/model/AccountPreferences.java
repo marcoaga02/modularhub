@@ -10,8 +10,8 @@ import lombok.Setter;
 @Table(name = "user_preferences")
 public class AccountPreferences extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "language_id")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "language")
     private Language language;
 
     @Override

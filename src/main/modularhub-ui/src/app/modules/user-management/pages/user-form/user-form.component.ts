@@ -3,10 +3,9 @@ import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 import {InputText} from 'primeng/inputtext';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Checkbox} from 'primeng/checkbox';
-import {Gender} from 'app/core/api/generated';
+import {Gender, Language} from 'app/core/api/generated';
 import {RadioButton} from 'primeng/radiobutton';
-import {LanguageService} from 'app/modules/user-management/api/services/language.service';
-import {BehaviorSubject, forkJoin, retry, Subject} from 'rxjs';
+import {BehaviorSubject, retry, Subject} from 'rxjs';
 import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
 import {Select} from 'primeng/select';
 import {DialogService, DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
@@ -26,11 +25,7 @@ import {DialogFooterComponent} from 'app/core/components/dialog-footer/dialog-fo
 import {UUID} from 'app/core/api/models/uuid';
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
-
-type LanguageWithValue = {
-  label: string,
-  value: string
-}
+import {DEFAULT_LANGUAGE, LANGUAGES} from 'app/core/utils/constants/languages';
 
 @Component({
   selector: 'app-user-form',
@@ -57,7 +52,7 @@ export class UserFormComponent {
     firstname: ['', Validators.required],
     lastname: ['', Validators.required],
     gender: this.formBuilder.nonNullable.control<Gender | null>(null, Validators.required),
-    language: this.formBuilder.nonNullable.control<UUID | null>(null, Validators.required),
+    language: this.formBuilder.nonNullable.control<Language | null>(DEFAULT_LANGUAGE, Validators.required),
     mobileNumber: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
     taxIdNumber: ['', [Validators.required, Validators.pattern(/^[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z]$/)]],
     email: ['', [Validators.required, Validators.email]],
@@ -70,7 +65,7 @@ export class UserFormComponent {
   protected loading = signal(true);
   protected userEdited?: UserResponse;
 
-  protected languages: LanguageWithValue[] = [];
+  protected readonly languages = LANGUAGES;
   private groups: IdentityGroup[] = [];
 
   constructor(
@@ -79,7 +74,6 @@ export class UserFormComponent {
     private readonly confirmationService: ConfirmationService,
     private readonly translateService: TranslateService,
     private readonly dialogService: DialogService,
-    private readonly languageService: LanguageService,
     private readonly userService: UserService,
     private readonly groupService: GroupService,
     private readonly messageService: MessageService
@@ -106,28 +100,10 @@ export class UserFormComponent {
         () => this.config.data!.formValid.next(this.userForm.valid)
       );
 
-    forkJoin([
-      this.languageService.getLanguages().pipe(
-        retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
-      ),
-      this.groupService.getGroups().pipe(
-        retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
-      ),
-    ]).subscribe({
-      next: ([languages, groups]) => {
-        if (languages?.length) {
-          this.languages = languages.map(l => ({
-              label: l.label,
-              value: l.id
-            })
-          );
-
-          const defaultLanguage = languages.find(l => l.isDefault) || languages.pop();
-          if (defaultLanguage) {
-            this.userForm.controls.language.setValue(defaultLanguage.id);
-          }
-        }
-
+    this.groupService.getGroups().pipe(
+      retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
+    ).subscribe({
+      next: groups => {
         if (groups?.length) {
           this.groups = groups;
         }
@@ -177,7 +153,7 @@ export class UserFormComponent {
       firstname: formValues.firstname,
       lastname: formValues.lastname,
       gender: formValues.gender!,
-      languageId: formValues.language!,
+      language: formValues.language!,
       mobileNumber: formValues.mobileNumber,
       taxIdNumber: formValues.taxIdNumber,
       email: formValues.email,
@@ -259,7 +235,7 @@ export class UserFormComponent {
       firstname: user.firstname,
       lastname: user.lastname,
       gender: user.gender,
-      language: user.language!.id,
+      language: user.language,
       mobileNumber: user.mobileNumber,
       taxIdNumber:user.taxIdNumber,
       email: user.email,

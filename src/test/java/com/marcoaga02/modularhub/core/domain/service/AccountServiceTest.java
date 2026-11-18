@@ -3,6 +3,7 @@ package com.marcoaga02.modularhub.core.domain.service;
 import com.marcoaga02.modularhub.core.api.dto.AccountDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesUpdateDTO;
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.InternalStateException;
 import com.marcoaga02.modularhub.core.api.mapper.AccountMapper;
@@ -182,7 +183,7 @@ class AccountServiceTest {
         @Test
         void updateCurrentAccountPreferences_shouldDelegateWithCurrentJwt_whenJwtIsPresent() {
             Jwt jwt = authenticate(IDENTITY_ID);
-            AccountPreferencesUpdateDTO request = new AccountPreferencesUpdateDTO().languageId("language-id");
+            AccountPreferencesUpdateDTO request = new AccountPreferencesUpdateDTO().language(LanguageDTO.IT);
             AccountPreferencesResponseDTO response = new AccountPreferencesResponseDTO();
             when(userAccountService.updatePreferences(jwt, request)).thenReturn(response);
 
@@ -194,7 +195,7 @@ class AccountServiceTest {
 
         @Test
         void updateCurrentAccountPreferences_shouldThrowInternalStateException_whenNoJwtAuthentication() {
-            AccountPreferencesUpdateDTO request = new AccountPreferencesUpdateDTO().languageId("language-id");
+            AccountPreferencesUpdateDTO request = new AccountPreferencesUpdateDTO().language(LanguageDTO.IT);
 
             assertNoJwtAuthentication(() -> accountService.updateCurrentAccountPreferences(request));
 

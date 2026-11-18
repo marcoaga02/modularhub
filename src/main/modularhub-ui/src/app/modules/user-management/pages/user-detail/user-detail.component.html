@@ -63,7 +63,7 @@
             <span class="text-sm text-gray-500">
               {{ "model.user.language" | translate }}
             </span>
-            <span>{{ user.language!.label }}</span>
+            <span>{{ ('model.language.' + user.language) | translate }}</span>
           </div>
 
           <!-- ROW 3 -->

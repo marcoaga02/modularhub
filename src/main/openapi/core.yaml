@@ -9,7 +9,6 @@ security:
 tags:
   - name: Account
   - name: Group
-  - name: Language
   - name: Plugin
 paths:
   /account:
@@ -72,24 +71,6 @@ paths:
           $ref: 'common.yaml#/components/responses/InternalServerError'
         '503':
           $ref: 'common.yaml#/components/responses/ServiceUnavailable'
-  /languages:
-    get:
-      tags:
-        - Language
-      operationId: getLanguages
-      responses:
-        '200':
-          description: Available languages
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LanguageResponse'
-        '401':
-          $ref: 'common.yaml#/components/responses/Unauthorized'
-        '500':
-          $ref: 'common.yaml#/components/responses/InternalServerError'
   /plugins:
     get:
       tags:
@@ -135,25 +116,11 @@ components:
           type: string
         updatedBy:
           type: string
-    LanguageResponse:
-      type: object
-      required:
-        - id
-        - code
-        - label
-        - isDefault
-      properties:
-        id:
-          type: string
-          format: uuid
-        code:
-          type: string
-          example: it-IT
-        label:
-          type: string
-          example: Italiano
-        isDefault:
-          type: boolean
+    Language:
+      type: string
+      enum:
+        - en
+        - it
     IdentityGroup:
       type: object
       required:
@@ -228,12 +195,11 @@ components:
         - language
       properties:
         language:
-          $ref: '#/components/schemas/LanguageResponse'
+          $ref: '#/components/schemas/Language'
     AccountPreferencesUpdate:
       type: object
       required:
-        - languageId
+        - language
       properties:
-        languageId:
-          type: string
-          format: uuid
+        language:
+          $ref: '#/components/schemas/Language'

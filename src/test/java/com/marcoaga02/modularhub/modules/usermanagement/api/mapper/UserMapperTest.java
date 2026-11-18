@@ -1,7 +1,7 @@
 package com.marcoaga02.modularhub.modules.usermanagement.api.mapper;
 
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
-import com.marcoaga02.modularhub.core.api.mapper.LanguageMapperImpl;
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
@@ -22,7 +22,7 @@ class UserMapperTest {
     private static final OffsetDateTime CREATED_ON = OffsetDateTime.parse("2026-01-01T10:15:30+01:00");
     private static final OffsetDateTime UPDATED_ON = OffsetDateTime.parse("2026-02-01T10:15:30+01:00");
 
-    private final UserMapper mapper = new UserMapperImpl(new LanguageMapperImpl());
+    private final UserMapper mapper = new UserMapperImpl();
 
     @Nested
     class ToDto {
@@ -64,13 +64,12 @@ class UserMapperTest {
 
         @Test
         void toDto_shouldTakeLanguageFromPreferences() {
-            Language language = new Language();
             AccountPreferences preferences = new AccountPreferences();
-            preferences.setLanguage(language);
+            preferences.setLanguage(Language.IT);
             User user = new User();
             user.setPreferences(preferences);
 
-            assertThat(mapper.toDto(user).getLanguage().getId()).isEqualTo(language.getUuid());
+            assertThat(mapper.toDto(user).getLanguage()).isEqualTo(LanguageDTO.IT);
         }
 
         @Test
@@ -112,13 +111,21 @@ class UserMapperTest {
         }
 
         @Test
-        void updateEntity_shouldNotSetIdentityIdAndPreferences_whenCreateRequestIsGiven() {
+        void updateEntity_shouldNotSetIdentityId_whenCreateRequestIsGiven() {
             User user = new User();
 
             mapper.updateEntity(createRequest(), user);
 
             assertThat(user.getIdentityId()).isNull();
-            assertThat(user.getPreferences()).isNull();
+        }
+
+        @Test
+        void updateEntity_shouldCreatePreferencesWithLanguage_whenUserHasNoPreferences() {
+            User user = new User();
+
+            mapper.updateEntity(createRequest(), user);
+
+            assertThat(user.getPreferences().getLanguage()).isEqualTo(Language.IT);
         }
 
         @Test
@@ -168,6 +175,18 @@ class UserMapperTest {
         }
 
         @Test
+        void updateEntity_shouldSetLanguageIntoExistingPreferences_whenUpdateRequestIsGiven() {
+            AccountPreferences preferences = new AccountPreferences();
+            preferences.setLanguage(Language.EN);
+            User user = new User();
+            user.setPreferences(preferences);
+
+            mapper.updateEntity(updateRequest(), user);
+
+            assertThat(preferences.getLanguage()).isEqualTo(Language.IT);
+        }
+
+        @Test
         void updateEntity_shouldKeepAuditFields_whenUpdateRequestIsGiven() {
             User user = new User();
             user.setCreatedOn(CREATED_ON);
@@ -206,7 +225,7 @@ class UserMapperTest {
                 .firstname("Mario")
                 .lastname("Rossi")
                 .gender(GenderDTO.M)
-                .languageId("lang-id")
+                .language(LanguageDTO.IT)
                 .mobileNumber("0000")
                 .taxIdNumber("TAX")
                 .email("mario@test.com")
@@ -221,7 +240,7 @@ class UserMapperTest {
                 .firstname("Mario")
                 .lastname("Rossi")
                 .gender(GenderDTO.M)
-                .languageId("lang-id")
+                .language(LanguageDTO.IT)
                 .mobileNumber("0000")
                 .taxIdNumber("TAX")
                 .email("mario@test.com")

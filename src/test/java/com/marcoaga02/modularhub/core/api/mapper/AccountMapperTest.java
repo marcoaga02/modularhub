@@ -2,6 +2,7 @@ package com.marcoaga02.modularhub.core.api.mapper;
 
 import com.marcoaga02.modularhub.core.api.dto.AccountDTO;
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
@@ -13,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AccountMapperTest {
 
     private final AccountMapper mapper =
-            new AccountMapperImpl(new AccountPreferencesMapperImpl(new LanguageMapperImpl()));
+            new AccountMapperImpl(new AccountPreferencesMapperImpl());
 
     @Test
     void toDto_shouldRenameFirstnameAndLastname() {
@@ -55,15 +56,14 @@ class AccountMapperTest {
 
     @Test
     void toDto_shouldMapPreferencesLanguage() {
-        Language language = new Language();
         AccountPreferences preferences = new AccountPreferences();
-        preferences.setLanguage(language);
+        preferences.setLanguage(Language.EN);
         User user = new User();
         user.setPreferences(preferences);
 
         AccountDTO dto = mapper.toDto(user);
 
-        assertThat(dto.getPreferences().getLanguage().getId()).isEqualTo(language.getUuid());
+        assertThat(dto.getPreferences().getLanguage()).isEqualTo(LanguageDTO.EN);
     }
 
     @Test

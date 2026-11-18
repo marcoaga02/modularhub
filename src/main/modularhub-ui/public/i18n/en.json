@@ -28,9 +28,6 @@
       "account": {
         "self-deletion": "Cannot delete the current user"
       },
-      "language": {
-        "not-found": "Language not found"
-      },
       "user": {
         "already-exists": {
           "email": "A user with the same email already exists",
@@ -100,6 +97,10 @@
     "gender": {
       "female": "Female",
       "male": "Male"
+    },
+    "language": {
+      "en": "English",
+      "it": "Italian"
     },
     "user": {
       "email": "Email",

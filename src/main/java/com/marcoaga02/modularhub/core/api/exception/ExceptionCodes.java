@@ -58,14 +58,6 @@ public final class ExceptionCodes {
         private Model() {
         }
 
-        public static final class Language {
-
-            public static final String NOT_FOUND = "exception.model.language.not-found";
-
-            private Language() {
-            }
-        }
-
         public static final class Account {
 
             public static final String SELF_DELETION = "exception.model.account.self-deletion";

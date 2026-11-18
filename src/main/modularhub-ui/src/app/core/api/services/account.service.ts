@@ -33,7 +33,7 @@ export class AccountService {
   }
 
   private onSuccess(accont: Account) {
-    this.translateService.use(accont.preferences.language.code);
+    this.translateService.use(accont.preferences.language);
     this.accountSubject.next(accont);
   }
 

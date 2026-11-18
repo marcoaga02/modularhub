@@ -2,13 +2,10 @@ package com.marcoaga02.modularhub.core.domain.service;
 
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesUpdateDTO;
-import com.marcoaga02.modularhub.core.api.exception.InternalStateException;
-import com.marcoaga02.modularhub.core.api.exception.language.LanguageNotFoundException;
 import com.marcoaga02.modularhub.core.api.mapper.AccountPreferencesMapper;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Language;
 import com.marcoaga02.modularhub.core.domain.model.User;
-import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.infrastructure.keycloak.KeycloakClaims;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -20,13 +17,10 @@ public class UserAccountService {
 
     private final UserRepository userRepository;
 
-    private final LanguageRepository languageRepository;
-
     private final AccountPreferencesMapper accountPreferencesMapper;
 
-    public UserAccountService(UserRepository userRepository, LanguageRepository languageRepository, AccountPreferencesMapper accountPreferencesMapper) {
+    public UserAccountService(UserRepository userRepository, AccountPreferencesMapper accountPreferencesMapper) {
         this.userRepository = userRepository;
-        this.languageRepository = languageRepository;
         this.accountPreferencesMapper = accountPreferencesMapper;
     }
 
@@ -47,7 +41,7 @@ public class UserAccountService {
     public AccountPreferencesResponseDTO updatePreferences(Jwt jwt, AccountPreferencesUpdateDTO dto) {
         User user = syncUser(jwt);
 
-        user.getPreferences().setLanguage(findLanguageOrElseThrow(dto.getLanguageId()));
+        accountPreferencesMapper.updateEntity(dto, user.getPreferences());
 
         return accountPreferencesMapper.toDto(user.getPreferences());
     }
@@ -63,11 +57,8 @@ public class UserAccountService {
     }
 
     private User newUser(String identityId) {
-        Language defaultLanguage = languageRepository.findByIsDefaultTrue()
-                .orElseThrow(() -> new InternalStateException("No default language configured"));
-
         AccountPreferences preferences = new AccountPreferences();
-        preferences.setLanguage(defaultLanguage);
+        preferences.setLanguage(Language.DEFAULT);
 
         User user = new User();
         user.setIdentityId(identityId);
@@ -75,10 +66,5 @@ public class UserAccountService {
         user.setPreferences(preferences);
 
         return user;
-    }
-
-    private Language findLanguageOrElseThrow(String languageId) {
-        return languageRepository.findByUuid(languageId)
-                .orElseThrow(() -> new LanguageNotFoundException(languageId));
     }
 }

@@ -113,12 +113,17 @@
               id="language"
               [options]="languages"
               formControlName="language"
-              optionValue="value"
-              optionLabel="label"
               appendTo="body"
               [placeholder]="'modules.user-management.pages.user-form.select-language-placeholder' | translate"
               [ngClass]="{'p-invalid': userForm.get('language')?.invalid && userForm.get('language')?.touched}"
-            />
+            >
+              <ng-template #selectedItem let-language>
+                {{ ('model.language.' + language) | translate }}
+              </ng-template>
+              <ng-template #item let-language>
+                {{ ('model.language.' + language) | translate }}
+              </ng-template>
+            </p-select>
           </div>
           <div class="flex flex-col gap-2 pt-6 pr-2">
             <div class="flex items-center gap-2">

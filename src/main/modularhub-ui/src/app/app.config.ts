@@ -33,13 +33,14 @@ import {provideApi as provideUserManagementApi} from 'app/modules/user-managemen
 import {registerLocaleData} from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import localeEn from '@angular/common/locales/en';
+import {DEFAULT_LANGUAGE} from 'app/core/utils/constants/languages';
 
 export const MAX_RETRY_ATTEMPTS = 3;
 export const RETRY_DELAY_MS = 1000;
 
 // TODO registrare i nuovi locale
-registerLocaleData(localeIt, 'it-IT');
-registerLocaleData(localeEn, 'en-EN');
+registerLocaleData(localeIt, 'it');
+registerLocaleData(localeEn, 'en');
 
 export function provideAuthInitializer(): EnvironmentProviders {
   return provideAppInitializer(async () => {
@@ -163,8 +164,8 @@ export const appConfig: ApplicationConfig = {
         prefix: './i18n/',
         suffix: '.json'
       }),
-      fallbackLang: 'it-IT',
-      lang: 'it-IT'
+      fallbackLang: DEFAULT_LANGUAGE,
+      lang: DEFAULT_LANGUAGE
     }),
     MessageService,
   ]

@@ -48,7 +48,7 @@ class AccountControllerSecurityTest extends BaseControllerSecurityTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""
                             {
-                                "languageId": "lang-id"
+                                "language": "en"
                             }
                             """);
         }

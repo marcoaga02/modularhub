@@ -1,19 +1,16 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.config.BaseKeycloakIT;
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
-import com.marcoaga02.modularhub.core.domain.model.Language;
-import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import static com.marcoaga02.modularhub.fixture.UserFixtures.language;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -27,20 +24,9 @@ class UserServiceRollbackIT extends BaseKeycloakIT {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private LanguageRepository languageRepository;
-
-    private Language language;
-
-    @BeforeEach
-    void setUp() {
-        language = languageRepository.save(language("it-IT", true));
-    }
-
     @AfterEach
     void cleanUp() {
         userRepository.deleteAll();
-        languageRepository.deleteAll();
     }
 
     @Test
@@ -67,7 +53,7 @@ class UserServiceRollbackIT extends BaseKeycloakIT {
                 .firstname("Mario")
                 .lastname("Rossi")
                 .gender(GenderDTO.M)
-                .languageId(language.getUuid())
+                .language(LanguageDTO.IT)
                 .taxIdNumber(taxIdNumber)
                 .email(username + "@test.com")
                 .username(username)

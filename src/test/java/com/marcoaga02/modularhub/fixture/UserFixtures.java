@@ -10,14 +10,6 @@ public final class UserFixtures {
     private UserFixtures() {
     }
 
-    public static Language language(String code, boolean isDefault) {
-        Language language = new Language();
-        language.setCode(code);
-        language.setLabel("label-" + code);
-        language.setIsDefault(isDefault);
-        return language;
-    }
-
     public static User user(String key, Language language) {
         AccountPreferences preferences = new AccountPreferences();
         preferences.setLanguage(language);
