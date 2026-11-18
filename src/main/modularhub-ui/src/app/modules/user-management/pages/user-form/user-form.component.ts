@@ -221,8 +221,8 @@ export class UserFormComponent {
       templates: {
         footer: DialogFooterComponent
       }
-    })?.onClose.subscribe((groupIds: UUID[]) => {
-      if (!groupIds?.length) {
+    })?.onClose.subscribe((groupIds: UUID[] | undefined) => {
+      if (groupIds === undefined) {
         return;
       }
 
