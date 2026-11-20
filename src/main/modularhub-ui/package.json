@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "generate:api": "openapi-generator-cli generate",
+    "clean:api": "node -e \"const fs = require('fs'); Object.values(require('./openapitools.json')['generator-cli'].generators).forEach(g => fs.rmSync(g.output, {recursive: true, force: true}))\"",
+    "generate:api": "npm run clean:api && openapi-generator-cli generate",
     "prestart": "npm run generate:api",
     "prebuild": "npm run generate:api",
     "pretest": "npm run generate:api"

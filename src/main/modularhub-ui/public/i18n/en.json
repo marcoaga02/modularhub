@@ -34,7 +34,11 @@
           "tax-id": "A user with the same tax ID already exists",
           "username": "A user with the same username already exists"
         },
-        "not-found": "User not found"
+        "not-found": "User not found",
+        "last-admin": "At least one active administrator must remain"
+      },
+      "role": {
+        "not-found": "Role not found"
       }
     },
     "validation": {
@@ -67,11 +71,6 @@
       "label": "Logout",
       "message": "Are you sure you want to log out?",
       "title": "Confirm logout"
-    }
-  },
-  "groups": {
-    "admin": {
-      "description": "Administrator: has all roles"
     }
   },
   "model": {
@@ -111,31 +110,25 @@
       },
       "firstname": "First name",
       "gender": "Gender",
-      "groups": "Groups",
       "language": "Language",
       "lastname": "Last name",
       "mobile-number": "Mobile number",
       "password": "Password",
       "tax-id-number": "Tax ID number",
-      "username": "Username"
+      "username": "Username",
+      "roles": "Roles"
     }
   },
   "modules": {
     "user-management": {
       "description": "User Management",
       "pages": {
-        "group-selector": {
-          "available-groups": "Available groups",
-          "filter-placeholder": "Filter groups",
-          "selected-groups": "Selected groups",
-          "title": "Group selection"
-        },
         "user-detail": {
           "account": "Account",
           "audit": "Audit",
-          "no-groups": "No groups assigned",
           "personal-info": "Personal information",
-          "title": "User detail {{fullName}}"
+          "title": "User detail {{fullName}}",
+          "no-roles": "No roles assigned"
         },
         "user-form": {
           "confirmation-cancel-dialog": {
@@ -164,8 +157,17 @@
           "edit-message": "User has been updated successfully",
           "empty-message": "No users found",
           "filter-placeholder": "Filter users"
+        },
+        "role-selector": {
+          "title": "Role selection",
+          "available-roles": "Available roles",
+          "selected-roles": "Selected roles",
+          "filter-placeholder": "Filter roles"
         }
       }
     }
+  },
+  "permissions": {
+    "USER_MANAGEMENT": "User and role management"
   }
 }

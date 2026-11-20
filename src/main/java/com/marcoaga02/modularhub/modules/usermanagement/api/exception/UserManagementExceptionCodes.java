@@ -17,8 +17,17 @@ public final class UserManagementExceptionCodes {
             public static final String ALREADY_EXISTS_TAX_ID = "exception.model.user.already-exists.tax-id";
             public static final String ALREADY_EXISTS_USERNAME = "exception.model.user.already-exists.username";
             public static final String ALREADY_EXISTS_EMAIL = "exception.model.user.already-exists.email";
+            public static final String LAST_ADMIN = "exception.model.user.last-admin";
 
             private User() {
+            }
+        }
+
+        public static final class Role {
+
+            public static final String NOT_FOUND = "exception.model.role.not-found";
+
+            private Role() {
             }
         }
     }

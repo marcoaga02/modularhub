@@ -31,9 +31,9 @@ public final class SecurityFixtures {
                 .build();
     }
 
-    public static List<GrantedAuthority> roles(String... roles) {
-        return Arrays.stream(roles)
-                .<GrantedAuthority>map(role -> new SimpleGrantedAuthority(SecurityConstants.ROLE_PREFIX + role))
+    public static List<GrantedAuthority> permissions(String... permissions) {
+        return Arrays.stream(permissions)
+                .<GrantedAuthority>map(permission -> new SimpleGrantedAuthority(SecurityConstants.PERMISSION_PREFIX + permission))
                 .toList();
     }
 
@@ -42,7 +42,7 @@ public final class SecurityFixtures {
         return jwt;
     }
 
-    public static Jwt authenticate(String subject, String... roles) {
-        return authenticate(jwt(subject), roles(roles));
+    public static Jwt authenticate(String subject, String... permissions) {
+        return authenticate(jwt(subject), permissions(permissions));
     }
 }

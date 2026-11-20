@@ -5,9 +5,12 @@ import com.marcoaga02.modularhub.config.BaseITWithMockIdentity;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesUpdateDTO;
 import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.Role;
 import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.RoleRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.infrastructure.keycloak.KeycloakClaims;
+import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -31,6 +34,9 @@ class UserAccountServiceIT extends BaseITWithMockIdentity {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -66,6 +72,34 @@ class UserAccountServiceIT extends BaseITWithMockIdentity {
                     .extracting(User::getUuid, User::getUsername, User::getFirstname, User::getTaxIdNumber)
                     .containsExactly(existing.getUuid(), "renamed", "Renamed", existing.getTaxIdNumber());
             assertThat(synced.getPreferences().getLanguage()).isEqualTo(Language.EN);
+        }
+    }
+
+    @Nested
+    class InitialAdministrator {
+
+        @Test
+        void syncUser_shouldGrantTheSeededAdminRole_whenInitialAdministratorLogsInWithoutActiveAdmins() {
+            userAccountService.syncUser(jwtWithClaims("admin", "Admin"));
+            flushAndClear();
+
+            User saved = userRepository.findByIdentityId(IDENTITY_ID).orElseThrow();
+            assertThat(saved.getRoles())
+                    .extracting(Role::getCode)
+                    .containsExactly(SecurityConstants.ADMIN_ROLE_CODE);
+        }
+
+        @Test
+        void syncUser_shouldNotGrantAdminRole_whenAnotherActiveAdminExists() {
+            User otherAdmin = user("other-admin", Language.EN);
+            otherAdmin.getRoles().add(roleRepository.findByCode(SecurityConstants.ADMIN_ROLE_CODE).orElseThrow());
+            userRepository.save(otherAdmin);
+            flushAndClear();
+
+            userAccountService.syncUser(jwtWithClaims("admin", "Admin"));
+            flushAndClear();
+
+            assertThat(userRepository.findByIdentityId(IDENTITY_ID).orElseThrow().getRoles()).isEmpty();
         }
     }
 

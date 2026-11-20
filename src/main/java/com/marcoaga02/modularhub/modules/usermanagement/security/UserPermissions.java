@@ -1,7 +1,7 @@
 package com.marcoaga02.modularhub.modules.usermanagement.security;
 
 import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
-import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserRoles;
+import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserManagementPermissions;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -17,7 +17,7 @@ public class UserPermissions {
         }
 
         return authentication.getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals(SecurityConstants.ROLE_PREFIX + UserRoles.USER_MANAGEMENT));
+                .anyMatch(authority -> authority.getAuthority().equals(SecurityConstants.PERMISSION_PREFIX + UserManagementPermissions.USER_MANAGEMENT));
     }
 
 }

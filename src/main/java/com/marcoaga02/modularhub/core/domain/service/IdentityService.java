@@ -1,8 +1,6 @@
 package com.marcoaga02.modularhub.core.domain.service;
 
-import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.api.exception.account.SelfDeletionException;
 import com.marcoaga02.modularhub.core.spi.IdentityProviderService;
@@ -11,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
 
 @Service
 public class IdentityService {
@@ -54,10 +51,6 @@ public class IdentityService {
         identityProvider.updateUser(identityId, user);
     }
 
-    public IdentityUserResponseDTO getUserById(String identityId) {
-        return identityProvider.getUserById(identityId);
-    }
-
     public void resetPassword(String identityId) {
         identityProvider.resetPassword(identityId);
     }
@@ -70,9 +63,5 @@ public class IdentityService {
         }
 
         identityProvider.deleteUser(identityId);
-    }
-
-    public List<IdentityGroupDTO> getGroups() {
-        return identityProvider.getGroups();
     }
 }

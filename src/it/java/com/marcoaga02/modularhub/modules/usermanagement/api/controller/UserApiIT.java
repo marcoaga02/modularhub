@@ -3,18 +3,20 @@ package com.marcoaga02.modularhub.modules.usermanagement.api.controller;
 import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.config.BaseApiIT;
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.GlobalExceptionHandler;
+import com.marcoaga02.modularhub.core.config.PermissionAuthoritiesConverter;
 import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.Role;
 import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.RoleRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
+import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
 import com.marcoaga02.modularhub.core.util.constant.PaginationHeaders;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserManagementExceptionCodes;
-import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserRoles;
+import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserManagementPermissions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -23,9 +25,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import tools.jackson.databind.ObjectMapper;
 
-import java.util.List;
+import java.util.Set;
 
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,7 +59,15 @@ class UserApiIT extends BaseApiIT {
     private UserRepository userRepository;
 
     @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private PermissionAuthoritiesConverter permissionAuthoritiesConverter;
+
+    @Autowired
     private ObjectMapper objectMapper;
+
+    private Role adminRole;
 
     private User admin;
 
@@ -64,7 +75,10 @@ class UserApiIT extends BaseApiIT {
 
     @BeforeEach
     void setUp() {
-        admin = userRepository.save(user("admin", Language.IT));
+        adminRole = roleRepository.findByCode(SecurityConstants.ADMIN_ROLE_CODE).orElseThrow();
+        User adminUser = user("admin", Language.IT);
+        adminUser.getRoles().add(adminRole);
+        admin = userRepository.save(adminUser);
         mario = userRepository.save(user("mario", Language.IT));
     }
 
@@ -84,10 +98,29 @@ class UserApiIT extends BaseApiIT {
         }
 
         @Test
-        void users_shouldReturnForbidden_whenUserManagementRoleIsMissing() throws Exception {
+        void users_shouldReturnForbidden_whenUserManagementPermissionIsMissing() throws Exception {
             mockMvc.perform(get(USERS).with(jwtOf(admin.getIdentityId())))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Access.DENIED));
+        }
+
+        @Test
+        void users_shouldReturnOk_whenPermissionComesFromTheAdminRoleStoredInDatabase() throws Exception {
+            mockMvc.perform(get(USERS).with(withPermissionsFromDatabase(admin)))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        void users_shouldReturnForbidden_whenUserHasNoRolesInDatabase() throws Exception {
+            mockMvc.perform(get(USERS).with(withPermissionsFromDatabase(mario)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Access.DENIED));
+        }
+
+        private RequestPostProcessor withPermissionsFromDatabase(User user) {
+            return SecurityMockMvcRequestPostProcessors.jwt()
+                    .jwt(jwt -> jwt.subject(user.getIdentityId()))
+                    .authorities(permissionAuthoritiesConverter);
         }
     }
 
@@ -116,15 +149,15 @@ class UserApiIT extends BaseApiIT {
     class GetUserByUuid {
 
         @Test
-        void getUserByUuid_shouldReturnUserWithIdentityGroupsAndAuditFullNames() throws Exception {
+        void getUserByUuid_shouldReturnUserWithRolesAndAuditFullNames() throws Exception {
             String uuid = createUserAsAdmin();
-            when(identityProvider.getUserById(NEW_IDENTITY_ID)).thenReturn(identityUserWithGroup());
 
             mockMvc.perform(get(USER, uuid).with(asAdmin()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(uuid))
                     .andExpect(jsonPath("$.language").value("it"))
-                    .andExpect(jsonPath("$.groups[0].name").value("group"))
+                    .andExpect(jsonPath("$.roles[0].id").value(adminRole.getUuid()))
+                    .andExpect(jsonPath("$.roles[0].system").value(true))
                     .andExpect(jsonPath("$.audit.createdBy").value(ADMIN_FULL_NAME))
                     .andExpect(jsonPath("$.audit.updatedBy").value(ADMIN_FULL_NAME))
                     .andExpect(jsonPath("$.audit.createdOn").isNotEmpty());
@@ -210,6 +243,26 @@ class UserApiIT extends BaseApiIT {
 
             verify(identityProvider, never()).updateUser(anyString(), any());
         }
+
+        @Test
+        void updateUser_shouldReturnForbiddenAndKeepTheRole_whenRemovingAdminFromTheLastAdmin() throws Exception {
+            mockMvc.perform(json(put(USER, admin.getUuid()), updateRequest(admin)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.errorCode").value(UserManagementExceptionCodes.Model.User.LAST_ADMIN));
+
+            assertThat(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull(SecurityConstants.ADMIN_ROLE_CODE))
+                    .isEqualTo(1);
+            verify(identityProvider, never()).updateUser(anyString(), any());
+        }
+
+        @Test
+        void updateUser_shouldReturnNotFound_whenARoleDoesNotExist() throws Exception {
+            UserUpdateRequestDTO request = updateRequest(mario).roleIds(Set.of("unknown-role"));
+
+            mockMvc.perform(json(put(USER, mario.getUuid()), request))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.errorCode").value(UserManagementExceptionCodes.Model.Role.NOT_FOUND));
+        }
     }
 
     @Nested
@@ -228,9 +281,23 @@ class UserApiIT extends BaseApiIT {
 
         @Test
         void deleteUserByUuid_shouldReturnForbiddenAndKeepUser_whenUserDeletesItself() throws Exception {
+            mario.getRoles().add(adminRole);
+            userRepository.save(mario);
+
             mockMvc.perform(delete(USER, admin.getUuid()).with(asAdmin()))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Model.Account.SELF_DELETION));
+
+            assertThat(userRepository.findByUuidAndDeletedOnIsNull(admin.getUuid())).isPresent();
+            verify(identityProvider, never()).deleteUser(anyString());
+        }
+
+        @Test
+        void deleteUserByUuid_shouldReturnForbiddenAndKeepUser_whenDeletingTheLastAdmin() throws Exception {
+            mockMvc.perform(delete(USER, admin.getUuid())
+                            .with(jwtOf(mario.getIdentityId(), UserManagementPermissions.USER_MANAGEMENT)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.errorCode").value(UserManagementExceptionCodes.Model.User.LAST_ADMIN));
 
             assertThat(userRepository.findByUuidAndDeletedOnIsNull(admin.getUuid())).isPresent();
             verify(identityProvider, never()).deleteUser(anyString());
@@ -262,7 +329,7 @@ class UserApiIT extends BaseApiIT {
     }
 
     private RequestPostProcessor asAdmin() {
-        return jwtOf(admin.getIdentityId(), UserRoles.USER_MANAGEMENT);
+        return jwtOf(admin.getIdentityId(), UserManagementPermissions.USER_MANAGEMENT);
     }
 
     private MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, Object body) {
@@ -281,7 +348,7 @@ class UserApiIT extends BaseApiIT {
                 .email("new@test.com")
                 .username("username-new")
                 .password("password")
-                .groupIds(List.of("group-id"))
+                .roleIds(Set.of(adminRole.getUuid()))
                 .enabled(true);
     }
 
@@ -295,12 +362,5 @@ class UserApiIT extends BaseApiIT {
                 .email(user.getEmail())
                 .username(user.getUsername())
                 .enabled(true);
-    }
-
-    private static IdentityUserResponseDTO identityUserWithGroup() {
-        IdentityUserResponseDTO identityUser = new IdentityUserResponseDTO();
-        identityUser.setId(NEW_IDENTITY_ID);
-        identityUser.setGroups(List.of(new IdentityGroupDTO().id("group-id").name("group")));
-        return identityUser;
     }
 }

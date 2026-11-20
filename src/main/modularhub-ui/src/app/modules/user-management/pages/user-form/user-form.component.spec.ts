@@ -5,12 +5,12 @@ import {BehaviorSubject, of, Subject} from 'rxjs';
 import {DialogService, DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {provideTranslateService} from '@ngx-translate/core';
-import {GroupService} from 'app/modules/user-management/api/services/group.service';
+import {RoleService} from 'app/modules/user-management/api/services/role.service';
 import {UserService} from 'app/modules/user-management/api/services/user.service';
 import {UUID} from 'app/core/api/models/uuid';
 
 describe('UserFormComponent', () => {
-  const groupId = 'group-id' as UUID;
+  const roleId = 'role-id' as UUID;
 
   let component: UserFormComponent;
   let fixture: ComponentFixture<UserFormComponent>;
@@ -52,7 +52,7 @@ describe('UserFormComponent', () => {
         {provide: ConfirmationService, useValue: {}},
         {provide: DialogService, useValue: dialogService},
         {provide: MessageService, useValue: {}},
-        {provide: GroupService, useValue: {getGroups: () => of([])}},
+        {provide: RoleService, useValue: {getRoles: () => of([])}},
         {provide: UserService, useValue: {}},
       ]
     }).compileComponents();
@@ -62,40 +62,40 @@ describe('UserFormComponent', () => {
     await fixture.whenStable();
   });
 
-  function closeGroupsDialogWith(groupIds: UUID[] | undefined) {
-    buttonClick.next('groups');
-    dialogClose.next(groupIds);
+  function closeRolesDialogWith(roleIds: UUID[] | undefined) {
+    buttonClick.next('roles');
+    dialogClose.next(roleIds);
   }
 
-  function selectedGroupIdsPassedToNextDialog(): UUID[] {
-    buttonClick.next('groups');
+  function selectedRoleIdsPassedToNextDialog(): UUID[] {
+    buttonClick.next('roles');
     const config = openedDialogs[openedDialogs.length - 1];
-    return (config.data as {selectedGroupIds: UUID[]}).selectedGroupIds;
+    return (config.data as {selectedRoleIds: UUID[]}).selectedRoleIds;
   }
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should keep the selected groups when the groups dialog confirms them', () => {
-    closeGroupsDialogWith([groupId]);
+  it('should keep the selected roles when the roles dialog confirms them', () => {
+    closeRolesDialogWith([roleId]);
 
-    expect(selectedGroupIdsPassedToNextDialog()).toEqual([groupId]);
+    expect(selectedRoleIdsPassedToNextDialog()).toEqual([roleId]);
   });
 
-  it('should clear the groups when the groups dialog confirms an empty selection', () => {
-    closeGroupsDialogWith([groupId]);
+  it('should clear the roles when the roles dialog confirms an empty selection', () => {
+    closeRolesDialogWith([roleId]);
 
-    closeGroupsDialogWith([]);
+    closeRolesDialogWith([]);
 
-    expect(selectedGroupIdsPassedToNextDialog()).toEqual([]);
+    expect(selectedRoleIdsPassedToNextDialog()).toEqual([]);
   });
 
-  it('should keep the previous groups when the groups dialog is closed without confirming', () => {
-    closeGroupsDialogWith([groupId]);
+  it('should keep the previous roles when the roles dialog is closed without confirming', () => {
+    closeRolesDialogWith([roleId]);
 
-    closeGroupsDialogWith(undefined);
+    closeRolesDialogWith(undefined);
 
-    expect(selectedGroupIdsPassedToNextDialog()).toEqual([groupId]);
+    expect(selectedRoleIdsPassedToNextDialog()).toEqual([roleId]);
   });
 });

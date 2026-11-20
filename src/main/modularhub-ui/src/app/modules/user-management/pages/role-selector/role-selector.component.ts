@@ -2,7 +2,7 @@ import {Component} from '@angular/core';
 import {PickList, PickListPassThroughOptions} from 'primeng/picklist';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {DialogFooterConfig} from 'app/core/components/dialog-footer/dialog-footer.component';
-import {IdentityGroup} from 'app/core/api/generated';
+import {RoleSummary} from 'app/modules/user-management/api/generated';
 import {PickListItemDirective} from 'app/core/utils/directives/pick-list-item.directive';
 import {PrimeTemplate} from 'primeng/api';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
@@ -10,17 +10,17 @@ import {TranslatePipe} from '@ngx-translate/core';
 import {UUID} from 'app/core/api/models/uuid';
 
 @Component({
-  selector: 'app-group-selector',
+  selector: 'app-role-selector',
   imports: [
     PickList,
     PickListItemDirective,
     PrimeTemplate,
     TranslatePipe
   ],
-  templateUrl: './group-selector.component.html',
-  styleUrl: './group-selector.component.css',
+  templateUrl: './role-selector.component.html',
+  styleUrl: './role-selector.component.css',
 })
-export class GroupSelectorComponent {
+export class RoleSelectorComponent {
 
   protected pickListPT: PickListPassThroughOptions = {
     sourceControls: {
@@ -37,13 +37,13 @@ export class GroupSelectorComponent {
     }
   };
 
-  protected availableGroups: IdentityGroup[] = [];
-  protected selectedGroups: IdentityGroup[] = [];
+  protected availableRoles: RoleSummary[] = [];
+  protected selectedRoles: RoleSummary[] = [];
 
   constructor(
     private readonly config: DynamicDialogConfig<DialogFooterConfig & {
-      groups: IdentityGroup[],
-      selectedGroupIds: UUID[],
+      roles: RoleSummary[],
+      selectedRoleIds: UUID[],
     }>,
     private readonly ref: DynamicDialogRef
   ) {
@@ -51,17 +51,17 @@ export class GroupSelectorComponent {
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.submit())
 
-    this.selectedGroups = this.config.data!.groups.filter(
-      g => this.config.data?.selectedGroupIds.includes(g.id)
+    this.selectedRoles = this.config.data!.roles.filter(
+      r => this.config.data?.selectedRoleIds.includes(r.id)
     );
-    this.availableGroups = this.config.data!.groups.filter(
-      g => !this.config.data?.selectedGroupIds.includes(g.id)
+    this.availableRoles = this.config.data!.roles.filter(
+      r => !this.config.data?.selectedRoleIds.includes(r.id)
     );
   }
 
   private submit() {
     this.ref.close(
-      this.selectedGroups.map(g => g.id)
+      this.selectedRoles.map(r => r.id)
     );
   }
 }

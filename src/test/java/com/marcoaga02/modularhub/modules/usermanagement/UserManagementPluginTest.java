@@ -1,6 +1,6 @@
 package com.marcoaga02.modularhub.modules.usermanagement;
 
-import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserRoles;
+import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserManagementPermissions;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +30,7 @@ class UserManagementPluginTest {
     }
 
     @Test
-    void getRequiredRoles_shouldRequireOnlyTheUserManagementRole() {
-        assertThat(plugin.getRequiredRoles()).containsExactly(UserRoles.USER_MANAGEMENT);
+    void getPermissions_shouldDeclareOnlyTheUserManagementPermission() {
+        assertThat(plugin.getPermissions()).containsExactly(UserManagementPermissions.USER_MANAGEMENT);
     }
 }

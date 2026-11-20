@@ -28,7 +28,7 @@ import java.util.Set;
 
 import static com.marcoaga02.modularhub.fixture.SecurityFixtures.authenticate;
 import static com.marcoaga02.modularhub.fixture.SecurityFixtures.jwt;
-import static com.marcoaga02.modularhub.fixture.SecurityFixtures.roles;
+import static com.marcoaga02.modularhub.fixture.SecurityFixtures.permissions;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
@@ -39,8 +39,8 @@ import static org.mockito.Mockito.when;
 class AccountServiceTest {
 
     private static final String IDENTITY_ID = "identity-id";
-    private static final String ADMIN = "ADMIN";
-    private static final String USER = "USER";
+    private static final String ADMIN = "USER_MANAGEMENT";
+    private static final String USER = "REPORTS";
     private static final String NO_JWT_MESSAGE = "No JWT authentication found in security context";
 
     @Mock
@@ -48,6 +48,9 @@ class AccountServiceTest {
 
     @Mock
     private AccountMapper accountMapper;
+
+    @Mock
+    private PermissionService permissionService;
 
     @InjectMocks
     private AccountService accountService;
@@ -61,119 +64,121 @@ class AccountServiceTest {
     class GetCurrentAccount {
 
         @Test
-        void getCurrentAccount_shouldReturnMappedSyncedUserWithTokenRoles_whenJwtIsPresent() {
-            Jwt jwt = authenticate(IDENTITY_ID, ADMIN);
+        void getCurrentAccount_shouldReturnMappedSyncedUserWithPermissionsFromRoles_whenJwtIsPresent() {
+            Jwt jwt = authenticate(IDENTITY_ID);
             User user = new User();
             AccountDTO accountDTO = new AccountDTO().identityId(IDENTITY_ID);
             when(userAccountService.syncUser(jwt)).thenReturn(user);
             when(accountMapper.toDto(user)).thenReturn(accountDTO);
+            when(permissionService.getEffectivePermissions(IDENTITY_ID)).thenReturn(Set.of(ADMIN));
 
             AccountDTO result = accountService.getCurrentAccount();
 
             assertThat(result).isSameAs(accountDTO);
-            assertThat(result.getRoles()).containsExactly(ADMIN);
+            assertThat(result.getPermissions()).containsExactly(ADMIN);
             verify(userAccountService).syncUser(jwt);
             verify(accountMapper).toDto(user);
+            verify(permissionService).getEffectivePermissions(IDENTITY_ID);
         }
 
         @Test
         void getCurrentAccount_shouldThrowInternalStateException_whenNoJwtAuthentication() {
             assertNoJwtAuthentication(() -> accountService.getCurrentAccount());
 
-            verifyNoInteractions(userAccountService, accountMapper);
+            verifyNoInteractions(userAccountService, accountMapper, permissionService);
         }
     }
 
     @Nested
-    class GetRoles {
+    class GetPermissions {
 
         @Test
-        void getRoles_shouldReturnRolesWithoutPrefix_whenUserHasRoles() {
+        void getPermissions_shouldReturnPermissionsWithoutPrefix_whenUserHasPermissions() {
             authenticate(IDENTITY_ID, ADMIN, USER);
 
-            assertThat(accountService.getRoles()).containsExactlyInAnyOrder(ADMIN, USER);
+            assertThat(accountService.getPermissions()).containsExactlyInAnyOrder(ADMIN, USER);
         }
 
         @Test
-        void getRoles_shouldIgnoreAuthoritiesWithoutRolePrefix() {
-            List<GrantedAuthority> authorities = new ArrayList<>(roles(ADMIN));
+        void getPermissions_shouldIgnoreAuthoritiesWithoutPermissionPrefix() {
+            List<GrantedAuthority> authorities = new ArrayList<>(permissions(ADMIN));
             authorities.add(new SimpleGrantedAuthority("SCOPE_openid"));
             authorities.add(new SimpleGrantedAuthority("FACTOR_BEARER"));
             authenticate(jwt(IDENTITY_ID), authorities);
 
-            assertThat(accountService.getRoles()).containsExactly(ADMIN);
+            assertThat(accountService.getPermissions()).containsExactly(ADMIN);
         }
 
         @Test
-        void getRoles_shouldReturnEmptySet_whenUserHasNoRoles() {
+        void getPermissions_shouldReturnEmptySet_whenUserHasNoPermissions() {
             authenticate(IDENTITY_ID);
 
-            assertThat(accountService.getRoles()).isEmpty();
+            assertThat(accountService.getPermissions()).isEmpty();
         }
 
         @Test
-        void getRoles_shouldReturnUnmodifiableSet() {
+        void getPermissions_shouldReturnUnmodifiableSet() {
             authenticate(IDENTITY_ID, ADMIN);
 
-            Set<String> roles = accountService.getRoles();
+            Set<String> userPermissions = accountService.getPermissions();
 
-            assertThatThrownBy(() -> roles.add(USER)).isInstanceOf(UnsupportedOperationException.class);
+            assertThatThrownBy(() -> userPermissions.add(USER)).isInstanceOf(UnsupportedOperationException.class);
         }
 
         @Test
-        void getRoles_shouldThrowInternalStateException_whenNoAuthentication() {
-            assertNoJwtAuthentication(() -> accountService.getRoles());
+        void getPermissions_shouldThrowInternalStateException_whenNoAuthentication() {
+            assertNoJwtAuthentication(() -> accountService.getPermissions());
         }
 
         @Test
-        void getRoles_shouldThrowInternalStateException_whenAuthenticationIsNotJwt() {
+        void getPermissions_shouldThrowInternalStateException_whenAuthenticationIsNotJwt() {
             SecurityContextHolder.getContext().setAuthentication(
-                    UsernamePasswordAuthenticationToken.authenticated("user", null, roles(ADMIN)));
+                    UsernamePasswordAuthenticationToken.authenticated("user", null, permissions(ADMIN)));
 
-            assertNoJwtAuthentication(() -> accountService.getRoles());
+            assertNoJwtAuthentication(() -> accountService.getPermissions());
         }
     }
 
     @Nested
-    class HasRole {
+    class HasPermission {
 
         @Test
-        void hasRole_shouldReturnTrue_whenUserHasTheRole() {
+        void hasPermission_shouldReturnTrue_whenUserHasThePermission() {
             authenticate(IDENTITY_ID, ADMIN);
 
-            assertThat(accountService.hasRole(ADMIN)).isTrue();
+            assertThat(accountService.hasPermission(ADMIN)).isTrue();
         }
 
         @Test
-        void hasRole_shouldReturnFalse_whenUserDoesNotHaveTheRole() {
+        void hasPermission_shouldReturnFalse_whenUserDoesNotHaveThePermission() {
             authenticate(IDENTITY_ID, USER);
 
-            assertThat(accountService.hasRole(ADMIN)).isFalse();
+            assertThat(accountService.hasPermission(ADMIN)).isFalse();
         }
     }
 
     @Nested
-    class HasAnyRole {
+    class HasAnyPermission {
 
         @Test
-        void hasAnyRole_shouldReturnTrue_whenUserHasAtLeastOneOfTheRoles() {
+        void hasAnyPermission_shouldReturnTrue_whenUserHasAtLeastOneOfThePermissions() {
             authenticate(IDENTITY_ID, USER);
 
-            assertThat(accountService.hasAnyRole(ADMIN, USER)).isTrue();
+            assertThat(accountService.hasAnyPermission(ADMIN, USER)).isTrue();
         }
 
         @Test
-        void hasAnyRole_shouldReturnFalse_whenUserHasNoneOfTheRoles() {
+        void hasAnyPermission_shouldReturnFalse_whenUserHasNoneOfThePermissions() {
             authenticate(IDENTITY_ID, USER);
 
-            assertThat(accountService.hasAnyRole(ADMIN, "OTHER")).isFalse();
+            assertThat(accountService.hasAnyPermission(ADMIN, "OTHER")).isFalse();
         }
 
         @Test
-        void hasAnyRole_shouldReturnFalse_whenNoRoleIsRequested() {
+        void hasAnyPermission_shouldReturnFalse_whenNoPermissionIsRequested() {
             authenticate(IDENTITY_ID, USER);
 
-            assertThat(accountService.hasAnyRole()).isFalse();
+            assertThat(accountService.hasAnyPermission()).isFalse();
         }
     }
 

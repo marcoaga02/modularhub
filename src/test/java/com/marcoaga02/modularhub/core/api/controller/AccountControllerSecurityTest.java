@@ -29,7 +29,7 @@ class AccountControllerSecurityTest extends BaseControllerSecurityTest {
 
         @Test
         void getCurrentAccount_shouldReturnOk_whenAuthenticatedWithoutRoles() throws Exception {
-            performWithRoles(request()).andExpect(status().isOk());
+            performWithPermissions(request()).andExpect(status().isOk());
         }
 
         @Test
@@ -55,7 +55,7 @@ class AccountControllerSecurityTest extends BaseControllerSecurityTest {
 
         @Test
         void updatePreferences_shouldReturnOk_whenAuthenticatedWithoutRoles() throws Exception {
-            performWithRoles(request()).andExpect(status().isOk());
+            performWithPermissions(request()).andExpect(status().isOk());
         }
 
         @Test

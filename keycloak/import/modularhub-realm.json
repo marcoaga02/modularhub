@@ -22,23 +22,6 @@
     "timeout": "10000",
     "writeTimeout": "10000"
   },
-  "roles": {
-    "realm": [
-      {
-        "name": "USER_MANAGEMENT"
-      }
-    ]
-  },
-  "groups": [
-    {
-      "name": "ADMIN",
-      "path": "/ADMIN",
-      "description": "groups.admin.description",
-      "realmRoles": [
-        "USER_MANAGEMENT"
-      ]
-    }
-  ],
   "clients": [
     {
       "clientId": "modularhub-frontend",
@@ -99,9 +82,6 @@
       ],
       "realmRoles": [
         "default-roles-modularhub"
-      ],
-      "groups": [
-        "/ADMIN"
       ]
     }
   ]

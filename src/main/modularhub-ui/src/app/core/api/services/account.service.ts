@@ -1,7 +1,7 @@
 import {Injectable} from '@angular/core';
 import {TranslateService} from '@ngx-translate/core';
 import {OAuthService} from 'angular-oauth2-oidc';
-import {BehaviorSubject, Observable} from 'rxjs';
+import {BehaviorSubject, firstValueFrom, Observable, ReplaySubject} from 'rxjs';
 import {Account, AccountApiService, AccountPreferencesUpdate} from 'app/core/api/generated';
 
 @Injectable({
@@ -10,6 +10,7 @@ import {Account, AccountApiService, AccountPreferencesUpdate} from 'app/core/api
 export class AccountService {
 
   private readonly accountSubject = new BehaviorSubject<Account | null>(null);
+  private readonly loaded = new ReplaySubject<void>(1);
 
   constructor(
     private readonly accountApi: AccountApiService,
@@ -19,6 +20,7 @@ export class AccountService {
 
   load(): void {
     if (!this.oauthService.hasValidAccessToken()) {
+      this.loaded.next();
       return;
     }
 
@@ -35,10 +37,16 @@ export class AccountService {
   private onSuccess(accont: Account) {
     this.translateService.use(accont.preferences.language);
     this.accountSubject.next(accont);
+    this.loaded.next();
   }
 
   private onError() {
     this.accountSubject.next(null);
+    this.loaded.next();
+  }
+
+  whenLoaded(): Promise<void> {
+    return firstValueFrom(this.loaded);
   }
 
   logout(): void {

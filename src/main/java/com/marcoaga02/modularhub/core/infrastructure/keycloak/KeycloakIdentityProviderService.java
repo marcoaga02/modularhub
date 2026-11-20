@@ -1,8 +1,6 @@
 package com.marcoaga02.modularhub.core.infrastructure.keycloak;
 
-import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.api.exception.ApplicationException;
 import com.marcoaga02.modularhub.core.api.exception.identity.IdentityProviderUnavailableException;
@@ -17,18 +15,14 @@ import org.keycloak.admin.client.CreatedResponseUtil;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
-import org.keycloak.representations.idm.GroupRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 @Service
 @Profile("keycloak")
@@ -70,15 +64,6 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
             userId = CreatedResponseUtil.getCreatedId(response);
         }
 
-        if (user.getGroupIds() != null && !user.getGroupIds().isEmpty()) {
-            try {
-                updateUserGroups(userId, new HashSet<>(user.getGroupIds()));
-            } catch (RuntimeException e) {
-                deleteCreatedUser(userId, e);
-                throw e;
-            }
-        }
-
         return userId;
     }
 
@@ -92,12 +77,6 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
         userRepresentation.setEnabled(user.getEnabled());
 
         execute(() -> realm().users().get(userId).update(userRepresentation));
-
-        Set<String> newGroups = user.getGroupIds() != null
-                ? new HashSet<>(user.getGroupIds())
-                : new HashSet<>();
-
-        updateUserGroups(userId, newGroups);
     }
 
     @Override
@@ -105,38 +84,6 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
         try (Response response = realm().users().delete(userId)) {
             checkResponse(response);
         }
-    }
-
-    @Override
-    public IdentityUserResponseDTO getUserById(String userId) {
-        UserRepresentation kcUser = execute(() -> realm().users().get(userId).toRepresentation());
-
-        final String identityId = kcUser.getId();
-
-        IdentityUserResponseDTO user = new IdentityUserResponseDTO();
-        user.setId(identityId);
-        user.setUsername(kcUser.getUsername());
-        user.setEmail(kcUser.getEmail());
-        user.setFirstName(kcUser.getFirstName());
-        user.setLastName(kcUser.getLastName());
-        user.setEnabled(kcUser.isEnabled());
-        user.setGroups(getUserGroups(identityId));
-
-        return user;
-    }
-
-    @Override
-    public List<IdentityGroupDTO> getGroups() {
-        return execute(() -> realm().groups().groups().stream()
-                .map(this::toGroupDTO)
-                .toList());
-    }
-
-    @Override
-    public List<IdentityGroupDTO> getUserGroups(String userId) {
-        return execute(() -> realm().users().get(userId).groups().stream()
-                .map(this::toGroupDTO)
-                .toList());
     }
 
     @Override
@@ -162,29 +109,6 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
                         appUrl,
                         List.of("UPDATE_PASSWORD")
                 ));
-    }
-
-    private void updateUserGroups(String userId, Set<String> groupIds) {
-        execute(() -> {
-            var userResource = realm().users().get(userId);
-            Set<String> currentGroups = userResource.groups().stream()
-                    .map(GroupRepresentation::getId)
-                    .collect(Collectors.toSet());
-            currentGroups.stream()
-                    .filter(id -> !groupIds.contains(id))
-                    .forEach(userResource::leaveGroup);
-            groupIds.stream()
-                    .filter(id -> !currentGroups.contains(id))
-                    .forEach(userResource::joinGroup);
-        });
-    }
-
-    private void deleteCreatedUser(String userId, RuntimeException cause) {
-        try {
-            deleteUser(userId);
-        } catch (RuntimeException deleteException) {
-            cause.addSuppressed(deleteException);
-        }
     }
 
     private void checkResponse(Response response) {
@@ -222,12 +146,5 @@ public class KeycloakIdentityProviderService implements IdentityProviderService 
             case 409 -> new IdentityConflictException(message, cause);
             default -> new IdentityProviderUnavailableException(message, cause);
         };
-    }
-
-    private IdentityGroupDTO toGroupDTO(GroupRepresentation group) {
-        return new IdentityGroupDTO()
-                .id(group.getId())
-                .name(group.getName())
-                .description(group.getDescription());
     }
 }

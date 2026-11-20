@@ -16,7 +16,7 @@ import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserN
 import com.marcoaga02.modularhub.modules.usermanagement.domain.service.UserService;
 import com.marcoaga02.modularhub.modules.usermanagement.security.UserPermissions;
 import com.marcoaga02.modularhub.config.BaseControllerTest;
-import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserRoles;
+import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserManagementPermissions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.mockito.ArgumentMatchers.any;
@@ -332,7 +333,7 @@ class UserControllerTest extends BaseControllerTest {
                 .email("mario@test.com")
                 .username("mario.rossi")
                 .password("password")
-                .groupIds(List.of("group-id"))
+                .roleIds(Set.of("role-id"))
                 .enabled(true);
     }
 
@@ -345,11 +346,11 @@ class UserControllerTest extends BaseControllerTest {
                 .taxIdNumber("TAX")
                 .email("mario@test.com")
                 .username("mario.rossi")
-                .groupIds(List.of("group-id"))
+                .roleIds(Set.of("role-id"))
                 .enabled(true);
     }
 
     private ResultActions perform(MockHttpServletRequestBuilder request) throws Exception {
-        return performWithRoles(request, UserRoles.USER_MANAGEMENT);
+        return performWithPermissions(request, UserManagementPermissions.USER_MANAGEMENT);
     }
 }

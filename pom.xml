@@ -336,7 +336,6 @@
                                 <schemaMapping>Gender=com.marcoaga02.modularhub.core.api.dto.GenderDTO</schemaMapping>
                                 <schemaMapping>Audit=com.marcoaga02.modularhub.core.api.dto.AuditDTO</schemaMapping>
                                 <schemaMapping>Language=com.marcoaga02.modularhub.core.api.dto.LanguageDTO</schemaMapping>
-                                <schemaMapping>IdentityGroup=com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO</schemaMapping>
                             </schemaMappings>
                         </configuration>
                     </execution>

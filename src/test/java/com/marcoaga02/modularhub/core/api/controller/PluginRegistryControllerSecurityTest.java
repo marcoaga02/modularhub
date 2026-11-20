@@ -27,7 +27,7 @@ class PluginRegistryControllerSecurityTest extends BaseControllerSecurityTest {
 
         @Test
         void getAuthorizedPlugins_shouldReturnOk_whenAuthenticatedWithoutRoles() throws Exception {
-            performWithRoles(request()).andExpect(status().isOk());
+            performWithPermissions(request()).andExpect(status().isOk());
         }
 
         @Test

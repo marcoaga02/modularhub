@@ -4,14 +4,15 @@ import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.config.BaseITWithMockIdentity;
 import com.marcoaga02.modularhub.core.api.dto.AuditDTO;
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.Role;
 import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.RoleRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.RoleSummaryDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
@@ -34,9 +35,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static com.marcoaga02.modularhub.fixture.SecurityFixtures.authenticate;
+import static com.marcoaga02.modularhub.fixture.UserFixtures.role;
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,7 +61,12 @@ class UserServiceIT extends BaseITWithMockIdentity {
     private UserRepository userRepository;
 
     @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
     private EntityManager entityManager;
+
+    private Role customRole;
 
     private User first;
 
@@ -69,6 +78,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
 
     @BeforeEach
     void setUp() {
+        customRole = roleRepository.save(role("custom"));
 
         first = userRepository.save(user("1", Language.IT));
         second = userRepository.save(user("2", Language.EN));
@@ -128,9 +138,10 @@ class UserServiceIT extends BaseITWithMockIdentity {
     class GetUserByUuid {
 
         @Test
-        void getUserByUuid_shouldReturnUserWithIdentityGroups_whenUserExists() {
-            IdentityGroupDTO group = new IdentityGroupDTO().id("group-id").name("group");
-            when(identityProvider.getUserById(first.getIdentityId())).thenReturn(identityUser(List.of(group)));
+        void getUserByUuid_shouldReturnUserWithRoles_whenUserExists() {
+            first.getRoles().add(customRole);
+            userRepository.save(first);
+            flushAndClear();
 
             UserResponseDTO result = userService.getUserByUuid(first.getUuid());
 
@@ -138,7 +149,9 @@ class UserServiceIT extends BaseITWithMockIdentity {
                     .extracting(UserResponseDTO::getId, UserResponseDTO::getUsername, UserResponseDTO::getEmail)
                     .containsExactly(first.getUuid(), first.getUsername(), first.getEmail());
             assertThat(result.getLanguage()).isEqualTo(LanguageDTO.IT);
-            assertThat(result.getGroups()).containsExactly(group);
+            assertThat(result.getRoles())
+                    .extracting(RoleSummaryDTO::getId, RoleSummaryDTO::getName, RoleSummaryDTO::getSystem)
+                    .containsExactly(tuple(customRole.getUuid(), customRole.getName(), false));
         }
 
         @Test
@@ -146,7 +159,6 @@ class UserServiceIT extends BaseITWithMockIdentity {
             authenticate(first.getIdentityId());
             User created = userRepository.save(user("audited", Language.IT));
             flushAndClear();
-            when(identityProvider.getUserById(created.getIdentityId())).thenReturn(identityUser(null));
 
             AuditDTO audit = userService.getUserByUuid(created.getUuid()).getAudit();
 
@@ -177,16 +189,17 @@ class UserServiceIT extends BaseITWithMockIdentity {
                     .containsExactly(NEW_IDENTITY_ID, "username-new", "TAX-new", Gender.F);
             assertThat(saved.getPreferences().getLanguage()).isEqualTo(Language.EN);
             assertThat(result.getLanguage()).isEqualTo(LanguageDTO.EN);
+            assertThat(saved.getRoles()).extracting(Role::getUuid).containsExactly(customRole.getUuid());
         }
 
         @Test
-        void createUser_shouldCreateIdentityUserWithPasswordAndGroups() {
+        void createUser_shouldCreateIdentityUserWithPassword() {
             when(identityProvider.createUser(any())).thenReturn(NEW_IDENTITY_ID);
 
             userService.createUser(createRequest("new"));
 
             verify(identityProvider).createUser(new IdentityUserCreateRequestDTO("username-new", "new@test.com",
-                    "firstname-new", "lastname-new", true, true, "password", List.of("group-id")));
+                    "firstname-new", "lastname-new", true, true, "password"));
             verify(identityProvider).updatePassword(NEW_IDENTITY_ID, "password");
         }
 
@@ -238,7 +251,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
                     .email(key + "@test.com")
                     .username("username-" + key)
                     .password("password")
-                    .groupIds(List.of("group-id"))
+                    .roleIds(Set.of(customRole.getUuid()))
                     .enabled(true);
         }
     }
@@ -271,8 +284,7 @@ class UserServiceIT extends BaseITWithMockIdentity {
             userService.updateUser(first.getUuid(), request);
 
             verify(identityProvider).updateUser(first.getIdentityId(), new IdentityUserUpdateRequestDTO(
-                    "new.username", first.getEmail(), first.getFirstname(), first.getLastname(), true,
-                    List.of("group-id")));
+                    "new.username", first.getEmail(), first.getFirstname(), first.getLastname(), true));
         }
 
         @Test
@@ -316,7 +328,6 @@ class UserServiceIT extends BaseITWithMockIdentity {
                     .taxIdNumber(user.getTaxIdNumber())
                     .email(user.getEmail())
                     .username(user.getUsername())
-                    .groupIds(List.of("group-id"))
                     .enabled(true);
         }
     }
@@ -363,12 +374,6 @@ class UserServiceIT extends BaseITWithMockIdentity {
     private void flushAndClear() {
         entityManager.flush();
         entityManager.clear();
-    }
-
-    private static IdentityUserResponseDTO identityUser(List<IdentityGroupDTO> groups) {
-        IdentityUserResponseDTO identityUser = new IdentityUserResponseDTO();
-        identityUser.setGroups(groups);
-        return identityUser;
     }
 
     private static void assertUserNotFound(ThrowingCallable call, String uuid) {

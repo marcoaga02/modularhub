@@ -1,5 +1,5 @@
 import {Component, effect, input, signal} from '@angular/core';
-import {NgClass, TitleCasePipe, UpperCasePipe} from '@angular/common';
+import {NgClass, UpperCasePipe} from '@angular/common';
 import {TranslatePipe} from '@ngx-translate/core';
 import {UserResponse} from 'app/modules/user-management/api/generated';
 import {UserService} from 'app/modules/user-management/api/services/user.service';
@@ -20,7 +20,6 @@ import {UUID} from 'app/core/api/models/uuid';
     Avatar,
     Tag,
     UpperCasePipe,
-    TitleCasePipe,
     LocalizedDatePipe
   ],
   templateUrl: './user-detail.component.html',

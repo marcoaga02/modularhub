@@ -67,8 +67,8 @@ class AccountMapperTest {
     }
 
     @Test
-    void toDto_shouldLeaveRolesEmpty_becauseTheyComeFromTheToken() {
-        assertThat(mapper.toDto(new User()).getRoles()).isEmpty();
+    void toDto_shouldLeavePermissionsEmpty_becauseTheServiceResolvesThem() {
+        assertThat(mapper.toDto(new User()).getPermissions()).isEmpty();
     }
 
     @Test

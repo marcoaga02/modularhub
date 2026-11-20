@@ -8,7 +8,6 @@ security:
   - bearerAuth: [ ]
 tags:
   - name: Account
-  - name: Group
   - name: Plugin
 paths:
   /account:
@@ -51,26 +50,6 @@ paths:
           $ref: 'common.yaml#/components/responses/Unauthorized'
         '500':
           $ref: 'common.yaml#/components/responses/InternalServerError'
-  /groups:
-    get:
-      tags:
-        - Group
-      operationId: getAllGroups
-      responses:
-        '200':
-          description: Groups of the identity provider
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IdentityGroup'
-        '401':
-          $ref: 'common.yaml#/components/responses/Unauthorized'
-        '500':
-          $ref: 'common.yaml#/components/responses/InternalServerError'
-        '503':
-          $ref: 'common.yaml#/components/responses/ServiceUnavailable'
   /plugins:
     get:
       tags:
@@ -121,20 +100,6 @@ components:
       enum:
         - en
         - it
-    IdentityGroup:
-      type: object
-      required:
-        - id
-        - name
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-          example: ADMIN
-        description:
-          type: string
     Plugin:
       type: object
       required:
@@ -163,7 +128,7 @@ components:
         - username
         - firstName
         - lastName
-        - roles
+        - permissions
         - preferences
       properties:
         identityId:
@@ -176,7 +141,7 @@ components:
           type: string
         lastName:
           type: string
-        roles:
+        permissions:
           type: array
           uniqueItems: true
           items:

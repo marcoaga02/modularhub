@@ -5,7 +5,9 @@ import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Gender;
 import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.Role;
 import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.RoleSummaryDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
@@ -14,15 +16,18 @@ import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 
+import static com.marcoaga02.modularhub.fixture.UserFixtures.role;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class UserMapperTest {
 
     private static final OffsetDateTime CREATED_ON = OffsetDateTime.parse("2026-01-01T10:15:30+01:00");
     private static final OffsetDateTime UPDATED_ON = OffsetDateTime.parse("2026-02-01T10:15:30+01:00");
 
-    private final UserMapper mapper = new UserMapperImpl();
+    private final UserMapper mapper = new UserMapperImpl(new RoleMapperImpl());
 
     @Nested
     class ToDto {
@@ -78,10 +83,20 @@ class UserMapperTest {
         }
 
         @Test
-        void toDto_shouldLeaveGroupsAndAuditUnset_becauseTheServiceFillsThem() {
+        void toDto_shouldMapRolesThroughRoleMapper() {
+            Role role = role("custom");
+            User user = new User();
+            user.getRoles().add(role);
+
+            assertThat(mapper.toDto(user).getRoles())
+                    .extracting(RoleSummaryDTO::getId, RoleSummaryDTO::getName, RoleSummaryDTO::getSystem)
+                    .containsExactly(tuple(role.getUuid(), "custom", false));
+        }
+
+        @Test
+        void toDto_shouldLeaveAuditUnset_becauseTheServiceFillsIt() {
             UserResponseDTO dto = mapper.toDto(new User());
 
-            assertThat(dto.getGroups()).isEmpty();
             assertThat(dto.getAudit()).isNull();
         }
 
@@ -126,6 +141,17 @@ class UserMapperTest {
             mapper.updateEntity(createRequest(), user);
 
             assertThat(user.getPreferences().getLanguage()).isEqualTo(Language.IT);
+        }
+
+        @Test
+        void updateEntity_shouldNotTouchRoles_whenCreateRequestHasRoleIds() {
+            Role role = role("kept");
+            User user = new User();
+            user.getRoles().add(role);
+
+            mapper.updateEntity(createRequest(), user);
+
+            assertThat(user.getRoles()).containsExactly(role);
         }
 
         @Test
@@ -202,6 +228,17 @@ class UserMapperTest {
         }
 
         @Test
+        void updateEntity_shouldNotTouchRoles_whenUpdateRequestHasRoleIds() {
+            Role role = role("kept");
+            User user = new User();
+            user.getRoles().add(role);
+
+            mapper.updateEntity(updateRequest(), user);
+
+            assertThat(user.getRoles()).containsExactly(role);
+        }
+
+        @Test
         void updateEntity_shouldLeaveUserUnchanged_whenUpdateRequestIsNull() {
             User user = new User();
             user.setFirstname("Mario");
@@ -231,7 +268,7 @@ class UserMapperTest {
                 .email("mario@test.com")
                 .username("mario")
                 .password("password")
-                .groupIds(List.of("group-id"))
+                .roleIds(Set.of("role-id"))
                 .enabled(true);
     }
 
@@ -245,7 +282,7 @@ class UserMapperTest {
                 .taxIdNumber("TAX")
                 .email("mario@test.com")
                 .username("mario")
-                .groupIds(List.of("group-id"))
+                .roleIds(Set.of("role-id"))
                 .enabled(true);
     }
 }

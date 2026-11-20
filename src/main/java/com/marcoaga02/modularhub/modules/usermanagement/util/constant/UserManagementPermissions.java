@@ -1,11 +1,10 @@
 package com.marcoaga02.modularhub.modules.usermanagement.util.constant;
 
-public final class UserRoles {
+public final class UserManagementPermissions {
 
-    private UserRoles() {
+    private UserManagementPermissions() {
         /* This utility class should not be instantiated */
     }
 
     public static final String USER_MANAGEMENT = "USER_MANAGEMENT";
-
 }

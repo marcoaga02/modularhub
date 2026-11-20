@@ -6,14 +6,17 @@ import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.core.api.mapper.AccountPreferencesMapper;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.Role;
 import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.RoleRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.infrastructure.keycloak.KeycloakClaims;
+import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,9 +25,11 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.marcoaga02.modularhub.fixture.SecurityFixtures.jwt;
+import static com.marcoaga02.modularhub.fixture.UserFixtures.adminRole;
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -37,6 +42,7 @@ class UserAccountServiceTest {
     private static final String EMAIL = "mario@test.com";
     private static final String FIRST_NAME = "Mario";
     private static final String LAST_NAME = "Rossi";
+    private static final String INITIAL_ADMIN = "admin";
 
     private static final Jwt JWT = jwt(IDENTITY_ID, Map.of(
             KeycloakClaims.USERNAME, USERNAME,
@@ -49,10 +55,18 @@ class UserAccountServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
     private AccountPreferencesMapper accountPreferencesMapper;
 
-    @InjectMocks
     private UserAccountService userAccountService;
+
+    @BeforeEach
+    void setUp() {
+        userAccountService = new UserAccountService(userRepository, roleRepository, accountPreferencesMapper,
+                INITIAL_ADMIN);
+    }
 
     @Nested
     class SyncUser {
@@ -97,6 +111,77 @@ class UserAccountServiceTest {
             assertThat(user)
                     .extracting(User::getUsername, User::getEmail, User::getFirstname, User::getLastname)
                     .containsExactly(USERNAME, EMAIL, FIRST_NAME, LAST_NAME);
+        }
+    }
+
+    @Nested
+    class InitialAdministrator {
+
+        private static final Jwt ADMIN_JWT = jwt(IDENTITY_ID, Map.of(KeycloakClaims.USERNAME, INITIAL_ADMIN));
+
+        @Test
+        void syncUser_shouldGrantAdminRole_whenInitialAdministratorLogsInAndNoActiveAdminExists() {
+            Role admin = adminRole();
+            mockSyncOf(ADMIN_JWT);
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull(SecurityConstants.ADMIN_ROLE_CODE))
+                    .thenReturn(0L);
+            when(roleRepository.findByCode(SecurityConstants.ADMIN_ROLE_CODE)).thenReturn(Optional.of(admin));
+
+            User result = userAccountService.syncUser(ADMIN_JWT);
+
+            assertThat(result.getRoles()).containsExactly(admin);
+            verify(roleRepository).findByCode(SecurityConstants.ADMIN_ROLE_CODE);
+        }
+
+        @Test
+        void syncUser_shouldNotGrantAdminRole_whenAnActiveAdminAlreadyExists() {
+            mockSyncOf(ADMIN_JWT);
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull(SecurityConstants.ADMIN_ROLE_CODE))
+                    .thenReturn(1L);
+
+            User result = userAccountService.syncUser(ADMIN_JWT);
+
+            assertThat(result.getRoles()).isEmpty();
+            verifyNoInteractions(roleRepository);
+        }
+
+        @Test
+        void syncUser_shouldNotGrantAdminRole_whenUsernameIsNotTheInitialAdministrator() {
+            mockSyncOf(JWT);
+
+            User result = userAccountService.syncUser(JWT);
+
+            assertThat(result.getRoles()).isEmpty();
+            verify(userRepository, never()).countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull(any());
+            verifyNoInteractions(roleRepository);
+        }
+
+        @Test
+        void syncUser_shouldNotGrantAdminRole_whenNoInitialAdministratorIsConfigured() {
+            UserAccountService withoutInitialAdmin = new UserAccountService(userRepository, roleRepository,
+                    accountPreferencesMapper, "");
+            mockSyncOf(ADMIN_JWT);
+
+            User result = withoutInitialAdmin.syncUser(ADMIN_JWT);
+
+            assertThat(result.getRoles()).isEmpty();
+            verify(userRepository, never()).countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull(any());
+            verifyNoInteractions(roleRepository);
+        }
+
+        @Test
+        void syncUser_shouldLeaveRolesEmpty_whenAdminRoleIsMissing() {
+            mockSyncOf(ADMIN_JWT);
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull(SecurityConstants.ADMIN_ROLE_CODE))
+                    .thenReturn(0L);
+            when(roleRepository.findByCode(SecurityConstants.ADMIN_ROLE_CODE)).thenReturn(Optional.empty());
+
+            assertThat(userAccountService.syncUser(ADMIN_JWT).getRoles()).isEmpty();
+        }
+
+        private void mockSyncOf(Jwt jwt) {
+            when(userRepository.findByIdentityId(jwt.getSubject())).thenReturn(Optional.of(user("existing", Language.EN)));
+            when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
         }
     }
 

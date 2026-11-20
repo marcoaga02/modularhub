@@ -28,7 +28,7 @@ describe('UserService', () => {
     email: 'mario@test.it',
     username: 'mario',
     enabled: true,
-    groups: [],
+    roles: [],
   };
   const updateRequest: UserUpdateRequest = {
     firstname: 'Mario',
@@ -38,7 +38,7 @@ describe('UserService', () => {
     taxIdNumber: 'TAX',
     email: 'mario@test.it',
     username: 'mario',
-    groupIds: [],
+    roleIds: [],
     enabled: true,
   };
 

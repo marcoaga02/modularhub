@@ -8,6 +8,7 @@ security:
   - bearerAuth: [ ]
 tags:
   - name: User
+  - name: Role
 paths:
   /users:
     get:
@@ -89,7 +90,7 @@ paths:
       operationId: getUserByUuid
       responses:
         '200':
-          description: User with audit and groups
+          description: User with audit and roles
           content:
             application/json:
               schema:
@@ -172,6 +173,26 @@ paths:
           $ref: 'common.yaml#/components/responses/InternalServerError'
         '503':
           $ref: 'common.yaml#/components/responses/ServiceUnavailable'
+  /roles:
+    get:
+      tags:
+        - Role
+      operationId: getAllRoles
+      responses:
+        '200':
+          description: Roles of the catalog, system roles first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleSummary'
+        '401':
+          $ref: 'common.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: 'common.yaml#/components/responses/Forbidden'
+        '500':
+          $ref: 'common.yaml#/components/responses/InternalServerError'
 components:
   securitySchemes:
     bearerAuth:
@@ -231,8 +252,9 @@ components:
           type: string
           format: password
           x-field-extra-annotation: '@jakarta.validation.constraints.NotBlank'
-        groupIds:
+        roleIds:
           type: array
+          uniqueItems: true
           items:
             type: string
             format: uuid
@@ -272,8 +294,9 @@ components:
         username:
           type: string
           x-field-extra-annotation: '@jakarta.validation.constraints.NotBlank'
-        groupIds:
+        roleIds:
           type: array
+          uniqueItems: true
           items:
             type: string
             format: uuid
@@ -290,7 +313,7 @@ components:
         - email
         - username
         - enabled
-        - groups
+        - roles
       properties:
         id:
           type: string
@@ -313,10 +336,25 @@ components:
           type: string
         enabled:
           type: boolean
-        groups:
+        roles:
           type: array
           uniqueItems: true
           items:
-            $ref: 'core.yaml#/components/schemas/IdentityGroup'
+            $ref: '#/components/schemas/RoleSummary'
         audit:
           $ref: 'core.yaml#/components/schemas/Audit'
+    RoleSummary:
+      type: object
+      required:
+        - id
+        - name
+        - system
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        system:
+          type: boolean
+          description: System roles (ADMIN) always grant every permission

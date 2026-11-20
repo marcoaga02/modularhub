@@ -34,7 +34,11 @@
           "tax-id": "Esiste già un utente con lo stesso codice fiscale",
           "username": "Esiste già un utente con lo stesso username"
         },
-        "not-found": "Utente non trovato"
+        "not-found": "Utente non trovato",
+        "last-admin": "Deve restare almeno un amministratore attivo"
+      },
+      "role": {
+        "not-found": "Ruolo non trovato"
       }
     },
     "validation": {
@@ -67,11 +71,6 @@
       "label": "Esci",
       "message": "Sei sicuro di voler uscire?",
       "title": "Conferma uscita"
-    }
-  },
-  "groups": {
-    "admin": {
-      "description": "Amministratore: possiede tutti i ruoli"
     }
   },
   "model": {
@@ -111,31 +110,25 @@
       },
       "firstname": "Nome",
       "gender": "Genere",
-      "groups": "Gruppi",
       "language": "Lingua",
       "lastname": "Cognome",
       "mobile-number": "Cellulare",
       "password": "Password",
       "tax-id-number": "Codice fiscale",
-      "username": "Username"
+      "username": "Username",
+      "roles": "Ruoli"
     }
   },
   "modules": {
     "user-management": {
       "description": "Gestione Utenti",
       "pages": {
-        "group-selector": {
-          "available-groups": "Gruppi disponibili",
-          "filter-placeholder": "Filtra gruppi",
-          "selected-groups": "Gruppi selezionati",
-          "title": "Selezione gruppi"
-        },
         "user-detail": {
           "account": "Account",
           "audit": "Audit",
-          "no-groups": "Nessun gruppo assegnato",
           "personal-info": "Informazioni personali",
-          "title": "Dettaglio utente {{fullName}}"
+          "title": "Dettaglio utente {{fullName}}",
+          "no-roles": "Nessun ruolo assegnato"
         },
         "user-form": {
           "confirmation-cancel-dialog": {
@@ -164,8 +157,17 @@
           "edit-message": "L'utente è stato modificato con successo",
           "empty-message": "Nessun utente trovato",
           "filter-placeholder": "Filtra utenti"
+        },
+        "role-selector": {
+          "title": "Selezione ruoli",
+          "available-roles": "Ruoli disponibili",
+          "selected-roles": "Ruoli selezionati",
+          "filter-placeholder": "Filtra ruoli"
         }
       }
     }
+  },
+  "permissions": {
+    "USER_MANAGEMENT": "Gestione utenti e ruoli"
   }
 }

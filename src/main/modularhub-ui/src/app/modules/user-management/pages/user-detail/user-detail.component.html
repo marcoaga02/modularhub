@@ -100,13 +100,13 @@
         </div>
       </div>
       <div class="flex flex-col p-4 gap-2 border-b">
-        <span class="text-sm">{{ "model.user.groups" | translate | uppercase }}</span>
+        <span class="text-sm">{{ "model.user.roles" | translate | uppercase }}</span>
         <div class="flex flex-wrap gap-2">
-          @for (group of user.groups; track group.id) {
-            <p-tag class="font-normal!" [value]="group.name | titlecase" icon="pi pi-users" severity="secondary"/>
+          @for (role of user.roles; track role.id) {
+            <p-tag class="font-normal!" [value]="role.name" icon="pi pi-shield" severity="secondary"/>
           } @empty {
             <span
-              class="text-sm text-color-secondary">{{ "modules.user-management.pages.user-detail.no-groups" | translate }}</span>
+              class="text-sm text-color-secondary">{{ "modules.user-management.pages.user-detail.no-roles" | translate }}</span>
           }
         </div>
       </div>

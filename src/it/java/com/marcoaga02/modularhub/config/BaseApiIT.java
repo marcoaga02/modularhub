@@ -6,7 +6,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-import static com.marcoaga02.modularhub.fixture.SecurityFixtures.roles;
+import static com.marcoaga02.modularhub.fixture.SecurityFixtures.permissions;
 
 @AutoConfigureMockMvc
 public abstract class BaseApiIT extends BaseITWithMockIdentity {
@@ -14,9 +14,9 @@ public abstract class BaseApiIT extends BaseITWithMockIdentity {
     @Autowired
     protected MockMvc mockMvc;
 
-    protected static RequestPostProcessor jwtOf(String subject, String... roles) {
+    protected static RequestPostProcessor jwtOf(String subject, String... permissions) {
         return SecurityMockMvcRequestPostProcessors.jwt()
                 .jwt(jwt -> jwt.subject(subject))
-                .authorities(roles(roles));
+                .authorities(permissions(permissions));
     }
 }

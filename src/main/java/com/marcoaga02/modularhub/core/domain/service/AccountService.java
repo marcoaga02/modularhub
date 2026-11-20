@@ -9,6 +9,7 @@ import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.annotation.RequestScope;
@@ -28,9 +29,12 @@ public class AccountService {
 
     private final AccountMapper accountMapper;
 
-    public AccountService(UserAccountService userAccountService, AccountMapper accountMapper) {
+    private final PermissionService permissionService;
+
+    public AccountService(UserAccountService userAccountService, AccountMapper accountMapper, PermissionService permissionService) {
         this.userAccountService = userAccountService;
         this.accountMapper = accountMapper;
+        this.permissionService = permissionService;
     }
 
     private JwtAuthenticationToken getJwtAuthentication() {
@@ -43,29 +47,30 @@ public class AccountService {
     }
 
     public AccountDTO getCurrentAccount() {
-        AccountDTO accountDTO = accountMapper.toDto(userAccountService.syncUser(getJwtAuthentication().getToken()));
-        accountDTO.setRoles(getRoles());
+        Jwt jwt = getJwtAuthentication().getToken();
+        AccountDTO accountDTO = accountMapper.toDto(userAccountService.syncUser(jwt));
+        accountDTO.setPermissions(permissionService.getEffectivePermissions(jwt.getSubject()));
 
         return accountDTO;
     }
 
-    public Set<String> getRoles() {
+    public Set<String> getPermissions() {
         return getJwtAuthentication().getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
                 .filter(Objects::nonNull)
-                .filter(a -> a.startsWith(SecurityConstants.ROLE_PREFIX))
-                .map(a -> a.substring(SecurityConstants.ROLE_PREFIX.length()))
+                .filter(a -> a.startsWith(SecurityConstants.PERMISSION_PREFIX))
+                .map(a -> a.substring(SecurityConstants.PERMISSION_PREFIX.length()))
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    public boolean hasRole(String role) {
-        return getRoles().contains(role);
+    public boolean hasPermission(String permission) {
+        return getPermissions().contains(permission);
     }
 
-    public boolean hasAnyRole(String... roles) {
-        Set<String> userRoles = getRoles();
-        return Arrays.stream(roles).anyMatch(userRoles::contains);
+    public boolean hasAnyPermission(String... permissions) {
+        Set<String> userPermissions = getPermissions();
+        return Arrays.stream(permissions).anyMatch(userPermissions::contains);
     }
 
     public AccountPreferencesResponseDTO updateCurrentAccountPreferences(AccountPreferencesUpdateDTO dto) {

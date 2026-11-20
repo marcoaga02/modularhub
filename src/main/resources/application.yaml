@@ -35,6 +35,9 @@ keycloak:
   frontend-client-id: modularhub-frontend
   app-url: http://localhost:4200
 
+modularhub:
+  initial-admin-username: ${MODULARHUB_INITIAL_ADMIN_USERNAME:admin}
+
 cors:
   allowed-origins:
     - http://localhost:4200

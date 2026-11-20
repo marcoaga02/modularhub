@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 public abstract class BaseControllerSecurityTest extends BaseControllerTest {
 
-    protected static final String OTHER_ROLE = "SOME_OTHER_ROLE";
+    protected static final String OTHER_PERMISSION = "SOME_OTHER_PERMISSION";
 
     protected void assertUnauthorized(MockHttpServletRequestBuilder request) throws Exception {
         mockMvc.perform(request)
@@ -19,8 +19,8 @@ public abstract class BaseControllerSecurityTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 
-    protected void assertForbidden(MockHttpServletRequestBuilder request, String... roles) throws Exception {
-        mockMvc.perform(request.with(withRoles(roles)))
+    protected void assertForbidden(MockHttpServletRequestBuilder request, String... permissions) throws Exception {
+        mockMvc.perform(request.with(withPermissions(permissions)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value(ExceptionCodes.Access.DENIED));
     }

@@ -3,7 +3,7 @@ package com.marcoaga02.modularhub.modules.usermanagement.api.controller;
 import com.marcoaga02.modularhub.config.BaseControllerSecurityTest;
 import com.marcoaga02.modularhub.modules.usermanagement.domain.service.UserService;
 import com.marcoaga02.modularhub.modules.usermanagement.security.UserPermissions;
-import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserRoles;
+import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserManagementPermissions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -37,7 +37,7 @@ class UserControllerSecurityTest extends BaseControllerSecurityTest {
                 "taxIdNumber": "TAXID01",
                 "email": "mario@mock.it",
                 "username": "mario",
-                "groupIds": [],
+                "roleIds": [],
                 "enabled": true
             }
             """;
@@ -52,7 +52,7 @@ class UserControllerSecurityTest extends BaseControllerSecurityTest {
                 "email": "mario@mock.it",
                 "username": "mario",
                 "password": "password",
-                "groupIds": [],
+                "roleIds": [],
                 "enabled": true
             }
             """;
@@ -68,15 +68,15 @@ class UserControllerSecurityTest extends BaseControllerSecurityTest {
         }
 
         @Test
-        void getAllUsers_shouldReturnOk_whenUserHasUserManagementRole() throws Exception {
+        void getAllUsers_shouldReturnOk_whenUserHasUserManagementPermission() throws Exception {
             when(userService.getAllUsers(any(), any())).thenReturn(Page.empty());
 
-            performWithRoles(request(), UserRoles.USER_MANAGEMENT).andExpect(status().isOk());
+            performWithPermissions(request(), UserManagementPermissions.USER_MANAGEMENT).andExpect(status().isOk());
         }
 
         @Test
-        void getAllUsers_shouldReturnForbidden_whenUserLacksUserManagementRole() throws Exception {
-            assertForbidden(request(), OTHER_ROLE);
+        void getAllUsers_shouldReturnForbidden_whenUserLacksUserManagementPermission() throws Exception {
+            assertForbidden(request(), OTHER_PERMISSION);
 
             verifyNoInteractions(userService);
         }
@@ -97,13 +97,13 @@ class UserControllerSecurityTest extends BaseControllerSecurityTest {
         }
 
         @Test
-        void getUserByUuid_shouldReturnOk_whenUserHasUserManagementRole() throws Exception {
-            performWithRoles(request(), UserRoles.USER_MANAGEMENT).andExpect(status().isOk());
+        void getUserByUuid_shouldReturnOk_whenUserHasUserManagementPermission() throws Exception {
+            performWithPermissions(request(), UserManagementPermissions.USER_MANAGEMENT).andExpect(status().isOk());
         }
 
         @Test
-        void getUserByUuid_shouldReturnForbidden_whenUserLacksUserManagementRole() throws Exception {
-            assertForbidden(request(), OTHER_ROLE);
+        void getUserByUuid_shouldReturnForbidden_whenUserLacksUserManagementPermission() throws Exception {
+            assertForbidden(request(), OTHER_PERMISSION);
 
             verifyNoInteractions(userService);
         }
@@ -126,13 +126,13 @@ class UserControllerSecurityTest extends BaseControllerSecurityTest {
         }
 
         @Test
-        void createUser_shouldReturnCreated_whenUserHasUserManagementRole() throws Exception {
-            performWithRoles(request(), UserRoles.USER_MANAGEMENT).andExpect(status().isCreated());
+        void createUser_shouldReturnCreated_whenUserHasUserManagementPermission() throws Exception {
+            performWithPermissions(request(), UserManagementPermissions.USER_MANAGEMENT).andExpect(status().isCreated());
         }
 
         @Test
-        void createUser_shouldReturnForbidden_whenUserLacksUserManagementRole() throws Exception {
-            assertForbidden(request(), OTHER_ROLE);
+        void createUser_shouldReturnForbidden_whenUserLacksUserManagementPermission() throws Exception {
+            assertForbidden(request(), OTHER_PERMISSION);
 
             verifyNoInteractions(userService);
         }
@@ -155,13 +155,13 @@ class UserControllerSecurityTest extends BaseControllerSecurityTest {
         }
 
         @Test
-        void updateUser_shouldReturnOk_whenUserHasUserManagementRole() throws Exception {
-            performWithRoles(request(), UserRoles.USER_MANAGEMENT).andExpect(status().isOk());
+        void updateUser_shouldReturnOk_whenUserHasUserManagementPermission() throws Exception {
+            performWithPermissions(request(), UserManagementPermissions.USER_MANAGEMENT).andExpect(status().isOk());
         }
 
         @Test
-        void updateUser_shouldReturnForbidden_whenUserLacksUserManagementRole() throws Exception {
-            assertForbidden(request(), OTHER_ROLE);
+        void updateUser_shouldReturnForbidden_whenUserLacksUserManagementPermission() throws Exception {
+            assertForbidden(request(), OTHER_PERMISSION);
 
             verifyNoInteractions(userService);
         }
@@ -182,13 +182,13 @@ class UserControllerSecurityTest extends BaseControllerSecurityTest {
         }
 
         @Test
-        void deleteUserByUuid_shouldReturnNoContent_whenUserHasUserManagementRole() throws Exception {
-            performWithRoles(request(), UserRoles.USER_MANAGEMENT).andExpect(status().isNoContent());
+        void deleteUserByUuid_shouldReturnNoContent_whenUserHasUserManagementPermission() throws Exception {
+            performWithPermissions(request(), UserManagementPermissions.USER_MANAGEMENT).andExpect(status().isNoContent());
         }
 
         @Test
-        void deleteUserByUuid_shouldReturnForbidden_whenUserLacksUserManagementRole() throws Exception {
-            assertForbidden(request(), OTHER_ROLE);
+        void deleteUserByUuid_shouldReturnForbidden_whenUserLacksUserManagementPermission() throws Exception {
+            assertForbidden(request(), OTHER_PERMISSION);
 
             verifyNoInteractions(userService);
         }
@@ -209,13 +209,13 @@ class UserControllerSecurityTest extends BaseControllerSecurityTest {
         }
 
         @Test
-        void resetPassword_shouldReturnNoContent_whenUserHasUserManagementRole() throws Exception {
-            performWithRoles(request(), UserRoles.USER_MANAGEMENT).andExpect(status().isNoContent());
+        void resetPassword_shouldReturnNoContent_whenUserHasUserManagementPermission() throws Exception {
+            performWithPermissions(request(), UserManagementPermissions.USER_MANAGEMENT).andExpect(status().isNoContent());
         }
 
         @Test
-        void resetPassword_shouldReturnForbidden_whenUserLacksUserManagementRole() throws Exception {
-            assertForbidden(request(), OTHER_ROLE);
+        void resetPassword_shouldReturnForbidden_whenUserLacksUserManagementPermission() throws Exception {
+            assertForbidden(request(), OTHER_PERMISSION);
 
             verifyNoInteractions(userService);
         }

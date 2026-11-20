@@ -11,3 +11,6 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: http://localhost/jwks-not-used-in-tests
+
+modularhub:
+  initial-admin-username: admin

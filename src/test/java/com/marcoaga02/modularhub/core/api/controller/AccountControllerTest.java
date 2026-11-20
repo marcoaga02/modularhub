@@ -44,7 +44,7 @@ class AccountControllerTest extends BaseControllerTest {
                     .username("mario.rossi")
                     .firstName("Mario")
                     .lastName("Rossi")
-                    .roles(Set.of("USER_MANAGEMENT"))
+                    .permissions(Set.of("USER_MANAGEMENT"))
                     .preferences(new AccountPreferencesResponseDTO().language(LanguageDTO.IT));
             when(accountService.getCurrentAccount()).thenReturn(account);
 
@@ -56,7 +56,7 @@ class AccountControllerTest extends BaseControllerTest {
                     .andExpect(jsonPath("$.username").value("mario.rossi"))
                     .andExpect(jsonPath("$.firstName").value("Mario"))
                     .andExpect(jsonPath("$.lastName").value("Rossi"))
-                    .andExpect(jsonPath("$.roles[0]").value("USER_MANAGEMENT"))
+                    .andExpect(jsonPath("$.permissions[0]").value("USER_MANAGEMENT"))
                     .andExpect(jsonPath("$.preferences.language").value("it"));
 
             verify(accountService).getCurrentAccount();
@@ -111,6 +111,6 @@ class AccountControllerTest extends BaseControllerTest {
     }
 
     private ResultActions perform(MockHttpServletRequestBuilder request) throws Exception {
-        return performWithRoles(request);
+        return performWithPermissions(request);
     }
 }

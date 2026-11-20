@@ -66,10 +66,12 @@ export function provideAuthInitializer(): EnvironmentProviders {
 export function providePluginRoutes(): EnvironmentProviders {
   return provideAppInitializer(async () => {
     const oAuthService = inject(OAuthService);
+    const accountService = inject(AccountService);
     const pluginService = inject(PluginService);
     const router = inject(Router);
 
     await waitForValidToken(oAuthService);
+    await accountService.whenLoaded();
 
     const plugins = await firstValueFrom(
       pluginService.getPlugins().pipe(

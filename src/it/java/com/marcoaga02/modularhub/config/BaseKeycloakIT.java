@@ -7,7 +7,6 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.ClientRepresentation;
-import org.keycloak.representations.idm.GroupRepresentation;
 import org.keycloak.representations.idm.RealmRepresentation;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -34,10 +33,6 @@ public abstract class BaseKeycloakIT extends BaseIT {
     protected static final String REALM = "test-realm";
     protected static final String FRONTEND_CLIENT_ID = "test-frontend-client";
     protected static final String APP_URL = "http://localhost:4200";
-    protected static final String FIRST_GROUP_NAME = "first-group";
-    protected static final String FIRST_GROUP_DESCRIPTION = "first group description";
-    protected static final String SECOND_GROUP_NAME = "second-group";
-    protected static final String SECOND_GROUP_DESCRIPTION = "second group description";
     protected static final int MIN_PASSWORD_LENGTH = 8;
     protected static final String MODULARHUB_REALM = "modularhub";
     protected static final String BACKEND_CLIENT_SECRET = "test-backend-client-secret";
@@ -117,20 +112,6 @@ public abstract class BaseKeycloakIT extends BaseIT {
         return adminClient.realm(REALM);
     }
 
-    protected String groupId(String name) {
-        return realm().groups().groups().stream()
-                .filter(group -> group.getName().equals(name))
-                .map(GroupRepresentation::getId)
-                .findFirst()
-                .orElseThrow();
-    }
-
-    protected List<String> groupIdsOf(String userId) {
-        return realm().users().get(userId).groups().stream()
-                .map(GroupRepresentation::getId)
-                .toList();
-    }
-
     protected List<String> mailRecipients() throws IOException, InterruptedException {
         String body = HTTP_CLIENT.send(mailpitRequest().GET().build(), HttpResponse.BodyHandlers.ofString()).body();
 
@@ -175,16 +156,6 @@ public abstract class BaseKeycloakIT extends BaseIT {
                 "port", String.valueOf(MAILPIT_SMTP_PORT),
                 "from", "noreply@modularhub.test"));
         realm.setClients(List.of(frontendClient));
-        realm.setGroups(List.of(
-                group(FIRST_GROUP_NAME, FIRST_GROUP_DESCRIPTION),
-                group(SECOND_GROUP_NAME, SECOND_GROUP_DESCRIPTION)));
         return realm;
-    }
-
-    private static GroupRepresentation group(String name, String description) {
-        GroupRepresentation group = new GroupRepresentation();
-        group.setName(name);
-        group.setDescription(description);
-        return group;
     }
 }

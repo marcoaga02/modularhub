@@ -11,7 +11,7 @@ public interface AccountMapper {
 
     @Mapping(source = "firstname", target = "firstName")
     @Mapping(source = "lastname", target = "lastName")
-    @Mapping(target = "roles", ignore = true)
+    @Mapping(target = "permissions", ignore = true)
     AccountDTO toDto(User user);
 
 }

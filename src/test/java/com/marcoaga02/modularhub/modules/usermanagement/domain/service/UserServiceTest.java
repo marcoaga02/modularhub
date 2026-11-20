@@ -3,12 +3,12 @@ package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 import com.marcoaga02.modularhub.core.api.dto.AuditDTO;
 import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
 import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.Role;
 import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.RoleRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
@@ -18,6 +18,8 @@ import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserManagementExceptionCodes;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.role.RoleNotFoundException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.LastAdminException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserAlreadyExistsException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserNotFoundException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.UserMapper;
@@ -44,13 +46,17 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+import static com.marcoaga02.modularhub.fixture.UserFixtures.adminRole;
+import static com.marcoaga02.modularhub.fixture.UserFixtures.role;
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -67,6 +73,7 @@ class UserServiceTest {
     private static final String NEW_TAX_ID = "NEW-TAX";
     private static final String NEW_USERNAME = "new.username";
     private static final String NEW_EMAIL = "new@test.com";
+    private static final String ADMIN = "ADMIN";
     private static final OffsetDateTime CREATED_ON = OffsetDateTime.parse("2026-01-01T10:00:00+01:00");
     private static final OffsetDateTime UPDATED_ON = OffsetDateTime.parse("2026-02-01T10:00:00+01:00");
 
@@ -84,6 +91,9 @@ class UserServiceTest {
 
     @Mock
     private UserAccountService userAccountService;
+
+    @Mock
+    private RoleRepository roleRepository;
 
     @InjectMocks
     private UserService userService;
@@ -143,18 +153,16 @@ class UserServiceTest {
     class GetUserByUuid {
 
         @Test
-        void getUserByUuid_shouldReturnMappedUserWithResolvedAuditAndIdentityGroups_whenUserExists() {
+        void getUserByUuid_shouldReturnMappedUserWithResolvedAudit_whenUserExists() {
             existingUser.setCreatedOn(CREATED_ON);
             existingUser.setCreatedBy("creator-id");
             existingUser.setUpdatedOn(UPDATED_ON);
             existingUser.setUpdatedBy("updater-id");
-            IdentityGroupDTO group = new IdentityGroupDTO().id("group-id").name("group");
             UserResponseDTO dto = new UserResponseDTO().id(existingUser.getUuid());
             mockExistingUser();
             when(userMapper.toDto(existingUser)).thenReturn(dto);
             when(userAccountService.resolveFullName("creator-id")).thenReturn("Creator Name");
             when(userAccountService.resolveFullName("updater-id")).thenReturn("Updater Name");
-            when(identityService.getUserById(IDENTITY_ID)).thenReturn(identityUser(List.of(group)));
 
             UserResponseDTO result = userService.getUserByUuid(existingUser.getUuid());
 
@@ -163,19 +171,7 @@ class UserServiceTest {
                     .extracting(AuditDTO::getCreatedOn, AuditDTO::getCreatedBy, AuditDTO::getUpdatedOn,
                             AuditDTO::getUpdatedBy)
                     .containsExactly(CREATED_ON, "Creator Name", UPDATED_ON, "Updater Name");
-            assertThat(result.getGroups()).containsExactly(group);
-            verify(identityService).getUserById(IDENTITY_ID);
-        }
-
-        @Test
-        void getUserByUuid_shouldLeaveGroupsEmpty_whenIdentityUserHasNoGroups() {
-            mockExistingUser();
-            when(userMapper.toDto(existingUser)).thenReturn(new UserResponseDTO());
-            when(identityService.getUserById(IDENTITY_ID)).thenReturn(identityUser(null));
-
-            UserResponseDTO result = userService.getUserByUuid(existingUser.getUuid());
-
-            assertThat(result.getGroups()).isEmpty();
+            verifyNoInteractions(identityService);
         }
 
         @Test
@@ -185,13 +181,6 @@ class UserServiceTest {
             assertUserNotFound(() -> userService.getUserByUuid(UNKNOWN_UUID));
 
             verifyNoInteractions(userMapper, userAccountService, identityService);
-        }
-
-        private static IdentityUserResponseDTO identityUser(List<IdentityGroupDTO> groups) {
-            IdentityUserResponseDTO identityUser = new IdentityUserResponseDTO();
-            identityUser.setId(IDENTITY_ID);
-            identityUser.setGroups(groups);
-            return identityUser;
         }
     }
 
@@ -222,7 +211,7 @@ class UserServiceTest {
             userService.createUser(createRequest());
 
             verify(identityService).createUser(new IdentityUserCreateRequestDTO(NEW_USERNAME, NEW_EMAIL, "Mario",
-                    "Rossi", true, true, "password", List.of("group-id")));
+                    "Rossi", true, true, "password"));
         }
 
         @Test
@@ -315,6 +304,30 @@ class UserServiceTest {
             assertNothingCreated();
         }
 
+        @Test
+        void createUser_shouldAssignRequestedRoles_whenRolesExist() {
+            Role custom = role("custom");
+            UserCreateRequestDTO request = createRequest().roleIds(Set.of(custom.getUuid()));
+            mockValidCreation();
+            when(roleRepository.findAllByUuidIn(Set.of(custom.getUuid()))).thenReturn(List.of(custom));
+
+            userService.createUser(request);
+
+            assertThat(captureSavedUser().getRoles()).containsExactly(custom);
+        }
+
+        @Test
+        void createUser_shouldThrowRoleNotFoundException_whenARoleDoesNotExist() {
+            UserCreateRequestDTO request = createRequest().roleIds(Set.of(UNKNOWN_UUID));
+            when(roleRepository.findAllByUuidIn(Set.of(UNKNOWN_UUID))).thenReturn(List.of());
+
+            assertThatThrownBy(() -> userService.createUser(request))
+                    .isInstanceOfSatisfying(RoleNotFoundException.class, ex ->
+                            assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.Role.NOT_FOUND));
+
+            assertNothingCreated();
+        }
+
         private void mockValidCreation() {
             when(identityService.createUser(any())).thenReturn(IDENTITY_ID);
         }
@@ -341,7 +354,6 @@ class UserServiceTest {
                     .email(NEW_EMAIL)
                     .username(NEW_USERNAME)
                     .password("password")
-                    .groupIds(List.of("group-id"))
                     .enabled(true);
         }
     }
@@ -361,7 +373,7 @@ class UserServiceTest {
             assertThat(result).isSameAs(dto);
             verify(userMapper).updateEntity(request, existingUser);
             verify(identityService).updateUser(IDENTITY_ID, new IdentityUserUpdateRequestDTO(
-                    request.getUsername(), request.getEmail(), "Luigi", "Verdi", false, List.of("group-id")));
+                    request.getUsername(), request.getEmail(), "Luigi", "Verdi", false));
         }
 
         @Test
@@ -456,6 +468,95 @@ class UserServiceTest {
             verify(userMapper, never()).toDto(any());
         }
 
+        @Test
+        void updateUser_shouldReplaceRolesWithRequestedOnes_whenRolesExist() {
+            Role previous = role("previous");
+            Role requested = role("requested");
+            existingUser.getRoles().add(previous);
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields().roleIds(Set.of(requested.getUuid()));
+            mockExistingUser();
+            when(roleRepository.findAllByUuidIn(Set.of(requested.getUuid()))).thenReturn(List.of(requested));
+
+            userService.updateUser(existingUser.getUuid(), request);
+
+            assertThat(existingUser.getRoles()).containsExactly(requested);
+            verify(userRepository).saveAndFlush(existingUser);
+        }
+
+        @Test
+        void updateUser_shouldThrowRoleNotFoundException_whenARoleDoesNotExist() {
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields().roleIds(Set.of(UNKNOWN_UUID));
+            mockExistingUser();
+            when(roleRepository.findAllByUuidIn(Set.of(UNKNOWN_UUID))).thenReturn(List.of());
+
+            assertThatThrownBy(() -> userService.updateUser(existingUser.getUuid(), request))
+                    .isInstanceOf(RoleNotFoundException.class);
+
+            verify(userRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(identityService);
+        }
+
+        @Test
+        void updateUser_shouldThrowLastAdminException_whenRemovingAdminFromTheLastActiveAdmin() {
+            existingUser.getRoles().add(adminRole());
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
+            mockExistingUser();
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(0L);
+
+            assertLastAdmin(() -> userService.updateUser(existingUser.getUuid(), request));
+
+            verify(userRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(identityService);
+        }
+
+        @Test
+        void updateUser_shouldThrowLastAdminException_whenDisablingTheLastActiveAdmin() {
+            Role admin = adminRole();
+            existingUser.getRoles().add(admin);
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields().roleIds(Set.of(admin.getUuid()));
+            mockExistingUser();
+            when(roleRepository.findAllByUuidIn(Set.of(admin.getUuid()))).thenReturn(List.of(admin));
+            doAnswer(invocation -> {
+                existingUser.setEnabled(false);
+                return existingUser;
+            }).when(userMapper).updateEntity(request, existingUser);
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(0L);
+
+            assertLastAdmin(() -> userService.updateUser(existingUser.getUuid(), request));
+
+            verify(userRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        void updateUser_shouldRemoveAdmin_whenAnotherActiveAdminExists() {
+            existingUser.getRoles().add(adminRole());
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
+            mockExistingUser();
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(1L);
+
+            userService.updateUser(existingUser.getUuid(), request);
+
+            assertThat(existingUser.getRoles()).isEmpty();
+            verify(userRepository).saveAndFlush(existingUser);
+        }
+
+        @Test
+        void updateUser_shouldNotCountAdmins_whenTheAdminKeepsTheRoleAndStaysEnabled() {
+            Role admin = adminRole();
+            existingUser.getRoles().add(admin);
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields().roleIds(Set.of(admin.getUuid()));
+            mockExistingUser();
+            when(roleRepository.findAllByUuidIn(Set.of(admin.getUuid()))).thenReturn(List.of(admin));
+
+            userService.updateUser(existingUser.getUuid(), request);
+
+            verify(userRepository, never()).countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(any(), any());
+            verify(userRepository).saveAndFlush(existingUser);
+        }
+
         private void assertNothingUpdated() {
             verify(userMapper, never()).updateEntity(any(UserUpdateRequestDTO.class), any());
             verify(userRepository, never()).saveAndFlush(any());
@@ -479,7 +580,6 @@ class UserServiceTest {
                     .taxIdNumber(taxIdNumber)
                     .email(email)
                     .username(username)
-                    .groupIds(List.of("group-id"))
                     .enabled(false);
         }
     }
@@ -497,9 +597,39 @@ class UserServiceTest {
 
             assertThat(existingUser.getDeletedBy()).isEqualTo(CURRENT_IDENTITY_ID);
             assertThat(existingUser.getDeletedOn()).isBetween(before, OffsetDateTime.now());
+            assertThat(existingUser.getRoles()).isEmpty();
             InOrder inOrder = inOrder(userRepository, identityService);
             inOrder.verify(userRepository).saveAndFlush(existingUser);
             inOrder.verify(identityService).deleteUser(IDENTITY_ID);
+        }
+
+        @Test
+        void deleteUser_shouldThrowLastAdminException_whenDeletingTheLastActiveAdmin() {
+            existingUser.getRoles().add(adminRole());
+            mockExistingUser();
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(0L);
+
+            assertLastAdmin(() -> userService.deleteUser(existingUser.getUuid()));
+
+            assertThat(existingUser.getDeletedOn()).isNull();
+            verify(userRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(identityService);
+        }
+
+        @Test
+        void deleteUser_shouldDeleteAdminAndClearRoles_whenAnotherActiveAdminExists() {
+            existingUser.getRoles().add(adminRole());
+            mockExistingUser();
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(1L);
+            when(accountService.getCurrentIdentityId()).thenReturn(CURRENT_IDENTITY_ID);
+
+            userService.deleteUser(existingUser.getUuid());
+
+            assertThat(existingUser.getRoles()).isEmpty();
+            assertThat(existingUser.getDeletedOn()).isNotNull();
+            verify(identityService).deleteUser(IDENTITY_ID);
         }
 
         @Test
@@ -560,6 +690,12 @@ class UserServiceTest {
                     assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
                     assertThat(ex).hasMessage("User not found: " + UNKNOWN_UUID);
                 });
+    }
+
+    private static void assertLastAdmin(ThrowingCallable call) {
+        assertThatThrownBy(call)
+                .isInstanceOfSatisfying(LastAdminException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.LAST_ADMIN));
     }
 
     private static void assertAlreadyExists(ThrowingCallable call, String errorCode, String value) {

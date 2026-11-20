@@ -7,7 +7,7 @@ import {DynamicDialogConfig} from 'primeng/dynamicdialog';
 
 export type UserFormFooterConfig = {
   formValid: BehaviorSubject<boolean>;
-  buttonClick: Subject<'confirm' | 'cancel' | 'groups'>;
+  buttonClick: Subject<'confirm' | 'cancel' | 'roles'>;
 }
 
 @Component({
@@ -30,8 +30,8 @@ export class UserFormFooterComponent {
     this.formValid = this.config.data!.formValid;
   }
 
-  protected onGroupsButtonClick() {
-    this.config.data!.buttonClick.next('groups');
+  protected onRolesButtonClick() {
+    this.config.data!.buttonClick.next('roles');
   }
 
   protected onCancelButtonClick() {

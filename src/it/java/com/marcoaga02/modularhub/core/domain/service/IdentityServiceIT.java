@@ -11,7 +11,6 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.List;
 
 import static com.marcoaga02.modularhub.fixture.SecurityFixtures.authenticate;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -86,6 +85,6 @@ class IdentityServiceIT extends BaseKeycloakIT {
 
     private static IdentityUserCreateRequestDTO createRequest(String password) {
         return new IdentityUserCreateRequestDTO(USERNAME, "mario.rossi@test.com", "Mario", "Rossi", true, true,
-                password, List.of());
+                password);
     }
 }

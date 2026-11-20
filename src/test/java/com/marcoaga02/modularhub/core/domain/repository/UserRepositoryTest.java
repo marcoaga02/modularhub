@@ -2,6 +2,7 @@ package com.marcoaga02.modularhub.core.domain.repository;
 
 import com.marcoaga02.modularhub.config.BaseRepositoryTest;
 import com.marcoaga02.modularhub.core.domain.model.Language;
+import com.marcoaga02.modularhub.core.domain.model.Role;
 import com.marcoaga02.modularhub.core.domain.model.User;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,8 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
+import static com.marcoaga02.modularhub.fixture.UserFixtures.adminRole;
+import static com.marcoaga02.modularhub.fixture.UserFixtures.role;
 import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,9 +24,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class UserRepositoryTest extends BaseRepositoryTest {
 
     private static final String UNKNOWN = "unknown";
+    private static final String ADMIN = "ADMIN";
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -171,7 +179,106 @@ class UserRepositoryTest extends BaseRepositoryTest {
         }
     }
 
+    @Nested
+    class CountActiveUsersByRoleCode {
+
+        private Role admin;
+
+        @BeforeEach
+        void setUpAdmins() {
+            admin = roleRepository.save(adminRole());
+            Role custom = roleRepository.save(role("custom"));
+            saveWithRoles("active-admin", false, false, admin);
+            saveWithRoles("second-admin", false, false, admin, custom);
+            saveWithRoles("disabled-admin", true, false, admin);
+            saveWithRoles("deleted-admin", false, true, admin);
+            saveWithRoles("custom-only", false, false, custom);
+            entityManager.flush();
+            entityManager.clear();
+        }
+
+        @Test
+        void countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull_shouldCountOnlyEnabledAndNotDeletedHolders() {
+            assertThat(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull(ADMIN)).isEqualTo(2);
+        }
+
+        @Test
+        void countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot_shouldExcludeTheGivenUser() {
+            Long activeAdminId = userRepository.findByIdentityId("identity-active-admin").orElseThrow().getId();
+
+            assertThat(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, activeAdminId))
+                    .isEqualTo(1);
+        }
+
+        @Test
+        void countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull_shouldReturnZero_whenNoUserHasTheRole() {
+            assertThat(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNull(UNKNOWN)).isZero();
+        }
+    }
+
+    @Nested
+    class FindActiveRolePermissionsByIdentityId {
+
+        @BeforeEach
+        void setUpRoles() {
+            Role admin = roleRepository.save(adminRole());
+            Role operators = roleRepository.save(role("operators", "USER_MANAGEMENT", "REPORTS"));
+            Role empty = roleRepository.save(role("empty"));
+            saveWithRoles("operator", false, false, operators, empty);
+            saveWithRoles("admin", false, false, admin);
+            saveWithRoles("disabled", true, false, operators);
+            saveWithRoles("removed", false, true, operators);
+            entityManager.flush();
+            entityManager.clear();
+        }
+
+        @Test
+        void findActiveRolePermissionsByIdentityId_shouldReturnAPermissionRowForEveryRole_whenUserIsActive() {
+            assertThat(userRepository.findActiveRolePermissionsByIdentityId("identity-operator"))
+                    .containsExactlyInAnyOrder(
+                            new UserRolePermission(null, "USER_MANAGEMENT"),
+                            new UserRolePermission(null, "REPORTS"),
+                            new UserRolePermission(null, null));
+        }
+
+        @Test
+        void findActiveRolePermissionsByIdentityId_shouldReturnTheRoleCode_whenUserHasASystemRole() {
+            assertThat(userRepository.findActiveRolePermissionsByIdentityId("identity-admin"))
+                    .containsExactly(new UserRolePermission(ADMIN, null));
+        }
+
+        @Test
+        void findActiveRolePermissionsByIdentityId_shouldReturnEmpty_whenUserIsDisabled() {
+            assertThat(userRepository.findActiveRolePermissionsByIdentityId("identity-disabled")).isEmpty();
+        }
+
+        @Test
+        void findActiveRolePermissionsByIdentityId_shouldReturnEmpty_whenUserIsDeleted() {
+            assertThat(userRepository.findActiveRolePermissionsByIdentityId("identity-removed")).isEmpty();
+        }
+
+        @Test
+        void findActiveRolePermissionsByIdentityId_shouldReturnEmpty_whenUserHasNoRoles() {
+            assertThat(userRepository.findActiveRolePermissionsByIdentityId(activeUser.getIdentityId())).isEmpty();
+        }
+
+        @Test
+        void findActiveRolePermissionsByIdentityId_shouldReturnEmpty_whenIdentityIsUnknown() {
+            assertThat(userRepository.findActiveRolePermissionsByIdentityId(UNKNOWN)).isEmpty();
+        }
+    }
+
     private void assertFound(Optional<User> result) {
         assertThat(result).map(User::getUuid).contains(activeUser.getUuid());
+    }
+
+    private void saveWithRoles(String key, boolean disabled, boolean deleted, Role... roles) {
+        User user = user(key, Language.IT);
+        user.setEnabled(!disabled);
+        if (deleted) {
+            user.setDeletedOn(OffsetDateTime.now());
+        }
+        user.getRoles().addAll(List.of(roles));
+        userRepository.save(user);
     }
 }

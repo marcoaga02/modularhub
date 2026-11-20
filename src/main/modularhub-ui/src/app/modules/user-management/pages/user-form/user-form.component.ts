@@ -14,13 +14,17 @@ import {
 } from 'app/modules/user-management/pages/user-form/user-form-footer/user-form-footer.component';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {ConfirmationService, MessageService} from 'primeng/api';
-import {UserCreateRequest, UserResponse, UserUpdateRequest} from 'app/modules/user-management/api/generated';
+import {
+  RoleSummary,
+  UserCreateRequest,
+  UserResponse,
+  UserUpdateRequest
+} from 'app/modules/user-management/api/generated';
 import {UserService} from 'app/modules/user-management/api/services/user.service';
 import {Password} from 'primeng/password';
 import {NgClass} from '@angular/common';
-import {GroupSelectorComponent} from 'app/modules/user-management/pages/group-selector/group-selector.component';
-import {GroupService} from 'app/modules/user-management/api/services/group.service';
-import {IdentityGroup} from 'app/core/api/generated';
+import {RoleSelectorComponent} from 'app/modules/user-management/pages/role-selector/role-selector.component';
+import {RoleService} from 'app/modules/user-management/api/services/role.service';
 import {DialogFooterComponent} from 'app/core/components/dialog-footer/dialog-footer.component';
 import {UUID} from 'app/core/api/models/uuid';
 import {Button} from 'primeng/button';
@@ -58,7 +62,7 @@ export class UserFormComponent {
     email: ['', [Validators.required, Validators.email]],
     username: ['', Validators.required],
     password: ['', Validators.required],
-    groupsIds: this.formBuilder.nonNullable.array<UUID>([]),
+    roleIds: this.formBuilder.nonNullable.array<UUID>([]),
     enabled: [false, Validators.required],
   });
 
@@ -66,7 +70,7 @@ export class UserFormComponent {
   protected userEdited?: UserResponse;
 
   protected readonly languages = LANGUAGES;
-  private groups: IdentityGroup[] = [];
+  private roles: RoleSummary[] = [];
 
   constructor(
     private readonly config: DynamicDialogConfig<UserFormFooterConfig & {userId?: UUID}>,
@@ -75,7 +79,7 @@ export class UserFormComponent {
     private readonly translateService: TranslateService,
     private readonly dialogService: DialogService,
     private readonly userService: UserService,
-    private readonly groupService: GroupService,
+    private readonly roleService: RoleService,
     private readonly messageService: MessageService
   ) {
     this.config.data!.buttonClick
@@ -88,8 +92,8 @@ export class UserFormComponent {
           case "cancel":
             this.cancel();
             break;
-          case "groups":
-            this.showGroupsSelectionDialog();
+          case "roles":
+            this.showRolesSelectionDialog();
             break;
         }
       });
@@ -100,12 +104,12 @@ export class UserFormComponent {
         () => this.config.data!.formValid.next(this.userForm.valid)
       );
 
-    this.groupService.getGroups().pipe(
+    this.roleService.getRoles().pipe(
       retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
     ).subscribe({
-      next: groups => {
-        if (groups?.length) {
-          this.groups = groups;
+      next: roles => {
+        if (roles?.length) {
+          this.roles = roles;
         }
 
         if (this.config.data?.userId) {
@@ -158,7 +162,7 @@ export class UserFormComponent {
       taxIdNumber: formValues.taxIdNumber,
       email: formValues.email,
       username: formValues.username,
-      groupIds: formValues.groupsIds,
+      roleIds: formValues.roleIds,
       enabled: formValues.enabled,
     }
 
@@ -205,28 +209,28 @@ export class UserFormComponent {
     });
   }
 
-  private showGroupsSelectionDialog() {
-    this.dialogService.open(GroupSelectorComponent, {
-      header: this.translateService.instant('modules.user-management.pages.group-selector.title'),
+  private showRolesSelectionDialog() {
+    this.dialogService.open(RoleSelectorComponent, {
+      header: this.translateService.instant('modules.user-management.pages.role-selector.title'),
       width: '45vw',
       height: '50vh',
       closable: true,
       closeOnEscape: true,
       data: {
-        groups: [...this.groups],
-        selectedGroupIds: this.userForm.controls.groupsIds.value,
+        roles: [...this.roles],
+        selectedRoleIds: this.userForm.controls.roleIds.value,
         formSubmit: new Subject<void>(),
         formValid: new BehaviorSubject(true),
       },
       templates: {
         footer: DialogFooterComponent
       }
-    })?.onClose.subscribe((groupIds: UUID[] | undefined) => {
-      if (groupIds === undefined) {
+    })?.onClose.subscribe((roleIds: UUID[] | undefined) => {
+      if (roleIds === undefined) {
         return;
       }
 
-      this.setGroupIds(groupIds);
+      this.setRoleIds(roleIds);
     });
   }
 
@@ -243,13 +247,13 @@ export class UserFormComponent {
       enabled: user.enabled,
     });
 
-    this.setGroupIds(user.groups.map(g => g.id));
+    this.setRoleIds(user.roles.map(r => r.id));
   }
 
-  private setGroupIds(groupIds: UUID[]) {
-    const control = this.userForm.controls.groupsIds;
+  private setRoleIds(roleIds: UUID[]) {
+    const control = this.userForm.controls.roleIds;
     control.clear();
-    groupIds.forEach(id => control.push(this.formBuilder.nonNullable.control(id)));
+    roleIds.forEach(id => control.push(this.formBuilder.nonNullable.control(id)));
   }
 
   protected onResetPasswordClick() {

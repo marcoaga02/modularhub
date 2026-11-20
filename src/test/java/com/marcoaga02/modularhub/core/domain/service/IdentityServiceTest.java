@@ -1,8 +1,6 @@
 package com.marcoaga02.modularhub.core.domain.service;
 
-import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
 import com.marcoaga02.modularhub.core.api.exception.account.SelfDeletionException;
@@ -18,7 +16,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -117,7 +114,7 @@ class IdentityServiceTest {
 
         private static IdentityUserCreateRequestDTO createRequest(String password) {
             return new IdentityUserCreateRequestDTO("mario.rossi", "mario@test.com", "Mario", "Rossi",
-                    true, true, password, List.of("group-id"));
+                    true, true, password);
         }
     }
 
@@ -148,25 +145,11 @@ class IdentityServiceTest {
         @Test
         void updateUser_shouldDelegateToIdentityProvider() {
             IdentityUserUpdateRequestDTO request = new IdentityUserUpdateRequestDTO("mario.rossi", "mario@test.com",
-                    "Mario", "Rossi", true, List.of("group-id"));
+                    "Mario", "Rossi", true);
 
             identityService.updateUser(IDENTITY_ID, request);
 
             verify(identityProvider).updateUser(IDENTITY_ID, request);
-        }
-    }
-
-    @Nested
-    class GetUserById {
-
-        @Test
-        void getUserById_shouldReturnUserFromIdentityProvider() {
-            IdentityUserResponseDTO user = new IdentityUserResponseDTO();
-            when(identityProvider.getUserById(IDENTITY_ID)).thenReturn(user);
-
-            assertThat(identityService.getUserById(IDENTITY_ID)).isSameAs(user);
-
-            verify(identityProvider).getUserById(IDENTITY_ID);
         }
     }
 
@@ -204,22 +187,6 @@ class IdentityServiceTest {
                     });
 
             verifyNoInteractions(identityProvider);
-        }
-    }
-
-    @Nested
-    class GetGroups {
-
-        @Test
-        void getGroups_shouldReturnGroupsFromIdentityProvider() {
-            List<IdentityGroupDTO> groups = List.of(
-                    new IdentityGroupDTO().id("group-1").name("first"),
-                    new IdentityGroupDTO().id("group-2").name("second"));
-            when(identityProvider.getGroups()).thenReturn(groups);
-
-            assertThat(identityService.getGroups()).isSameAs(groups);
-
-            verify(identityProvider).getGroups();
         }
     }
 }

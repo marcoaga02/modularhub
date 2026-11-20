@@ -53,6 +53,6 @@ class PluginRegistryControllerTest extends BaseControllerTest {
     }
 
     private ResultActions perform(MockHttpServletRequestBuilder request) throws Exception {
-        return performWithRoles(request);
+        return performWithPermissions(request);
     }
 }

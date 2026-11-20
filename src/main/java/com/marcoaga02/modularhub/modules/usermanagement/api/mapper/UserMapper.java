@@ -4,14 +4,14 @@ import com.marcoaga02.modularhub.core.domain.model.User;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
+import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = RoleMapper.class, injectionStrategy = InjectionStrategy.CONSTRUCTOR)
 public interface UserMapper {
 
-    @Mapping(target = "groups", ignore = true)
     @Mapping(target = "audit", ignore = true)
     @Mapping(source = "user.uuid", target = "id")
     @Mapping(source = "user.preferences.language", target = "language")
@@ -24,6 +24,7 @@ public interface UserMapper {
     @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "deletedBy", ignore = true)
     @Mapping(target = "identityId", ignore = true)
+    @Mapping(target = "roles", ignore = true)
     @Mapping(source = "language", target = "preferences.language")
     User updateEntity(UserCreateRequestDTO dto, @MappingTarget User user);
 
@@ -34,6 +35,7 @@ public interface UserMapper {
     @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "deletedBy", ignore = true)
     @Mapping(target = "identityId", ignore = true)
+    @Mapping(target = "roles", ignore = true)
     @Mapping(source = "language", target = "preferences.language")
     User updateEntity(UserUpdateRequestDTO dto, @MappingTarget User user);
 

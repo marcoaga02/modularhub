@@ -8,7 +8,6 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.ClientRepresentation;
-import org.keycloak.representations.idm.GroupRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,40 +21,36 @@ class ModularhubRealmIT extends BaseKeycloakIT {
 
     private static final String FRONTEND_CLIENT = "modularhub-frontend";
     private static final String BACKEND_CLIENT = "modularhub-backend";
-    private static final String ADMIN_GROUP = "ADMIN";
+    private static final String OFFLINE_ACCESS = "offline_access";
     private static final String DEV_USER = "admin";
 
     @Autowired
     private List<ModulePlugin> plugins;
 
     @Test
-    void realm_shouldDefineEveryRoleRequiredByPlugins() {
+    void realm_shouldNotDefineRolesForPluginPermissions_becauseTheyAreManagedByTheApplication() {
         List<String> realmRoles = modularhubRealm().roles().list().stream()
                 .map(RoleRepresentation::getName)
                 .toList();
 
-        assertThat(realmRoles).containsAll(pluginRoles());
+        assertThat(realmRoles).doesNotContainAnyElementsOf(pluginPermissions());
     }
 
     @Test
-    void adminGroup_shouldGrantEveryRoleRequiredByPlugins() {
-        List<String> groupRoles = modularhubRealm().groups().group(adminGroup().getId())
+    void realm_shouldNotDefineGroups_becauseRolesAreManagedByTheApplication() {
+        assertThat(modularhubRealm().groups().groups()).isEmpty();
+    }
+
+    @Test
+    void devUser_shouldBeAllowedToRequestOfflineTokens() {
+        UserRepresentation devUser = modularhubRealm().users().searchByUsername(DEV_USER, true).getFirst();
+
+        List<String> effectiveRoles = modularhubRealm().users().get(devUser.getId())
                 .roles().realmLevel().listEffective().stream()
                 .map(RoleRepresentation::getName)
                 .toList();
 
-        assertThat(groupRoles).containsAll(pluginRoles());
-    }
-
-    @Test
-    void devUser_shouldBelongToAdminGroup() {
-        UserRepresentation devUser = modularhubRealm().users().searchByUsername(DEV_USER, true).getFirst();
-
-        List<String> groups = modularhubRealm().users().get(devUser.getId()).groups().stream()
-                .map(GroupRepresentation::getName)
-                .toList();
-
-        assertThat(groups).containsExactly(ADMIN_GROUP);
+        assertThat(effectiveRoles).contains(OFFLINE_ACCESS);
     }
 
     @Test
@@ -96,16 +91,9 @@ class ModularhubRealmIT extends BaseKeycloakIT {
         return adminClient.realm(MODULARHUB_REALM);
     }
 
-    private GroupRepresentation adminGroup() {
-        return modularhubRealm().groups().groups().stream()
-                .filter(group -> group.getName().equals(ADMIN_GROUP))
-                .findFirst()
-                .orElseThrow();
-    }
-
-    private List<String> pluginRoles() {
+    private List<String> pluginPermissions() {
         return plugins.stream()
-                .flatMap(plugin -> plugin.getRequiredRoles().stream())
+                .flatMap(plugin -> plugin.getPermissions().stream())
                 .toList();
     }
 }

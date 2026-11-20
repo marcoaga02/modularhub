@@ -1,15 +1,22 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
-import com.marcoaga02.modularhub.core.api.dto.*;
+import com.marcoaga02.modularhub.core.api.dto.AuditDTO;
+import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
+import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
+import com.marcoaga02.modularhub.core.domain.model.Role;
 import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.RoleRepository;
 import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
 import com.marcoaga02.modularhub.core.domain.service.UserAccountService;
-import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
+import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.role.RoleNotFoundException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.LastAdminException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserAlreadyExistsException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserNotFoundException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.UserMapper;
@@ -23,7 +30,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.OffsetDateTime;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -40,14 +50,20 @@ public class UserService {
 
     private final UserAccountService userAccountService;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper, IdentityService identityService, AccountService accountService, UserAccountService userAccountService) {
+    private final RoleRepository roleRepository;
+
+    public UserService(UserRepository userRepository, UserMapper userMapper, IdentityService identityService,
+                       AccountService accountService, UserAccountService userAccountService,
+                       RoleRepository roleRepository) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.identityService = identityService;
         this.accountService = accountService;
         this.userAccountService = userAccountService;
+        this.roleRepository = roleRepository;
     }
 
+    @Transactional(readOnly = true)
     public Page<UserResponseDTO> getAllUsers(UserCriteriaDTO criteria, Pageable pageable) {
         Page<User> pageResult = userRepository.findAll(
                 UserSpecification.byCriteria(criteria),
@@ -57,6 +73,7 @@ public class UserService {
         return pageResult.map(userMapper::toDto);
     }
 
+    @Transactional(readOnly = true)
     public UserResponseDTO getUserByUuid(String uuid) {
         User user = userRepository.findByUuidAndDeletedOnIsNull(uuid)
                 .orElseThrow(() -> new UserNotFoundException(uuid));
@@ -69,12 +86,6 @@ public class UserService {
 
         UserResponseDTO dto = userMapper.toDto(user);
         dto.setAudit(auditDto);
-
-        IdentityUserResponseDTO userResponseDTO = identityService.getUserById(user.getIdentityId());
-
-        if (userResponseDTO.getGroups() != null) {
-            dto.setGroups(new HashSet<>(userResponseDTO.getGroups()));
-        }
 
         return dto;
     }
@@ -96,6 +107,7 @@ public class UserService {
         User user = new User();
 
         userMapper.updateEntity(dto, user);
+        user.setRoles(findRolesOrElseThrow(dto.getRoleIds()));
 
         IdentityUserCreateRequestDTO userRequestDTO = new IdentityUserCreateRequestDTO(
                 dto.getUsername(),
@@ -104,8 +116,7 @@ public class UserService {
                 dto.getLastname(),
                 dto.getEnabled(),
                 EMAIL_VERIFIED,
-                dto.getPassword(),
-                dto.getGroupIds()
+                dto.getPassword()
         );
 
         String identityId = identityService.createUser(userRequestDTO);
@@ -139,7 +150,15 @@ public class UserService {
             throw UserAlreadyExistsException.email(dto.getEmail());
         }
 
+        boolean wasActiveAdmin = isActiveAdmin(user);
+
         userMapper.updateEntity(dto, user);
+        user.setRoles(findRolesOrElseThrow(dto.getRoleIds()));
+
+        if (wasActiveAdmin && !isActiveAdmin(user)) {
+            requireAnotherActiveAdmin(user);
+        }
+
         userRepository.saveAndFlush(user);
 
         IdentityUserUpdateRequestDTO userRequestDTO = new IdentityUserUpdateRequestDTO(
@@ -147,8 +166,7 @@ public class UserService {
                 dto.getEmail(),
                 dto.getFirstname(),
                 dto.getLastname(),
-                dto.getEnabled(),
-                dto.getGroupIds()
+                dto.getEnabled()
         );
 
         identityService.updateUser(user.getIdentityId(), userRequestDTO);
@@ -161,6 +179,11 @@ public class UserService {
         User user = userRepository.findByUuidAndDeletedOnIsNull(uuid)
                 .orElseThrow(() -> new UserNotFoundException(uuid));
 
+        if (isActiveAdmin(user)) {
+            requireAnotherActiveAdmin(user);
+        }
+
+        user.getRoles().clear();
         user.setDeletedBy(accountService.getCurrentIdentityId());
         user.setDeletedOn(OffsetDateTime.now());
         userRepository.saveAndFlush(user);
@@ -173,6 +196,39 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException(uuid));
 
         identityService.resetPassword(user.getIdentityId());
+    }
+
+    private Set<Role> findRolesOrElseThrow(Set<String> roleIds) {
+        if (roleIds == null || roleIds.isEmpty()) {
+            return new HashSet<>();
+        }
+
+        List<Role> roles = roleRepository.findAllByUuidIn(roleIds);
+        Set<String> foundIds = roles.stream()
+                .map(Role::getUuid)
+                .collect(Collectors.toSet());
+
+        roleIds.stream()
+                .filter(id -> !foundIds.contains(id))
+                .findFirst()
+                .ifPresent(id -> {
+                    throw new RoleNotFoundException(id);
+                });
+
+        return new HashSet<>(roles);
+    }
+
+    private static boolean isActiveAdmin(User user) {
+        return Boolean.TRUE.equals(user.getEnabled())
+                && user.getDeletedOn() == null
+                && user.getRoles().stream().anyMatch(role -> SecurityConstants.ADMIN_ROLE_CODE.equals(role.getCode()));
+    }
+
+    private void requireAnotherActiveAdmin(User user) {
+        if (userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(
+                SecurityConstants.ADMIN_ROLE_CODE, user.getId()) == 0) {
+            throw new LastAdminException(user.getUuid());
+        }
     }
 
     private boolean existsActiveUserWithSameTaxIdNumber(String taxIdNumber) {
