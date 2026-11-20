@@ -4,7 +4,7 @@ import {UserFormFooterComponent} from './user-form-footer.component';
 import {BehaviorSubject, Subject} from 'rxjs';
 import {DynamicDialogConfig} from 'primeng/dynamicdialog';
 import {ConfirmationService} from 'primeng/api';
-import {TranslateService} from '@ngx-translate/core';
+import {provideTranslateService} from '@ngx-translate/core';
 
 describe('UserFormFooterComponent', () => {
   let component: UserFormFooterComponent;
@@ -23,7 +23,7 @@ describe('UserFormFooterComponent', () => {
           }
         },
         { provide: ConfirmationService, useValue: {} },
-        { provide: TranslateService, useValue: {} },
+        provideTranslateService(),
       ]
     }).compileComponents();
 

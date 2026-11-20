@@ -2,7 +2,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 
 import {SidebarComponent} from 'app/core/components/sidebar/sidebar.component';
 import {ConfirmationService} from 'primeng/api';
-import {TranslateService} from '@ngx-translate/core';
+import {provideTranslateService} from '@ngx-translate/core';
 import {OAuthService} from 'angular-oauth2-oidc';
 
 describe('SidebarComponent', () => {
@@ -14,7 +14,7 @@ describe('SidebarComponent', () => {
       imports: [SidebarComponent],
       providers: [
         { provide: ConfirmationService, useValue: {} },
-        { provide: TranslateService, useValue: {} },
+        provideTranslateService(),
         { provide: OAuthService, useValue: {} },
       ]
     }).compileComponents();

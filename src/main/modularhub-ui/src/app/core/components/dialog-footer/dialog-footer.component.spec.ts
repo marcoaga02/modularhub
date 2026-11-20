@@ -3,7 +3,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {DialogFooterComponent} from './dialog-footer.component';
 import {DynamicDialogConfig} from 'primeng/dynamicdialog';
 import {BehaviorSubject, Subject} from 'rxjs';
-import {TranslateService} from '@ngx-translate/core';
+import {provideTranslateService} from '@ngx-translate/core';
 
 describe('DialogFooterComponent', () => {
   let component: DialogFooterComponent;
@@ -21,7 +21,7 @@ describe('DialogFooterComponent', () => {
             }
           }
         },
-        { provide: TranslateService, useValue: {} },
+        provideTranslateService(),
       ]
     }).compileComponents();
 
