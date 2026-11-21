@@ -28,7 +28,7 @@ export class App {
 
   protected toastPT: ToastPassThroughOptions = {
     messageContent: {
-      class: 'justify-between!',
+      class: 'justify-between',
     },
   };
 }

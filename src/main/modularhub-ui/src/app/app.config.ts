@@ -36,6 +36,7 @@ export const appConfig: ApplicationConfig = {
     providePrimeNG({
       theme: {
         preset: definePreset(Aura, theme),
+        options: { cssLayer: { name: 'primeng', order: 'theme, base, primeng' } },
       },
     }),
     provideHttpClient(withInterceptors([oAuthInterceptor, errorHandlerInterceptor])),

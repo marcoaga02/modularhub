@@ -12,7 +12,7 @@ import { getFullName, getInitials } from 'app/core/utils/functions/person-name';
 export class AccountDetailHeaderComponent {
   protected readonly avatarPT: AvatarPassThroughOptions = {
     label: {
-      class: 'text-base!',
+      class: 'text-base',
     },
   };
 

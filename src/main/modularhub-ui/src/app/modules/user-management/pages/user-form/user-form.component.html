@@ -46,12 +46,9 @@
   } @else {
     <form class="flex flex-col gap-2 px-6 py-4" [formGroup]="userForm">
       <p-divider align="left">
-        <span
-          class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-accent"
-        >
-          <i class="pi pi-id-card"></i>
-          {{ 'modules.user-management.pages.user-form.sections.personal-details' | translate }}
-        </span>
+        <app-section-title icon="pi pi-id-card">{{
+          'modules.user-management.pages.user-form.sections.personal-details' | translate
+        }}</app-section-title>
       </p-divider>
       <div class="grid grid-cols-2 gap-x-4 gap-y-3">
         <div class="flex flex-col gap-1.5">
@@ -158,12 +155,9 @@
       </div>
 
       <p-divider align="left">
-        <span
-          class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-accent"
-        >
-          <i class="pi pi-user"></i>
-          {{ 'modules.user-management.pages.user-form.sections.account' | translate }}
-        </span>
+        <app-section-title icon="pi pi-user">{{
+          'modules.user-management.pages.user-form.sections.account' | translate
+        }}</app-section-title>
       </p-divider>
       <div class="grid grid-cols-2 gap-x-4 gap-y-3">
         <div class="flex flex-col gap-1.5">
@@ -233,12 +227,9 @@
       </div>
 
       <p-divider align="left">
-        <span
-          class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-accent"
-        >
-          <i class="pi pi-lock"></i>
-          {{ 'modules.user-management.pages.user-form.sections.security' | translate }}
-        </span>
+        <app-section-title icon="pi pi-lock">{{
+          'modules.user-management.pages.user-form.sections.security' | translate
+        }}</app-section-title>
       </p-divider>
       @if (isUserEdit) {
         <div class="flex items-center gap-4 rounded-lg border bg-content-hover px-4 py-3">
@@ -306,12 +297,9 @@
       }
 
       <p-divider align="left">
-        <span
-          class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-accent"
-        >
-          <i class="pi pi-shield"></i>
-          {{ 'model.user.roles' | translate }}
-        </span>
+        <app-section-title icon="pi pi-shield">{{
+          'model.user.roles' | translate
+        }}</app-section-title>
       </p-divider>
       <p-listbox
         id="roles"

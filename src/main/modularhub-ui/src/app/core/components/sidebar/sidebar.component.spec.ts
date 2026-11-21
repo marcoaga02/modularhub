@@ -53,61 +53,52 @@ describe('SidebarComponent', () => {
     await fixture.whenStable();
   });
 
-  function pluginItems(): HTMLElement[] {
-    return Array.from(element.querySelectorAll<HTMLElement>('[role="button"]'));
+  function pluginLinks(): HTMLAnchorElement[] {
+    return Array.from(element.querySelectorAll<HTMLAnchorElement>('nav a'));
   }
 
-  async function toggle() {
-    element.querySelector<HTMLButtonElement>('p-button button')!.click();
+  function button(icon: string): HTMLButtonElement {
+    return element.querySelector<HTMLElement>(`nav button i.${icon}`)!.closest('button')!;
+  }
+
+  async function click(target: HTMLElement) {
+    target.click();
     await fixture.whenStable();
   }
 
-  function isOpen(): boolean {
-    return element.firstElementChild!.classList.contains('w-80');
-  }
-
-  it('should show one item for every plugin, closed and without descriptions', () => {
-    expect(pluginItems()).toHaveLength(2);
-    expect(isOpen()).toBe(false);
-    expect(element.textContent).not.toContain('users.description');
-  });
-
-  it('should show the plugin descriptions when it is opened', async () => {
-    await toggle();
-
-    expect(isOpen()).toBe(true);
+  it('should start open with a link and a description for every plugin', () => {
+    expect(pluginLinks().map((link) => link.getAttribute('href'))).toEqual(['/users', '/reports']);
+    expect(element.textContent).toContain('ModularHub');
     expect(element.textContent).toContain('users.description');
     expect(element.textContent).toContain('reports.description');
   });
 
-  it('should close when it is toggled again', async () => {
-    await toggle();
-    await toggle();
+  it('should show only the icons when it is collapsed', async () => {
+    await click(button('pi-angle-double-left'));
 
-    expect(isOpen()).toBe(false);
+    expect(pluginLinks()).toHaveLength(2);
+    expect(element.textContent).not.toContain('users.description');
+    expect(element.textContent).not.toContain('ModularHub');
   });
 
-  it('should navigate to the plugin and close when a plugin is clicked', async () => {
-    await toggle();
+  it('should show the descriptions again when it is expanded', async () => {
+    await click(button('pi-angle-double-left'));
 
-    pluginItems()[1].click();
-    await fixture.whenStable();
+    await click(button('pi-angle-double-right'));
+
+    expect(element.textContent).toContain('users.description');
+  });
+
+  it('should navigate to the plugin and highlight its link', async () => {
+    await click(pluginLinks()[1]);
 
     expect(TestBed.inject(Router).url).toBe('/reports');
-    expect(isOpen()).toBe(false);
-  });
-
-  it('should navigate to the plugin and stay closed when it is already closed', async () => {
-    pluginItems()[0].click();
-    await fixture.whenStable();
-
-    expect(TestBed.inject(Router).url).toBe('/users');
-    expect(isOpen()).toBe(false);
+    expect(pluginLinks()[1].classList).toContain('bg-highlight');
+    expect(pluginLinks()[0].classList).not.toContain('bg-highlight');
   });
 
   it('should log out only after the confirmation is accepted', async () => {
-    element.querySelector<HTMLElement>('.text-danger')!.click();
-    await fixture.whenStable();
+    await click(button('pi-sign-out'));
 
     expect(confirmDialog.confirm).toHaveBeenCalledWith(
       'general.logout.title',

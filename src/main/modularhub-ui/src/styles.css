@@ -1,3 +1,5 @@
+@layer theme, base, primeng, components, utilities;
+
 @import 'tailwindcss';
 @import 'primeicons/primeicons.css';
 
@@ -8,6 +10,9 @@
   --color-content: var(--p-content-background);
   --color-content-hover: var(--p-content-hover-background);
   --color-content-border: var(--p-content-border-color);
+  --color-ground: var(--p-surface-50);
+  --color-highlight: var(--p-highlight-background);
+  --color-on-highlight: var(--p-highlight-color);
   --color-success: var(--p-green-500);
   --color-danger: var(--p-red-500);
 }

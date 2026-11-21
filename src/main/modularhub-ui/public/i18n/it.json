@@ -3,6 +3,10 @@
     "components": {
       "top-bar": {
         "profile": "Il mio profilo"
+      },
+      "sidebar": {
+        "collapse": "Riduci",
+        "expand": "Espandi"
       }
     },
     "pages": {
@@ -126,10 +130,11 @@
       "pages": {
         "user-detail": {
           "account": "Account",
-          "audit": "Audit",
           "personal-info": "Informazioni personali",
-          "title": "Dettaglio utente {{fullName}}",
-          "no-roles": "Nessun ruolo assegnato"
+          "no-roles": "Nessun ruolo assegnato",
+          "delete-current-account": "Non puoi eliminare l'account con cui hai effettuato l'accesso",
+          "created": "Creato il {{date}} da {{user}}",
+          "updated": "Modificato il {{date}} da {{user}}"
         },
         "user-form": {
           "confirmation-cancel-dialog": {
@@ -186,15 +191,20 @@
         },
         "user-list": {
           "confirmation-delete-dialog": {
-            "message": "Sei sicuro di voler eliminare gli utenti selezionati?",
-            "title": "Conferma cancellazione utenti"
+            "message": "Sei sicuro di voler eliminare questo utente?",
+            "title": "Conferma eliminazione utente"
           },
           "creation-message": "L'utente è stato creato con successo",
-          "delete-button-tooltip": "Non è possibile eliminare l'utente correntemente autenticato",
-          "delete-message": "Utente/i cancellato/i con successo",
+          "delete-message": "Utente eliminato con successo",
           "edit-message": "L'utente è stato modificato con successo",
           "empty-message": "Nessun utente trovato",
-          "filter-placeholder": "Filtra utenti"
+          "filter-placeholder": "Filtra utenti",
+          "title": "Utenti",
+          "new-user": "Nuovo utente",
+          "columns": {
+            "user": "Utente",
+            "status": "Stato"
+          }
         }
       }
     }

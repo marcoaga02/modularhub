@@ -111,23 +111,29 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
   }
 
+  const LIST = 'modules.user-management.pages.user-list';
+
   function rows(): HTMLTableRowElement[] {
     return Array.from(element.querySelectorAll<HTMLTableRowElement>('tbody tr'));
   }
 
   async function selectRow(index: number) {
-    rows()[index].querySelector<HTMLInputElement>('p-tablecheckbox input')!.click();
+    rows()[index].click();
     await fixture.whenStable();
   }
 
-  function button(label: string): HTMLButtonElement {
-    return Array.from(element.querySelectorAll<HTMLButtonElement>('p-button button')).find((b) =>
-      b.textContent?.includes(label.toUpperCase()),
+  function detail(): HTMLElement | null {
+    return element.querySelector('app-user-detail');
+  }
+
+  function button(label: string, container: HTMLElement = element): HTMLButtonElement {
+    return Array.from(container.querySelectorAll<HTMLButtonElement>('p-button button')).find(
+      (b) => b.textContent?.includes(label) || b.getAttribute('aria-label') === label,
     )!;
   }
 
-  async function click(label: string) {
-    button(label).click();
+  async function click(target: HTMLElement) {
+    target.click();
     await fixture.whenStable();
   }
 
@@ -136,23 +142,30 @@ describe('UserListComponent', () => {
   }
 
   describe('loading', () => {
-    it('should load the first page and show the users', async () => {
-      await setUp();
+    it('should load the first page and show the users with their total', async () => {
+      await setUp([mario, luigi], 2);
 
       expect(lastCriteria().page).toBe(0);
       expect(lastCriteria().size).toBe(20);
       expect(rows()).toHaveLength(2);
+      expect(rows()[0].textContent).toContain('mario Rossi');
       expect(rows()[0].textContent).toContain('mario@test.it');
+      expect(rows()[0].textContent).toContain('model.user.enabled.true');
+      expect(element.querySelector('p-badge')!.textContent?.trim()).toBe('2');
       expect(element.querySelector('.p-datatable-mask')).toBeNull();
+    });
+
+    it('should show the roles of the users', async () => {
+      await setUp([{ ...mario, roles: [{ id: 'role-id' as UUID, name: 'ADMIN', system: true }] }]);
+
+      expect(rows()[0].textContent).toContain('ADMIN');
     });
 
     it('should stop loading and show the empty message when the response has no body', async () => {
       await setUp(null);
 
       expect(element.querySelector('.p-datatable-mask')).toBeNull();
-      expect(element.textContent).toContain(
-        'modules.user-management.pages.user-list.empty-message',
-      );
+      expect(element.textContent).toContain(`${LIST}.empty-message`);
     });
 
     it('should reload the users filtered by the typed text', async () => {
@@ -169,46 +182,44 @@ describe('UserListComponent', () => {
     it('should load the page and the page size requested by the paginator', async () => {
       await setUp([mario, luigi], 60);
 
-      element.querySelector<HTMLButtonElement>('.p-paginator-next')!.click();
-      await fixture.whenStable();
+      await click(element.querySelector<HTMLButtonElement>('.p-paginator-next')!);
 
       expect(lastCriteria().page).toBe(1);
       expect(lastCriteria().size).toBe(20);
     });
   });
 
-  describe('buttons', () => {
-    it('should disable edit and delete when no user is selected', async () => {
+  describe('detail', () => {
+    it('should not show the detail until a user is selected', async () => {
       await setUp();
 
-      expect(button('general.button.label.edit').disabled).toBe(true);
-      expect(button('general.button.label.delete').disabled).toBe(true);
+      expect(detail()).toBeNull();
     });
 
-    it('should enable edit and delete when another user is selected', async () => {
+    it('should show the detail of the clicked user', async () => {
       await setUp();
 
       await selectRow(1);
 
-      expect(button('general.button.label.edit').disabled).toBe(false);
-      expect(button('general.button.label.delete').disabled).toBe(false);
+      expect(detail()!.textContent).toContain('luigi@test.it');
     });
 
-    it('should disable edit when more users are selected', async () => {
+    it('should close the detail when the selected user is clicked again', async () => {
       await setUp();
-
-      await selectRow(0);
       await selectRow(1);
 
-      expect(button('general.button.label.edit').disabled).toBe(true);
+      await selectRow(1);
+
+      expect(detail()).toBeNull();
     });
 
-    it('should disable delete when the current account is selected', async () => {
+    it('should close the detail when it is dismissed', async () => {
       await setUp();
+      await selectRow(1);
 
-      await selectRow(0);
+      await click(button('general.button.label.close', detail()!));
 
-      expect(button('general.button.label.delete').disabled).toBe(true);
+      expect(detail()).toBeNull();
     });
   });
 
@@ -216,7 +227,7 @@ describe('UserListComponent', () => {
     it('should open the user form without a user', async () => {
       await setUp();
 
-      await click('general.button.label.add');
+      await click(button(`${LIST}.new-user`));
 
       const [component, config] = dialogService.open.mock.lastCall!;
       expect(component).toBe(UserFormComponent);
@@ -224,16 +235,15 @@ describe('UserListComponent', () => {
     });
 
     it('should show a message and reload the first page when a user is created', async () => {
-      await setUp();
-      await click('general.button.label.add');
+      await setUp([mario, luigi], 60);
+      await click(element.querySelector<HTMLButtonElement>('.p-paginator-next')!);
+      await click(button(`${LIST}.new-user`));
       const loadsBefore = userService.getUsers.mock.calls.length;
 
       formDialogClose.next(luigi);
       await fixture.whenStable();
 
-      expect(messages).toEqual([
-        { severity: 'success', detail: 'modules.user-management.pages.user-list.creation-message' },
-      ]);
+      expect(messages).toEqual([{ severity: 'success', detail: `${LIST}.creation-message` }]);
       expect(userService.getUsers.mock.calls.length).toBe(loadsBefore + 1);
       expect(lastCriteria().offset).toBe(0);
       expect(accountService.reload).not.toHaveBeenCalled();
@@ -241,7 +251,7 @@ describe('UserListComponent', () => {
 
     it('should do nothing when the user form is closed without result', async () => {
       await setUp();
-      await click('general.button.label.add');
+      await click(button(`${LIST}.new-user`));
       const loadsBefore = userService.getUsers.mock.calls.length;
 
       formDialogClose.next(undefined);
@@ -252,64 +262,63 @@ describe('UserListComponent', () => {
   });
 
   describe('edit', () => {
-    it('should open the user form with the selected user', async () => {
+    it('should open the user form with the user of the detail', async () => {
       await setUp();
       await selectRow(1);
 
-      await click('general.button.label.edit');
+      await click(button('general.button.label.edit', detail()!));
 
       const config = dialogService.open.mock.lastCall![1];
       expect(config.data.userId).toBe(luigi.id);
     });
 
+    it('should reload the page and keep the detail updated when a user is edited', async () => {
+      await setUp();
+      await selectRow(1);
+      await click(button('general.button.label.edit', detail()!));
+      const updated = { ...luigi, email: 'luigi@new.it' };
+      userService.getUsers.mockReturnValue(page([mario, updated]));
+
+      formDialogClose.next(updated);
+      await fixture.whenStable();
+
+      expect(messages).toEqual([{ severity: 'success', detail: `${LIST}.edit-message` }]);
+      expect(detail()!.textContent).toContain('luigi@new.it');
+      expect(accountService.reload).not.toHaveBeenCalled();
+    });
+
     it('should reload the current account when the current account is edited', async () => {
       await setUp();
       await selectRow(0);
-      await click('general.button.label.edit');
+      await click(button('general.button.label.edit', detail()!));
 
       formDialogClose.next(mario);
       await fixture.whenStable();
 
       expect(accountService.reload).toHaveBeenCalledOnce();
-      expect(messages).toEqual([
-        { severity: 'success', detail: 'modules.user-management.pages.user-list.edit-message' },
-      ]);
-    });
-
-    it('should not reload the current account when another user is edited', async () => {
-      await setUp();
-      await selectRow(1);
-      await click('general.button.label.edit');
-
-      formDialogClose.next(luigi);
-      await fixture.whenStable();
-
-      expect(accountService.reload).not.toHaveBeenCalled();
     });
   });
 
   describe('delete', () => {
-    it('should delete the selected users after confirmation, show a message and reload', async () => {
+    it('should delete the user after confirmation, show a message and close the detail', async () => {
       await setUp();
       await selectRow(1);
-      await click('general.button.label.delete');
-      const loadsBefore = userService.getUsers.mock.calls.length;
+      await click(button('general.button.label.delete', detail()!));
       expect(confirmDialog.confirm).toHaveBeenCalledWith(
-        'modules.user-management.pages.user-list.confirmation-delete-dialog.title',
-        'modules.user-management.pages.user-list.confirmation-delete-dialog.message',
+        `${LIST}.confirmation-delete-dialog.title`,
+        `${LIST}.confirmation-delete-dialog.message`,
         expect.any(Function),
       );
       expect(userService.deleteUsers).not.toHaveBeenCalled();
+      userService.getUsers.mockReturnValue(page([mario]));
 
       confirmDialog.confirm.mock.lastCall![2]();
       await fixture.whenStable();
 
       expect(userService.deleteUsers).toHaveBeenCalledWith([luigi]);
-      expect(messages).toEqual([
-        { severity: 'success', summary: 'modules.user-management.pages.user-list.delete-message' },
-      ]);
-      expect(userService.getUsers.mock.calls.length).toBe(loadsBefore + 1);
-      expect(button('general.button.label.delete').disabled).toBe(true);
+      expect(messages).toEqual([{ severity: 'success', detail: `${LIST}.delete-message` }]);
+      expect(rows()).toHaveLength(1);
+      expect(detail()).toBeNull();
     });
   });
 });

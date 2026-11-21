@@ -21,6 +21,7 @@ import { SelectButton } from 'primeng/selectbutton';
 import { Divider } from 'primeng/divider';
 import { Message } from 'primeng/message';
 import { ProgressSpinner } from 'primeng/progressspinner';
+import { SectionTitleComponent } from 'app/core/components/section-title/section-title.component';
 import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { Gender, Language } from 'app/core/api/generated';
@@ -69,6 +70,7 @@ function passwordsMatch(form: AbstractControl): ValidationErrors | null {
     Divider,
     Message,
     ProgressSpinner,
+    SectionTitleComponent,
   ],
   templateUrl: './user-form.component.html',
   styleUrl: './user-form.component.css',

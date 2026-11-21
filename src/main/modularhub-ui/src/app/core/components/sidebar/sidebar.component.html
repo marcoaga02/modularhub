@@ -1,34 +1,62 @@
-<div
-  class="flex flex-col border rounded-r-xl h-full transition-all duration-300"
-  [ngClass]="{ 'w-80': isOpen(), 'w-13': !isOpen() }"
+<nav
+  class="flex h-full flex-col border-r bg-content transition-[width] duration-300"
+  [class.w-64]="isOpen()"
+  [class.w-16]="!isOpen()"
 >
-  <p-button icon="pi pi-th-large" class="p-1 border-b" [text]="true" (onClick)="toggle()" />
-  <div class="flex flex-col p-1 gap-0.5 flex-1 border-b">
-    @for (plugin of plugins(); track plugin.path) {
-      <div
-        class="flex items-center gap-3 h-12 px-3 border rounded-xl cursor-pointer"
-        [pTooltip]="!isOpen() ? (plugin.description | translate) : ''"
-        tabindex="0"
-        role="button"
-        (click)="navigate(plugin.path)"
-        (keydown.enter)="navigate(plugin.path)"
-        (keydown.space)="navigate(plugin.path)"
-      >
-        <i [class]="plugin.icon + ' text-xl shrink-0'"></i>
-        @if (isOpen()) {
-          <span class="text-sm truncate">{{ plugin.description | translate }}</span>
-        }
-      </div>
-    }
-  </div>
-  <div
-    class="flex items-center gap-3 h-12 px-3 cursor-pointer text-danger"
-    [pTooltip]="!isOpen() ? ('general.logout.label' | translate) : ''"
-    (click)="logout()"
-  >
-    <i class="pi pi-sign-out text-xl shrink-0"></i>
+  <div class="flex h-14 shrink-0 items-center gap-3 border-b px-4">
+    <img src="/logo.svg" class="size-8 shrink-0" width="32" height="32" alt="" />
     @if (isOpen()) {
-      <span class="text-sm truncate">{{ 'general.logout.label' | translate }}</span>
+      <span class="truncate font-semibold">ModularHub</span>
     }
   </div>
-</div>
+
+  <ul class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2">
+    @for (plugin of plugins(); track plugin.path) {
+      <li>
+        <a
+          [routerLink]="['/', plugin.path]"
+          routerLinkActive="bg-highlight text-on-highlight"
+          class="flex h-10 items-center gap-3 rounded-lg px-3 hover:bg-content-hover"
+          [pTooltip]="isOpen() ? '' : (plugin.description | translate)"
+          tooltipPosition="right"
+        >
+          <i class="shrink-0 text-lg" [class]="plugin.icon"></i>
+          @if (isOpen()) {
+            <span class="truncate text-sm">{{ plugin.description | translate }}</span>
+          }
+        </a>
+      </li>
+    }
+  </ul>
+
+  <div class="flex flex-col gap-1 border-t p-2">
+    <button
+      type="button"
+      class="flex h-10 items-center gap-3 rounded-lg px-3 text-muted hover:bg-content-hover"
+      [pTooltip]="isOpen() ? '' : ('core.components.sidebar.expand' | translate)"
+      tooltipPosition="right"
+      (click)="toggle()"
+    >
+      <i
+        class="pi shrink-0 text-lg"
+        [class.pi-angle-double-left]="isOpen()"
+        [class.pi-angle-double-right]="!isOpen()"
+      ></i>
+      @if (isOpen()) {
+        <span class="truncate text-sm">{{ 'core.components.sidebar.collapse' | translate }}</span>
+      }
+    </button>
+    <button
+      type="button"
+      class="flex h-10 items-center gap-3 rounded-lg px-3 text-muted hover:bg-content-hover hover:text-danger"
+      [pTooltip]="isOpen() ? '' : ('general.logout.label' | translate)"
+      tooltipPosition="right"
+      (click)="logout()"
+    >
+      <i class="pi pi-sign-out shrink-0 text-lg"></i>
+      @if (isOpen()) {
+        <span class="truncate text-sm">{{ 'general.logout.label' | translate }}</span>
+      }
+    </button>
+  </div>
+</nav>

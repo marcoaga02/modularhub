@@ -28,19 +28,19 @@ export class TopbarComponent {
 
   protected readonly avatarPT: AvatarPassThroughOptions = {
     label: {
-      class: 'text-sm!',
+      class: 'text-sm',
     },
     root: {
-      class: 'w-10! h-10! cursor-pointer!',
+      class: 'w-10 h-10 cursor-pointer',
     },
   };
 
   protected readonly popoverPT: PopoverPassThroughOptions = {
     content: {
-      class: 'p-0!',
+      class: 'p-0',
     },
     root: {
-      class: 'rounded-xl!',
+      class: 'rounded-xl',
     },
   };
 

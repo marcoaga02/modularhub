@@ -1,9 +1,6 @@
-<p-toolbar>
+<p-toolbar class="h-14 shrink-0 border-x-0 border-t-0">
   <ng-template #start>
-    <div class="flex items-center gap-4">
-      <img src="/logo.svg" class="h-7 w-7" width="28" height="28" alt="ModularHub" />
-      <span>{{ currentPlugin()?.description | translate }}</span>
-    </div>
+    <span class="truncate text-sm text-muted">{{ currentPlugin()?.description | translate }}</span>
   </ng-template>
   <ng-template #end>
     @if (account(); as account) {
