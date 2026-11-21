@@ -1,24 +1,34 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NgClass } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { BehaviorSubject, retry, Subject } from 'rxjs';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
+import { retry } from 'rxjs';
+import { TranslatePipe } from '@ngx-translate/core';
 import { InputText } from 'primeng/inputtext';
-import { Checkbox } from 'primeng/checkbox';
-import { RadioButton } from 'primeng/radiobutton';
 import { Select } from 'primeng/select';
 import { Password } from 'primeng/password';
 import { Button } from 'primeng/button';
-import { Tooltip } from 'primeng/tooltip';
-import { MessageService } from 'primeng/api';
-import { DialogService, DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { Listbox } from 'primeng/listbox';
+import { Tag } from 'primeng/tag';
+import { Avatar } from 'primeng/avatar';
+import { ToggleSwitch } from 'primeng/toggleswitch';
+import { SelectButton } from 'primeng/selectbutton';
+import { Divider } from 'primeng/divider';
+import { Message } from 'primeng/message';
+import { ProgressSpinner } from 'primeng/progressspinner';
+import { SectionTitleComponent } from 'app/core/components/section-title/section-title.component';
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { Gender, Language } from 'app/core/api/generated';
 import { UUID } from 'app/core/api/models/uuid';
 import { MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS } from 'app/core/utils/constants/retry';
 import { DEFAULT_LANGUAGE, LANGUAGES } from 'app/core/utils/constants/languages';
 import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
-import { DialogFooterComponent } from 'app/core/components/dialog-footer/dialog-footer.component';
+import { getFullName, getInitials } from 'app/core/utils/functions/person-name';
 import {
   RoleSummary,
   UserCreateRequest,
@@ -27,95 +37,118 @@ import {
 } from 'app/modules/user-management/api/generated';
 import { UserService } from 'app/modules/user-management/api/services/user.service';
 import { RoleService } from 'app/modules/user-management/api/services/role.service';
-import { UserFormFooterConfig } from 'app/modules/user-management/pages/user-form/user-form-footer/user-form-footer.component';
-import { RoleSelectorComponent } from 'app/modules/user-management/pages/role-selector/role-selector.component';
+import { PasswordResetService } from 'app/modules/user-management/utils/services/password-reset.service';
+
+export type UserFormConfig = { userId?: UUID };
+
+const ERRORS = 'modules.user-management.pages.user-form.errors';
+
+const PATTERN_ERRORS: Record<string, string> = {
+  taxIdNumber: `${ERRORS}.tax-id-number`,
+  mobileNumber: `${ERRORS}.mobile-number`,
+};
+
+function passwordsMatch(form: AbstractControl): ValidationErrors | null {
+  const { password, passwordConfirmation } = form.value;
+  return password === passwordConfirmation ? null : { passwordMismatch: true };
+}
 
 @Component({
   selector: 'app-user-form',
   imports: [
     TranslatePipe,
     InputText,
-    Checkbox,
     ReactiveFormsModule,
-    RadioButton,
     Select,
     Password,
-    NgClass,
     Button,
-    Tooltip,
+    Listbox,
+    Tag,
+    Avatar,
+    ToggleSwitch,
+    SelectButton,
+    Divider,
+    Message,
+    ProgressSpinner,
+    SectionTitleComponent,
   ],
   templateUrl: './user-form.component.html',
   styleUrl: './user-form.component.css',
+  host: { class: 'flex min-h-0 flex-1 flex-col' },
 })
 export class UserFormComponent {
   private readonly formBuilder = inject(FormBuilder);
-  private readonly config =
-    inject<DynamicDialogConfig<UserFormFooterConfig & { userId?: UUID }>>(DynamicDialogConfig);
+  private readonly config = inject<DynamicDialogConfig<UserFormConfig>>(DynamicDialogConfig);
   private readonly ref = inject(DynamicDialogRef);
   private readonly confirmDialog = inject(ConfirmDialogService);
-  private readonly translateService = inject(TranslateService);
-  private readonly dialogService = inject(DialogService);
   private readonly userService = inject(UserService);
   private readonly roleService = inject(RoleService);
-  private readonly messageService = inject(MessageService);
+  private readonly passwordReset = inject(PasswordResetService);
 
-  protected readonly userForm = this.formBuilder.nonNullable.group({
-    firstname: ['', Validators.required],
-    lastname: ['', Validators.required],
-    gender: this.formBuilder.nonNullable.control<Gender | null>(null, Validators.required),
-    language: this.formBuilder.nonNullable.control<Language | null>(
-      DEFAULT_LANGUAGE,
-      Validators.required,
-    ),
-    mobileNumber: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
-    taxIdNumber: [
-      '',
-      [
+  protected readonly userForm = this.formBuilder.nonNullable.group(
+    {
+      firstname: ['', Validators.required],
+      lastname: ['', Validators.required],
+      gender: this.formBuilder.nonNullable.control<Gender | null>(null, Validators.required),
+      language: this.formBuilder.nonNullable.control<Language | null>(
+        DEFAULT_LANGUAGE,
         Validators.required,
-        Validators.pattern(/^[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z]$/),
+      ),
+      mobileNumber: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
+      taxIdNumber: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z]$/),
+        ],
       ],
-    ],
-    email: ['', [Validators.required, Validators.email]],
-    username: ['', Validators.required],
-    password: ['', Validators.required],
-    roleIds: this.formBuilder.nonNullable.array<UUID>([]),
-    enabled: [false, Validators.required],
-  });
+      email: ['', [Validators.required, Validators.email]],
+      username: ['', Validators.required],
+      password: ['', Validators.required],
+      passwordConfirmation: ['', Validators.required],
+      roleIds: this.formBuilder.nonNullable.control<UUID[]>([]),
+      enabled: [false],
+    },
+    { validators: passwordsMatch },
+  );
   private initialFormValue = this.currentFormValue();
 
   protected readonly loading = signal(true);
-  private readonly userEdited = signal<UserResponse | undefined>(undefined);
-  protected readonly isUserEdit = computed(() => this.userEdited() !== undefined);
+  protected readonly saving = signal(false);
+  protected readonly userEdited = signal<UserResponse | undefined>(undefined);
+  protected readonly isUserEdit = this.config.data?.userId !== undefined;
+  protected readonly fullName = computed(() => {
+    const user = this.userEdited();
+    return user ? getFullName(user.firstname, user.lastname) : '';
+  });
+  protected readonly initials = computed(() => {
+    const user = this.userEdited();
+    return user ? getInitials(user.firstname, user.lastname) : '';
+  });
+
+  protected readonly enabled = toSignal(this.userForm.controls.enabled.valueChanges, {
+    initialValue: this.userForm.controls.enabled.value,
+  });
+  private readonly selectedRoleIds = toSignal(this.userForm.controls.roleIds.valueChanges, {
+    initialValue: this.userForm.controls.roleIds.value,
+  });
+  protected readonly roles = signal<RoleSummary[]>([]);
+  protected readonly selectedRolesCount = computed(() => this.selectedRoleIds().length);
 
   protected readonly languages = LANGUAGES;
-  private roles: RoleSummary[] = [];
+  protected readonly genders = [
+    { value: Gender.M, label: 'model.gender.male' },
+    { value: Gender.F, label: 'model.gender.female' },
+  ];
 
   constructor() {
-    this.config.data!.buttonClick.pipe(takeUntilDestroyed()).subscribe((action) => {
-      switch (action) {
-        case 'confirm':
-          this.confirm();
-          break;
-        case 'cancel':
-          this.cancel();
-          break;
-        case 'roles':
-          this.showRolesSelectionDialog();
-          break;
-      }
-    });
-
-    this.userForm.valueChanges
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.config.data!.formValid.next(this.userForm.valid));
-
     this.roleService
       .getRoles()
       .pipe(retry({ count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS }))
       .subscribe({
         next: (roles) => {
           if (roles?.length) {
-            this.roles = roles;
+            this.roles.set(roles);
           }
 
           if (this.config.data?.userId) {
@@ -138,9 +171,8 @@ export class UserFormComponent {
           this.userEdited.set(user);
           this.initForm(user);
 
-          this.userForm.controls.password.clearValidators();
-          this.userForm.controls.password.updateValueAndValidity();
           this.userForm.controls.password.disable();
+          this.userForm.controls.passwordConfirmation.disable();
           this.initialFormValue = this.currentFormValue();
 
           this.loading.set(false);
@@ -149,10 +181,34 @@ export class UserFormComponent {
       });
   }
 
-  private confirm() {
-    if (!this.userForm.valid) {
+  protected errorOf(field: keyof typeof this.userForm.controls): string | null {
+    const control = this.userForm.controls[field];
+    if (!control.touched) {
+      return null;
+    }
+
+    if (control.hasError('required')) {
+      return `${ERRORS}.required`;
+    }
+
+    if (control.hasError('email')) {
+      return `${ERRORS}.email`;
+    }
+
+    if (control.hasError('pattern')) {
+      return PATTERN_ERRORS[field] ?? null;
+    }
+
+    if (field === 'passwordConfirmation' && this.userForm.hasError('passwordMismatch')) {
+      return `${ERRORS}.password-mismatch`;
+    }
+
+    return null;
+  }
+
+  protected onSaveClick() {
+    if (this.userForm.invalid) {
       this.userForm.markAllAsTouched();
-      this.userForm.markAllAsDirty();
       return;
     }
 
@@ -178,9 +234,10 @@ export class UserFormComponent {
           password: formValues.password,
         } satisfies UserCreateRequest);
 
+    this.saving.set(true);
     request.subscribe({
       next: (user) => this.ref.close(user),
-      error: () => undefined,
+      error: () => this.saving.set(false),
     });
   }
 
@@ -189,7 +246,7 @@ export class UserFormComponent {
     return JSON.stringify({ ...value, roleIds: [...value.roleIds].sort() });
   }
 
-  private cancel() {
+  protected onCancelClick() {
     if (this.currentFormValue() === this.initialFormValue) {
       this.ref.close();
       return;
@@ -202,33 +259,6 @@ export class UserFormComponent {
     );
   }
 
-  private showRolesSelectionDialog() {
-    this.dialogService
-      .open(RoleSelectorComponent, {
-        header: this.translateService.instant('modules.user-management.pages.role-selector.title'),
-        width: '45vw',
-        height: '50vh',
-        closable: true,
-        closeOnEscape: true,
-        data: {
-          roles: [...this.roles],
-          selectedRoleIds: this.userForm.controls.roleIds.value,
-          formSubmit: new Subject<void>(),
-          formValid: new BehaviorSubject(true),
-        },
-        templates: {
-          footer: DialogFooterComponent,
-        },
-      })
-      ?.onClose.subscribe((roleIds: UUID[] | undefined) => {
-        if (roleIds === undefined) {
-          return;
-        }
-
-        this.setRoleIds(roleIds);
-      });
-  }
-
   private initForm(user: UserResponse) {
     this.userForm.patchValue({
       firstname: user.firstname,
@@ -239,37 +269,12 @@ export class UserFormComponent {
       taxIdNumber: user.taxIdNumber,
       email: user.email,
       username: user.username,
+      roleIds: user.roles.map((r) => r.id),
       enabled: user.enabled,
     });
-
-    this.setRoleIds(user.roles.map((r) => r.id));
-  }
-
-  private setRoleIds(roleIds: UUID[]) {
-    const control = this.userForm.controls.roleIds;
-    control.clear();
-    roleIds.forEach((id) => control.push(this.formBuilder.nonNullable.control(id)));
   }
 
   protected onResetPasswordClick() {
-    this.confirmDialog.confirm(
-      'modules.user-management.pages.user-form.reset-password.confirmation-title',
-      'modules.user-management.pages.user-form.reset-password.confirmation-message',
-      () => this.resetPassword(),
-    );
-  }
-
-  private resetPassword() {
-    this.userService.resetPassword(this.userEdited()!.id).subscribe({
-      next: () => {
-        this.messageService.add({
-          severity: 'success',
-          summary: this.translateService.instant(
-            'modules.user-management.pages.user-form.reset-password.success',
-          ),
-        });
-      },
-      error: () => undefined,
-    });
+    this.passwordReset.resetPassword(this.userEdited()!.id);
   }
 }

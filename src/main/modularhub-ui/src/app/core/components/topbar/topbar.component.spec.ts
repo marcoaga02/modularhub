@@ -8,7 +8,7 @@ import { PluginService } from 'app/core/api/services/plugin.service';
 import { AccountService } from 'app/core/api/services/account.service';
 import { Account, Language, Plugin } from 'app/core/api/generated';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
-import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
+import { FORM_DIALOG_CONFIG } from 'app/core/utils/constants/dialog';
 
 @Component({ template: '' })
 class DummyComponent {}
@@ -35,20 +35,17 @@ describe('TopbarComponent', () => {
   let accountSignal: WritableSignal<Account | null>;
   let accountService: { account: Signal<Account | null>; logout: ReturnType<typeof vi.fn> };
   let dialogService: { open: ReturnType<typeof vi.fn> };
-  let confirmDialog: { confirm: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     accountSignal = signal<Account | null>(null);
     accountService = { account: accountSignal.asReadonly(), logout: vi.fn() };
     dialogService = { open: vi.fn() };
-    confirmDialog = { confirm: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [TopbarComponent],
       providers: [
         provideTranslateService(),
         provideRouter([{ path: 'user-management', component: DummyComponent }]),
-        { provide: ConfirmDialogService, useValue: confirmDialog },
         { provide: PluginService, useValue: { plugins: signal([usersPlugin]) } },
         { provide: AccountService, useValue: accountService },
         { provide: DialogService, useValue: dialogService },
@@ -71,7 +68,7 @@ describe('TopbarComponent', () => {
   }
 
   async function clickMenuItem(label: string) {
-    const items = Array.from(element.querySelectorAll<HTMLElement>('p-popover .cursor-pointer'));
+    const items = Array.from(element.querySelectorAll<HTMLElement>('p-popover button'));
     items.find((item) => item.textContent?.includes(label))!.click();
     await fixture.whenStable();
   }
@@ -86,13 +83,13 @@ describe('TopbarComponent', () => {
     expect(element.querySelector('p-avatar')!.textContent?.trim()).toBe('MR');
   });
 
-  it('should show full name and username in the menu', async () => {
+  it('should show full name and email in the menu', async () => {
     await publishAccount();
     await openMenu();
 
     const menu = element.querySelector('p-popover')!.textContent;
     expect(menu).toContain('mario rossi');
-    expect(menu).toContain('mario');
+    expect(menu).toContain('mario@test.it');
   });
 
   it('should show the description of the plugin of the current route', async () => {
@@ -110,24 +107,15 @@ describe('TopbarComponent', () => {
 
     expect(dialogService.open).toHaveBeenCalledWith(
       AccountDetailComponent,
-      expect.objectContaining({ closable: true }),
+      expect.objectContaining({ ...FORM_DIALOG_CONFIG, width: '32rem' }),
     );
   });
 
-  it('should log out only after the confirmation is accepted', async () => {
+  it('should log out right away', async () => {
     await publishAccount();
     await openMenu();
 
     await clickMenuItem('general.logout.label');
-
-    expect(confirmDialog.confirm).toHaveBeenCalledWith(
-      'general.logout.title',
-      'general.logout.message',
-      expect.any(Function),
-    );
-    expect(accountService.logout).not.toHaveBeenCalled();
-
-    confirmDialog.confirm.mock.lastCall![2]();
 
     expect(accountService.logout).toHaveBeenCalledOnce();
   });

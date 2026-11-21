@@ -4,6 +4,8 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
+import { definePreset } from '@primeuix/themes';
+import theme from 'app/core/theme/theme.json';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
@@ -33,7 +35,8 @@ export const appConfig: ApplicationConfig = {
     providePluginRoutes(),
     providePrimeNG({
       theme: {
-        preset: Aura,
+        preset: definePreset(Aura, theme),
+        options: { cssLayer: { name: 'primeng', order: 'theme, base, primeng' } },
       },
     }),
     provideHttpClient(withInterceptors([oAuthInterceptor, errorHandlerInterceptor])),

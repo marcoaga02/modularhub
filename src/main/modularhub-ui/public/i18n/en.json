@@ -1,16 +1,30 @@
 {
   "core": {
+    "auth": {
+      "password-updated": "Password updated"
+    },
     "components": {
       "top-bar": {
         "profile": "My profile"
+      },
+      "sidebar": {
+        "collapse": "Collapse",
+        "expand": "Expand"
       }
     },
     "pages": {
       "account-detail": {
         "account": "Account",
-        "edit-preferences-message": "Account preferences have been updated successfully",
-        "personal-info": "Personal information",
-        "preferences": "Preferences"
+        "change-password": {
+          "label": "Change password",
+          "description": "Choose a new password for your account."
+        },
+        "language-hint": "Applied immediately, no need to save.",
+        "managed-by-admin": "These details can only be changed by an administrator.",
+        "personal-details": "Personal details",
+        "preferences": "Preferences",
+        "security": "Security",
+        "title": "My profile"
       }
     }
   },
@@ -63,14 +77,14 @@
         "confirm": "Confirm",
         "delete": "Delete",
         "edit": "Edit",
-        "save": "Save"
+        "save": "Save",
+        "close": "Close",
+        "more": "More actions"
       }
     },
     "error": "Error",
     "logout": {
-      "label": "Logout",
-      "message": "Are you sure you want to log out?",
-      "title": "Confirm logout"
+      "label": "Logout"
     }
   },
   "model": {
@@ -80,6 +94,7 @@
       "gender": "Gender",
       "lastname": "Last name",
       "mobile-number": "Mobile number",
+      "password": "Password",
       "tax-id-number": "Tax ID number",
       "username": "Username"
     },
@@ -124,46 +139,89 @@
       "description": "User Management",
       "pages": {
         "user-detail": {
-          "account": "Account",
-          "audit": "Audit",
-          "personal-info": "Personal information",
-          "title": "User detail {{fullName}}",
-          "no-roles": "No roles assigned"
+          "no-roles": "No roles assigned",
+          "contacts": "Contacts",
+          "personal-details": "Personal details",
+          "access": "Access",
+          "history": "History",
+          "edit": "Edit user"
         },
         "user-form": {
           "confirmation-cancel-dialog": {
             "message": "All changes will be lost. Continue?",
             "title": "Confirm discard changes"
           },
-          "creation-title": "Create user",
-          "edit-title": "Edit user {{fullName}}",
+          "creation-title": "New user",
+          "edit-title": "Edit user",
           "reset-password": {
-            "confirmation-message": "Are you sure you want to send the user an email to reset their password?",
-            "confirmation-title": "Confirm password reset",
-            "label": "Reset password",
-            "success": "Password reset email sent successfully",
-            "tooltip-message": "Send the user an email to change their password"
+            "description": "The password is never shown. The reset sends the user a link to choose a new one."
           },
-          "select-language-placeholder": "Select language"
+          "select-language-placeholder": "Select language",
+          "roles": {
+            "filter-placeholder": "Filter roles",
+            "system": "System",
+            "empty": "No roles available",
+            "selected-count": "{{selected}} of {{total}} selected"
+          },
+          "sections": {
+            "personal-details": "Personal details",
+            "account": "Account",
+            "security": "Security"
+          },
+          "enabled-hint": {
+            "true": "Can sign in",
+            "false": "Cannot sign in"
+          },
+          "required-fields": "Required fields",
+          "save": "Save changes",
+          "create": "Create user",
+          "password-confirmation": "Confirm password",
+          "placeholders": {
+            "firstname": "e.g. Mario",
+            "lastname": "e.g. Rossi",
+            "tax-id-number": "16 characters",
+            "mobile-number": "Digits only",
+            "email": "name@example.com",
+            "username": "name.surname",
+            "password": "Enter a password",
+            "password-confirmation": "Repeat the password"
+          },
+          "errors": {
+            "required": "Required field",
+            "email": "Invalid email",
+            "tax-id-number": "Invalid tax ID number",
+            "mobile-number": "Digits only",
+            "password-mismatch": "Passwords do not match"
+          }
         },
         "user-list": {
           "confirmation-delete-dialog": {
-            "message": "Are you sure you want to delete the selected users?",
+            "message": "Are you sure you want to delete this user?",
             "title": "Confirm user deletion"
           },
           "creation-message": "The user has been created successfully",
-          "delete-button-tooltip": "Cannot delete the currently authenticated user",
-          "delete-message": "User(s) deleted successfully",
+          "delete-message": "User deleted successfully",
           "edit-message": "User has been updated successfully",
-          "empty-message": "No users found",
-          "filter-placeholder": "Filter users"
-        },
-        "role-selector": {
-          "title": "Role selection",
-          "available-roles": "Available roles",
-          "selected-roles": "Selected roles",
-          "filter-placeholder": "Filter roles"
+          "empty": {
+            "title": "No users found",
+            "filtered": "No user matches your search.",
+            "clear-filters": "Clear filters",
+            "no-users": "Get started by creating the first user."
+          },
+          "filter-placeholder": "Filter users",
+          "title": "Users",
+          "new-user": "New user",
+          "columns": {
+            "user": "User",
+            "status": "Status"
+          }
         }
+      },
+      "reset-password": {
+        "label": "Reset password",
+        "confirmation-title": "Confirm password reset",
+        "confirmation-message": "Are you sure you want to send the user an email to reset their password?",
+        "success": "Password reset email sent successfully"
       }
     }
   },

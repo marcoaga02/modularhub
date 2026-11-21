@@ -8,6 +8,7 @@ import {
   AccountPreferencesResponse,
   AccountPreferencesUpdate,
 } from 'app/core/api/generated';
+import { UPDATE_PASSWORD_ACTION } from 'app/core/auth/password-update';
 
 @Injectable({
   providedIn: 'root',
@@ -20,6 +21,7 @@ export class AccountService {
   private readonly currentAccount = signal<Account | null>(null);
   readonly account = this.currentAccount.asReadonly();
   private readonly loaded = new ReplaySubject<void>(1);
+  private loginStarted = false;
 
   load(): void {
     if (!this.oauthService.hasValidAccessToken()) {
@@ -48,8 +50,21 @@ export class AccountService {
     return firstValueFrom(this.loaded);
   }
 
+  login(): void {
+    if (this.loginStarted) {
+      return;
+    }
+
+    this.loginStarted = true;
+    this.oauthService.initLoginFlow();
+  }
+
   logout(): void {
     this.oauthService.logOut();
+  }
+
+  changePassword(): void {
+    this.oauthService.initCodeFlow('', { kc_action: UPDATE_PASSWORD_ACTION });
   }
 
   async reload(): Promise<void> {

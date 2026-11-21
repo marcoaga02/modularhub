@@ -1,16 +1,30 @@
 {
   "core": {
+    "auth": {
+      "password-updated": "Password aggiornata"
+    },
     "components": {
       "top-bar": {
         "profile": "Il mio profilo"
+      },
+      "sidebar": {
+        "collapse": "Riduci",
+        "expand": "Espandi"
       }
     },
     "pages": {
       "account-detail": {
         "account": "Account",
-        "edit-preferences-message": "Le preferenze dell'account sono state modificate con successo",
-        "personal-info": "Informazioni personali",
-        "preferences": "Preferenze"
+        "change-password": {
+          "label": "Cambia password",
+          "description": "Scegli una nuova password per il tuo account."
+        },
+        "language-hint": "Si applica subito, senza salvare.",
+        "managed-by-admin": "Questi dati possono essere modificati solo da un amministratore.",
+        "personal-details": "Dati personali",
+        "preferences": "Preferenze",
+        "security": "Sicurezza",
+        "title": "Il mio profilo"
       }
     }
   },
@@ -63,14 +77,14 @@
         "confirm": "Conferma",
         "delete": "Elimina",
         "edit": "Modifica",
-        "save": "Salva"
+        "save": "Salva",
+        "close": "Chiudi",
+        "more": "Altre azioni"
       }
     },
     "error": "Errore",
     "logout": {
-      "label": "Esci",
-      "message": "Sei sicuro di voler uscire?",
-      "title": "Conferma uscita"
+      "label": "Esci"
     }
   },
   "model": {
@@ -80,6 +94,7 @@
       "gender": "Genere",
       "lastname": "Cognome",
       "mobile-number": "Cellulare",
+      "password": "Password",
       "tax-id-number": "Codice fiscale",
       "username": "Username"
     },
@@ -124,46 +139,89 @@
       "description": "Gestione Utenti",
       "pages": {
         "user-detail": {
-          "account": "Account",
-          "audit": "Audit",
-          "personal-info": "Informazioni personali",
-          "title": "Dettaglio utente {{fullName}}",
-          "no-roles": "Nessun ruolo assegnato"
+          "no-roles": "Nessun ruolo assegnato",
+          "contacts": "Contatti",
+          "personal-details": "Dati anagrafici",
+          "access": "Accesso",
+          "history": "Cronologia",
+          "edit": "Modifica utente"
         },
         "user-form": {
           "confirmation-cancel-dialog": {
             "message": "Tutte le modifiche andranno perse. Continuare?",
             "title": "Conferma annullamento modifiche"
           },
-          "creation-title": "Creazione utente",
-          "edit-title": "Modifica utente {{fullName}}",
+          "creation-title": "Nuovo utente",
+          "edit-title": "Modifica utente",
           "reset-password": {
-            "confirmation-message": "Sei sicuro di voler inviare una mail all'utente per reimpostare la password?",
-            "confirmation-title": "Conferma reset password",
-            "label": "Reimposta password",
-            "success": "Email per reset della password inviata con successo",
-            "tooltip-message": "Invia un'email all'utente per cambiare la password"
+            "description": "La password non viene mai mostrata. Il reset invia all'utente un link per sceglierne una nuova."
           },
-          "select-language-placeholder": "Seleziona lingua"
+          "select-language-placeholder": "Seleziona lingua",
+          "roles": {
+            "filter-placeholder": "Filtra ruoli",
+            "system": "Sistema",
+            "empty": "Nessun ruolo disponibile",
+            "selected-count": "{{selected}} di {{total}} selezionati"
+          },
+          "sections": {
+            "personal-details": "Dati anagrafici",
+            "account": "Account",
+            "security": "Sicurezza"
+          },
+          "enabled-hint": {
+            "true": "Può accedere",
+            "false": "Non può accedere"
+          },
+          "required-fields": "Campi obbligatori",
+          "save": "Salva modifiche",
+          "create": "Crea utente",
+          "password-confirmation": "Conferma password",
+          "placeholders": {
+            "firstname": "Es. Mario",
+            "lastname": "Es. Rossi",
+            "tax-id-number": "16 caratteri",
+            "mobile-number": "Solo cifre",
+            "email": "nome@example.com",
+            "username": "nome.cognome",
+            "password": "Inserisci una password",
+            "password-confirmation": "Ripeti la password"
+          },
+          "errors": {
+            "required": "Campo obbligatorio",
+            "email": "Email non valida",
+            "tax-id-number": "Codice fiscale non valido",
+            "mobile-number": "Solo cifre",
+            "password-mismatch": "Le password non coincidono"
+          }
         },
         "user-list": {
           "confirmation-delete-dialog": {
-            "message": "Sei sicuro di voler eliminare gli utenti selezionati?",
-            "title": "Conferma cancellazione utenti"
+            "message": "Sei sicuro di voler eliminare questo utente?",
+            "title": "Conferma eliminazione utente"
           },
           "creation-message": "L'utente è stato creato con successo",
-          "delete-button-tooltip": "Non è possibile eliminare l'utente correntemente autenticato",
-          "delete-message": "Utente/i cancellato/i con successo",
+          "delete-message": "Utente eliminato con successo",
           "edit-message": "L'utente è stato modificato con successo",
-          "empty-message": "Nessun utente trovato",
-          "filter-placeholder": "Filtra utenti"
-        },
-        "role-selector": {
-          "title": "Selezione ruoli",
-          "available-roles": "Ruoli disponibili",
-          "selected-roles": "Ruoli selezionati",
-          "filter-placeholder": "Filtra ruoli"
+          "empty": {
+            "title": "Nessun utente trovato",
+            "filtered": "Nessun utente corrisponde alla ricerca.",
+            "clear-filters": "Azzera filtri",
+            "no-users": "Inizia creando il primo utente."
+          },
+          "filter-placeholder": "Filtra utenti",
+          "title": "Utenti",
+          "new-user": "Nuovo utente",
+          "columns": {
+            "user": "Utente",
+            "status": "Stato"
+          }
         }
+      },
+      "reset-password": {
+        "label": "Reimposta password",
+        "confirmation-title": "Conferma reset password",
+        "confirmation-message": "Sei sicuro di voler inviare una mail all'utente per reimpostare la password?",
+        "success": "Email per reset della password inviata con successo"
       }
     }
   },

@@ -60,7 +60,7 @@ describe('UserListComponent', () => {
   let userService: {
     getUsers: ReturnType<typeof vi.fn>;
     getUserById: ReturnType<typeof vi.fn>;
-    deleteUsers: ReturnType<typeof vi.fn>;
+    deleteUser: ReturnType<typeof vi.fn>;
   };
   let accountService: {
     account: Signal<Account | null>;
@@ -75,7 +75,7 @@ describe('UserListComponent', () => {
     userService = {
       getUsers: vi.fn().mockReturnValue(page(users, total)),
       getUserById: vi.fn().mockReturnValue(of(mario)),
-      deleteUsers: vi.fn().mockReturnValue(of([undefined])),
+      deleteUser: vi.fn().mockReturnValue(of(undefined)),
     };
     accountService = {
       account: signal(account).asReadonly(),
@@ -111,23 +111,47 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
   }
 
+  const LIST = 'modules.user-management.pages.user-list';
+
   function rows(): HTMLTableRowElement[] {
     return Array.from(element.querySelectorAll<HTMLTableRowElement>('tbody tr'));
   }
 
   async function selectRow(index: number) {
-    rows()[index].querySelector<HTMLInputElement>('p-tablecheckbox input')!.click();
+    rows()[index].click();
     await fixture.whenStable();
   }
 
-  function button(label: string): HTMLButtonElement {
-    return Array.from(element.querySelectorAll<HTMLButtonElement>('p-button button')).find((b) =>
-      b.textContent?.includes(label.toUpperCase()),
+  function detail(): HTMLElement | null {
+    return element.querySelector('app-user-detail');
+  }
+
+  function button(label: string, container: HTMLElement = element): HTMLButtonElement {
+    return Array.from(container.querySelectorAll<HTMLButtonElement>('p-button button')).find(
+      (b) => b.textContent?.includes(label) || b.getAttribute('aria-label') === label,
     )!;
   }
 
-  async function click(label: string) {
-    button(label).click();
+  async function click(target: HTMLElement) {
+    target.click();
+    await fixture.whenStable();
+  }
+
+  function content(item: HTMLElement): HTMLElement {
+    return item.querySelector<HTMLElement>('.p-menu-item-content')!;
+  }
+
+  function menuItem(label: string): HTMLElement {
+    return Array.from(document.querySelectorAll<HTMLElement>('.p-menu-item')).find((item) =>
+      item.textContent?.includes(label),
+    )!;
+  }
+
+  async function search(text: string) {
+    const input = element.querySelector<HTMLInputElement>('p-iconfield input')!;
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    await new Promise((resolve) => setTimeout(resolve, FILTER_DEBOUNCE_MS));
     await fixture.whenStable();
   }
 
@@ -136,79 +160,110 @@ describe('UserListComponent', () => {
   }
 
   describe('loading', () => {
-    it('should load the first page and show the users', async () => {
-      await setUp();
+    it('should load the first page and show the users with their total', async () => {
+      await setUp([mario, luigi], 2);
 
       expect(lastCriteria().page).toBe(0);
       expect(lastCriteria().size).toBe(20);
       expect(rows()).toHaveLength(2);
+      expect(rows()[0].textContent).toContain('mario Rossi');
       expect(rows()[0].textContent).toContain('mario@test.it');
+      expect(rows()[0].textContent).toContain('model.user.enabled.true');
+      expect(element.querySelector('p-badge')!.textContent?.trim()).toBe('2');
       expect(element.querySelector('.p-datatable-mask')).toBeNull();
     });
 
-    it('should stop loading and show the empty message when the response has no body', async () => {
+    it('should show the roles of the users', async () => {
+      await setUp([{ ...mario, roles: [{ id: 'role-id' as UUID, name: 'ADMIN', system: true }] }]);
+
+      expect(rows()[0].textContent).toContain('ADMIN');
+    });
+
+    it('should stop loading and show the empty state instead of the table when there are no users', async () => {
       await setUp(null);
 
       expect(element.querySelector('.p-datatable-mask')).toBeNull();
-      expect(element.textContent).toContain(
-        'modules.user-management.pages.user-list.empty-message',
-      );
+      expect(element.textContent).toContain(`${LIST}.empty.title`);
+      expect(element.textContent).toContain(`${LIST}.empty.no-users`);
+      expect(button(`${LIST}.empty.clear-filters`)).toBeUndefined();
+      expect(element.querySelector('p-table')!.parentElement!.classList).toContain('hidden');
+    });
+
+    it('should open the creation form from the empty state', async () => {
+      await setUp(null);
+      const emptyState = element.querySelector<HTMLElement>('.pi-users')!.parentElement!;
+
+      await click(button(`${LIST}.new-user`, emptyState));
+
+      expect(dialogService.open).toHaveBeenCalledOnce();
     });
 
     it('should reload the users filtered by the typed text', async () => {
       await setUp();
-      const search = element.querySelector<HTMLInputElement>('p-iconfield input')!;
 
-      search.value = 'mar';
-      search.dispatchEvent(new Event('input'));
-      await new Promise((resolve) => setTimeout(resolve, FILTER_DEBOUNCE_MS));
+      await search('mar');
 
       expect(lastCriteria().filter.text).toBe('mar');
+    });
+
+    it('should offer to clear the filter when the search finds no users', async () => {
+      await setUp();
+      userService.getUsers.mockReturnValue(page([]));
+      await search('zzz');
+
+      expect(element.textContent).toContain(`${LIST}.empty.filtered`);
+      userService.getUsers.mockReturnValue(page([mario, luigi]));
+
+      await click(button(`${LIST}.empty.clear-filters`));
+
+      expect(lastCriteria().filter.text).toBe('');
+      expect(lastCriteria().page).toBe(0);
+      expect(element.querySelector<HTMLInputElement>('p-iconfield input')!.value).toBe('');
+      expect(rows()).toHaveLength(2);
+      expect(element.textContent).not.toContain(`${LIST}.empty.title`);
     });
 
     it('should load the page and the page size requested by the paginator', async () => {
       await setUp([mario, luigi], 60);
 
-      element.querySelector<HTMLButtonElement>('.p-paginator-next')!.click();
-      await fixture.whenStable();
+      await click(element.querySelector<HTMLButtonElement>('.p-paginator-next')!);
 
       expect(lastCriteria().page).toBe(1);
       expect(lastCriteria().size).toBe(20);
     });
   });
 
-  describe('buttons', () => {
-    it('should disable edit and delete when no user is selected', async () => {
+  describe('detail', () => {
+    it('should not show the detail until a user is selected', async () => {
       await setUp();
 
-      expect(button('general.button.label.edit').disabled).toBe(true);
-      expect(button('general.button.label.delete').disabled).toBe(true);
+      expect(detail()).toBeNull();
     });
 
-    it('should enable edit and delete when another user is selected', async () => {
+    it('should show the detail of the clicked user', async () => {
       await setUp();
 
       await selectRow(1);
 
-      expect(button('general.button.label.edit').disabled).toBe(false);
-      expect(button('general.button.label.delete').disabled).toBe(false);
+      expect(detail()!.textContent).toContain('luigi@test.it');
     });
 
-    it('should disable edit when more users are selected', async () => {
+    it('should close the detail when the selected user is clicked again', async () => {
       await setUp();
-
-      await selectRow(0);
       await selectRow(1);
 
-      expect(button('general.button.label.edit').disabled).toBe(true);
+      await selectRow(1);
+
+      expect(detail()).toBeNull();
     });
 
-    it('should disable delete when the current account is selected', async () => {
+    it('should close the detail when it is dismissed', async () => {
       await setUp();
+      await selectRow(1);
 
-      await selectRow(0);
+      await click(button('general.button.label.close', detail()!));
 
-      expect(button('general.button.label.delete').disabled).toBe(true);
+      expect(detail()).toBeNull();
     });
   });
 
@@ -216,25 +271,23 @@ describe('UserListComponent', () => {
     it('should open the user form without a user', async () => {
       await setUp();
 
-      await click('general.button.label.add');
+      await click(button(`${LIST}.new-user`));
 
       const [component, config] = dialogService.open.mock.lastCall!;
       expect(component).toBe(UserFormComponent);
-      expect(config.header).toBe('modules.user-management.pages.user-form.creation-title');
       expect(config.data.userId).toBeUndefined();
     });
 
     it('should show a message and reload the first page when a user is created', async () => {
-      await setUp();
-      await click('general.button.label.add');
+      await setUp([mario, luigi], 60);
+      await click(element.querySelector<HTMLButtonElement>('.p-paginator-next')!);
+      await click(button(`${LIST}.new-user`));
       const loadsBefore = userService.getUsers.mock.calls.length;
 
       formDialogClose.next(luigi);
       await fixture.whenStable();
 
-      expect(messages).toEqual([
-        { severity: 'success', detail: 'modules.user-management.pages.user-list.creation-message' },
-      ]);
+      expect(messages).toEqual([{ severity: 'success', detail: `${LIST}.creation-message` }]);
       expect(userService.getUsers.mock.calls.length).toBe(loadsBefore + 1);
       expect(lastCriteria().offset).toBe(0);
       expect(accountService.reload).not.toHaveBeenCalled();
@@ -242,7 +295,7 @@ describe('UserListComponent', () => {
 
     it('should do nothing when the user form is closed without result', async () => {
       await setUp();
-      await click('general.button.label.add');
+      await click(button(`${LIST}.new-user`));
       const loadsBefore = userService.getUsers.mock.calls.length;
 
       formDialogClose.next(undefined);
@@ -253,65 +306,64 @@ describe('UserListComponent', () => {
   });
 
   describe('edit', () => {
-    it('should open the user form with the selected user', async () => {
+    it('should open the user form with the user of the detail', async () => {
       await setUp();
       await selectRow(1);
 
-      await click('general.button.label.edit');
+      await click(button('modules.user-management.pages.user-detail.edit', detail()!));
 
       const config = dialogService.open.mock.lastCall![1];
-      expect(config.header).toBe('modules.user-management.pages.user-form.edit-title');
       expect(config.data.userId).toBe(luigi.id);
+    });
+
+    it('should reload the page and keep the detail updated when a user is edited', async () => {
+      await setUp();
+      await selectRow(1);
+      await click(button('modules.user-management.pages.user-detail.edit', detail()!));
+      const updated = { ...luigi, email: 'luigi@new.it' };
+      userService.getUsers.mockReturnValue(page([mario, updated]));
+
+      formDialogClose.next(updated);
+      await fixture.whenStable();
+
+      expect(messages).toEqual([{ severity: 'success', detail: `${LIST}.edit-message` }]);
+      expect(detail()!.textContent).toContain('luigi@new.it');
+      expect(accountService.reload).not.toHaveBeenCalled();
     });
 
     it('should reload the current account when the current account is edited', async () => {
       await setUp();
       await selectRow(0);
-      await click('general.button.label.edit');
+      await click(button('modules.user-management.pages.user-detail.edit', detail()!));
 
       formDialogClose.next(mario);
       await fixture.whenStable();
 
       expect(accountService.reload).toHaveBeenCalledOnce();
-      expect(messages).toEqual([
-        { severity: 'success', detail: 'modules.user-management.pages.user-list.edit-message' },
-      ]);
-    });
-
-    it('should not reload the current account when another user is edited', async () => {
-      await setUp();
-      await selectRow(1);
-      await click('general.button.label.edit');
-
-      formDialogClose.next(luigi);
-      await fixture.whenStable();
-
-      expect(accountService.reload).not.toHaveBeenCalled();
     });
   });
 
   describe('delete', () => {
-    it('should delete the selected users after confirmation, show a message and reload', async () => {
+    it('should delete the user after confirmation, show a message and close the detail', async () => {
       await setUp();
       await selectRow(1);
-      await click('general.button.label.delete');
-      const loadsBefore = userService.getUsers.mock.calls.length;
+      await click(button('general.button.label.more', detail()!));
+      await click(content(menuItem('general.button.label.delete')));
       expect(confirmDialog.confirm).toHaveBeenCalledWith(
-        'modules.user-management.pages.user-list.confirmation-delete-dialog.title',
-        'modules.user-management.pages.user-list.confirmation-delete-dialog.message',
+        `${LIST}.confirmation-delete-dialog.title`,
+        `${LIST}.confirmation-delete-dialog.message`,
         expect.any(Function),
       );
-      expect(userService.deleteUsers).not.toHaveBeenCalled();
+      expect(userService.deleteUser).not.toHaveBeenCalled();
+      userService.getUsers.mockReturnValue(page([mario]));
 
       confirmDialog.confirm.mock.lastCall![2]();
       await fixture.whenStable();
 
-      expect(userService.deleteUsers).toHaveBeenCalledWith([luigi]);
-      expect(messages).toEqual([
-        { severity: 'success', summary: 'modules.user-management.pages.user-list.delete-message' },
-      ]);
-      expect(userService.getUsers.mock.calls.length).toBe(loadsBefore + 1);
-      expect(button('general.button.label.delete').disabled).toBe(true);
+      expect(userService.deleteUser).toHaveBeenCalledWith(luigi.id);
+      expect(messages).toEqual([{ severity: 'success', detail: `${LIST}.delete-message` }]);
+      expect(rows()).toHaveLength(1);
+      expect(detail()).toBeNull();
     });
   });
 });

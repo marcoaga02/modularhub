@@ -34,7 +34,7 @@ describe('ConfirmDialogService', () => {
           severity: 'secondary',
           outlined: true,
         },
-        acceptButtonProps: { label: 'general.button.label.confirm', severity: 'secondary' },
+        acceptButtonProps: { label: 'general.button.label.confirm' },
       }),
     );
   });

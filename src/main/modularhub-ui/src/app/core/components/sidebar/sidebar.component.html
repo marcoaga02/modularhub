@@ -1,34 +1,78 @@
-<div
-  class="flex flex-col border rounded-r-xl h-full transition-all duration-300"
-  [ngClass]="{ 'w-80': isOpen(), 'w-13': !isOpen() }"
+<nav
+  class="absolute inset-y-0 left-0 flex flex-col overflow-hidden border-r bg-content transition-[width] duration-300"
+  [class.w-64]="isExpanded()"
+  [class.w-16]="!isExpanded()"
+  [class.shadow-xl]="isFloating()"
+  (mouseleave)="isHovered.set(false)"
 >
-  <p-button icon="pi pi-th-large" class="p-1 border-b" [text]="true" (onClick)="toggle()" />
-  <div class="flex flex-col p-1 gap-0.5 flex-1 border-b">
-    @for (plugin of plugins(); track plugin.path) {
-      <div
-        class="flex items-center gap-3 h-12 px-3 border rounded-xl cursor-pointer"
-        [pTooltip]="!isOpen() ? (plugin.description | translate) : ''"
-        tabindex="0"
-        role="button"
-        (click)="navigate(plugin.path)"
-        (keydown.enter)="navigate(plugin.path)"
-        (keydown.space)="navigate(plugin.path)"
+  <div class="flex h-14 shrink-0 items-center gap-3 border-b px-4">
+    @if (isExpanded()) {
+      <img
+        src="/logo-full.svg"
+        class="h-8 min-w-0 flex-1 object-contain object-left"
+        alt="ModularHub"
+      />
+    }
+    <button
+      type="button"
+      class="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-content-hover"
+      [class.order-first]="!isPinned()"
+      [attr.aria-label]="
+        (isPinned() ? 'core.components.sidebar.collapse' : 'core.components.sidebar.expand')
+          | translate
+      "
+      [pTooltip]="isPinned() ? ('core.components.sidebar.collapse' | translate) : ''"
+      tooltipPosition="right"
+      (mouseenter)="isHovered.set(true)"
+      (click)="togglePinned()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        class="size-5"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
       >
-        <i [class]="plugin.icon + ' text-xl shrink-0'"></i>
-        @if (isOpen()) {
-          <span class="text-sm truncate">{{ plugin.description | translate }}</span>
-        }
-      </div>
-    }
+        <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 3v18" />
+        <path [attr.d]="isPinned() ? 'm16 15-3-3 3-3' : 'm14 9 3 3-3 3'" />
+      </svg>
+    </button>
   </div>
-  <div
-    class="flex items-center gap-3 h-12 px-3 cursor-pointer text-red-500"
-    [pTooltip]="!isOpen() ? ('general.logout.label' | translate) : ''"
-    (click)="logout()"
-  >
-    <i class="pi pi-sign-out text-xl shrink-0"></i>
-    @if (isOpen()) {
-      <span class="text-sm truncate">{{ 'general.logout.label' | translate }}</span>
+
+  <ul class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2">
+    @for (plugin of plugins(); track plugin.path) {
+      <li>
+        <a
+          [routerLink]="['/', plugin.path]"
+          routerLinkActive="bg-highlight text-on-highlight"
+          #link="routerLinkActive"
+          class="flex h-10 items-center gap-3 rounded-lg px-3.5 hover:bg-content-hover"
+        >
+          <i class="shrink-0 text-lg" [class]="plugin.icon"></i>
+          @if (isExpanded()) {
+            <span class="flex-1 truncate text-sm">{{ plugin.description | translate }}</span>
+            @if (link.isActive) {
+              <span class="size-1.5 shrink-0 rounded-full bg-accent"></span>
+            }
+          }
+        </a>
+      </li>
     }
+  </ul>
+
+  <div class="border-t p-2">
+    <button
+      type="button"
+      class="flex h-10 w-full items-center gap-3 rounded-lg px-3.5 text-muted hover:bg-content-hover hover:text-danger"
+      (click)="logout()"
+    >
+      <i class="pi pi-sign-out shrink-0 text-lg"></i>
+      @if (isExpanded()) {
+        <span class="truncate text-sm">{{ 'general.logout.label' | translate }}</span>
+      }
+    </button>
   </div>
-</div>
+</nav>

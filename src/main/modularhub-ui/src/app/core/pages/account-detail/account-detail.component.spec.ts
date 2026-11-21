@@ -1,11 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { signal, Signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { signal, WritableSignal } from '@angular/core';
+import { of, Subject } from 'rxjs';
 import { provideTranslateService } from '@ngx-translate/core';
-import { MessageService, ToastMessageOptions } from 'primeng/api';
+import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
 import { AccountService } from 'app/core/api/services/account.service';
-import { Account, Gender, Language } from 'app/core/api/generated';
+import { Account, AccountPreferencesResponse, Gender, Language } from 'app/core/api/generated';
 
 describe('AccountDetailComponent', () => {
   const account: Account = {
@@ -23,111 +23,131 @@ describe('AccountDetailComponent', () => {
 
   let fixture: ComponentFixture<AccountDetailComponent>;
   let element: HTMLElement;
+  let accountSignal: WritableSignal<Account | null>;
   let accountService: {
-    account: Signal<Account | null>;
+    account: WritableSignal<Account | null>;
     updateCurrentAccountPreferences: ReturnType<typeof vi.fn>;
+    changePassword: ReturnType<typeof vi.fn>;
   };
-  let messages: ToastMessageOptions[];
+  let closed: number;
 
-  async function setUp(initialAccount: Account | null) {
+  beforeEach(async () => {
+    accountSignal = signal<Account | null>(account);
     accountService = {
-      account: signal(initialAccount).asReadonly(),
-      updateCurrentAccountPreferences: vi.fn().mockReturnValue(of(account.preferences)),
+      account: accountSignal,
+      updateCurrentAccountPreferences: vi.fn().mockReturnValue(of({ language: Language.En })),
+      changePassword: vi.fn(),
     };
+    const ref = new DynamicDialogRef();
+    closed = 0;
+    ref.onClose.subscribe(() => closed++);
 
     await TestBed.configureTestingModule({
       imports: [AccountDetailComponent],
       providers: [
         provideTranslateService(),
-        MessageService,
         { provide: AccountService, useValue: accountService },
+        { provide: DynamicDialogRef, useValue: ref },
       ],
     }).compileComponents();
-
-    messages = [];
-    TestBed.inject(MessageService).messageObserver.subscribe((m) =>
-      messages.push(...(Array.isArray(m) ? m : [m])),
-    );
 
     fixture = TestBed.createComponent(AccountDetailComponent);
     element = fixture.nativeElement;
     await fixture.whenStable();
+  });
+
+  function selectedLanguage(): string {
+    return element.querySelector('p-select')!.textContent!.trim();
   }
 
-  async function clickButton(label: string) {
-    const buttons = Array.from(element.querySelectorAll<HTMLButtonElement>('p-button button'));
-    buttons.find((b) => b.textContent?.includes(label))!.click();
+  async function chooseLanguage(language: Language) {
+    element.querySelector<HTMLElement>('p-select')!.click();
+    await fixture.whenStable();
+    Array.from(document.querySelectorAll<HTMLElement>('li[role="option"]'))
+      .find((option) => option.textContent?.includes(`model.language.${language}`))!
+      .click();
     await fixture.whenStable();
   }
 
-  function languageSelect(): HTMLElement | null {
-    return element.querySelector('p-select');
-  }
-
-  it('should keep loading when there is no account', async () => {
-    await setUp(null);
-
-    expect(element.querySelector('p-progress-spinner')).not.toBeNull();
-  });
-
-  it('should show the data of the account', async () => {
-    await setUp(account);
-
+  it('should show the data of the account', () => {
     const text = element.textContent;
-    expect(text).toContain('Mario');
-    expect(text).toContain('Rossi');
+    expect(text).toContain('Mario Rossi');
     expect(text).toContain('model.gender.male');
     expect(text).toContain('RSSMRA80A01H501U');
     expect(text).toContain('3331234567');
     expect(text).toContain('mario@test.it');
     expect(text).toContain('mario.rossi');
-    expect(text).toContain('model.language.it');
+    expect(selectedLanguage()).toBe('model.language.it');
   });
 
-  it('should show the language selector when edit is clicked', async () => {
-    await setUp(account);
+  it('should hide the optional data the account does not have', async () => {
+    accountSignal.set({
+      ...account,
+      gender: undefined,
+      taxIdNumber: undefined,
+      mobileNumber: undefined,
+    });
+    await fixture.whenStable();
 
-    await clickButton('general.button.label.edit');
-
-    expect(languageSelect()).not.toBeNull();
-    expect(languageSelect()!.textContent).toContain('model.language.it');
+    const text = element.textContent;
+    expect(text).not.toContain('model.account.gender');
+    expect(text).not.toContain('model.account.tax-id-number');
+    expect(text).not.toContain('model.account.mobile-number');
   });
 
-  it('should go back to the read only view when cancel is clicked', async () => {
-    await setUp(account);
-    await clickButton('general.button.label.edit');
+  it('should close the dialog from the close button', async () => {
+    element
+      .querySelector<HTMLButtonElement>('header button[aria-label="general.button.label.close"]')!
+      .click();
+    await fixture.whenStable();
 
-    await clickButton('general.button.label.cancel');
-
-    expect(languageSelect()).toBeNull();
-    expect(accountService.updateCurrentAccountPreferences).not.toHaveBeenCalled();
+    expect(closed).toBe(1);
   });
 
-  it('should save the selected language, show a confirmation and go back to the read only view', async () => {
-    await setUp(account);
-    await clickButton('general.button.label.edit');
+  it('should start the password change from the security section', async () => {
+    Array.from(element.querySelectorAll<HTMLButtonElement>('p-button button'))
+      .find((button) =>
+        button.textContent?.includes('core.pages.account-detail.change-password.label'),
+      )!
+      .click();
+    await fixture.whenStable();
 
-    await clickButton('general.button.label.save');
+    expect(accountService.changePassword).toHaveBeenCalledOnce();
+  });
+
+  it('should save the language as soon as it is chosen', async () => {
+    await chooseLanguage(Language.En);
 
     expect(accountService.updateCurrentAccountPreferences).toHaveBeenCalledWith({
-      language: Language.It,
+      language: Language.En,
     });
-    expect(messages).toEqual([
-      { severity: 'success', summary: 'core.pages.account-detail.edit-preferences-message' },
-    ]);
-    expect(languageSelect()).toBeNull();
+    expect(selectedLanguage()).toBe('model.language.en');
   });
 
-  it('should stay in edit mode when the save fails', async () => {
-    await setUp(account);
-    accountService.updateCurrentAccountPreferences.mockReturnValue(
-      throwError(() => new Error('boom')),
-    );
-    await clickButton('general.button.label.edit');
+  it('should disable the language while it is being saved', async () => {
+    const response = new Subject<AccountPreferencesResponse>();
+    accountService.updateCurrentAccountPreferences.mockReturnValue(response);
 
-    await clickButton('general.button.label.save');
+    await chooseLanguage(Language.En);
 
-    expect(messages).toEqual([]);
-    expect(languageSelect()).not.toBeNull();
+    expect(element.querySelector('p-select')!.classList).toContain('p-disabled');
+
+    response.next({ language: Language.En });
+    response.complete();
+    await fixture.whenStable();
+
+    expect(element.querySelector('p-select')!.classList).not.toContain('p-disabled');
+  });
+
+  it('should go back to the previous language when the save fails', async () => {
+    const response = new Subject<AccountPreferencesResponse>();
+    accountService.updateCurrentAccountPreferences.mockReturnValue(response);
+    await chooseLanguage(Language.En);
+
+    response.error(new Error('unavailable'));
+    await fixture.whenStable();
+
+    expect(selectedLanguage()).toBe('model.language.it');
+    expect(element.querySelector('p-select')!.classList).not.toContain('p-disabled');
   });
 });

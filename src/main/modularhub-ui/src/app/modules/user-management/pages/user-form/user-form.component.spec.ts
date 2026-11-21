@@ -1,8 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BehaviorSubject, of, Subject } from 'rxjs';
-import { DialogService, DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { MessageService, ToastMessageOptions } from 'primeng/api';
-import { provideTranslateService } from '@ngx-translate/core';
+import { of, Subject, throwError } from 'rxjs';
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { UserFormComponent } from 'app/modules/user-management/pages/user-form/user-form.component';
 import { RoleService } from 'app/modules/user-management/api/services/role.service';
 import { UserService } from 'app/modules/user-management/api/services/user.service';
@@ -10,8 +9,16 @@ import { RoleSummary, UserResponse } from 'app/modules/user-management/api/gener
 import { Gender, Language } from 'app/core/api/generated';
 import { UUID } from 'app/core/api/models/uuid';
 import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
+import { PasswordResetService } from 'app/modules/user-management/utils/services/password-reset.service';
 
 describe('UserFormComponent', () => {
+  const FORM = 'modules.user-management.pages.user-form';
+  const SAVE = `${FORM}.save`;
+  const CREATE = `${FORM}.create`;
+  const CANCEL = 'general.button.label.cancel';
+  const RESET_PASSWORD = 'modules.user-management.reset-password.label';
+
+  const adminRole: RoleSummary = { id: 'admin-role-id' as UUID, name: 'ADMIN', system: true };
   const role: RoleSummary = { id: 'role-id' as UUID, name: 'Operators', system: false };
   const otherRole: RoleSummary = { id: 'other-role-id' as UUID, name: 'Auditors', system: false };
   const user: UserResponse = {
@@ -35,27 +42,21 @@ describe('UserFormComponent', () => {
     email: 'luigi@test.it',
     username: 'luigi.verdi',
   };
+  const PASSWORD = 'Secret123!';
 
   let fixture: ComponentFixture<UserFormComponent>;
   let element: HTMLElement;
-  let buttonClick: Subject<'confirm' | 'cancel' | 'roles'>;
-  let formValid: BehaviorSubject<boolean>;
   let ref: DynamicDialogRef;
   let closedWith: unknown[];
   let userService: {
     getUserById: ReturnType<typeof vi.fn>;
     createUser: ReturnType<typeof vi.fn>;
     updateUser: ReturnType<typeof vi.fn>;
-    resetPassword: ReturnType<typeof vi.fn>;
   };
-  let dialogService: { open: ReturnType<typeof vi.fn> };
-  let rolesDialogClose: Subject<UUID[] | undefined>;
   let confirmDialog: { confirm: ReturnType<typeof vi.fn> };
-  let messages: ToastMessageOptions[];
+  let passwordReset: { resetPassword: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    buttonClick = new Subject();
-    formValid = new BehaviorSubject(false);
     ref = new DynamicDialogRef();
     closedWith = [];
     ref.onClose.subscribe((result) => closedWith.push(result));
@@ -63,15 +64,9 @@ describe('UserFormComponent', () => {
       getUserById: vi.fn().mockReturnValue(of(user)),
       createUser: vi.fn().mockReturnValue(of(user)),
       updateUser: vi.fn().mockReturnValue(of(user)),
-      resetPassword: vi.fn().mockReturnValue(of(undefined)),
-    };
-    dialogService = {
-      open: vi.fn(() => {
-        rolesDialogClose = new Subject();
-        return { onClose: rolesDialogClose.asObservable() };
-      }),
     };
     confirmDialog = { confirm: vi.fn() };
+    passwordReset = { resetPassword: vi.fn() };
   });
 
   async function setUp(userId?: UUID) {
@@ -79,20 +74,14 @@ describe('UserFormComponent', () => {
       imports: [UserFormComponent],
       providers: [
         provideTranslateService(),
-        MessageService,
         { provide: ConfirmDialogService, useValue: confirmDialog },
-        { provide: DynamicDialogConfig, useValue: { data: { buttonClick, formValid, userId } } },
+        { provide: DynamicDialogConfig, useValue: { data: { userId } } },
         { provide: DynamicDialogRef, useValue: ref },
-        { provide: DialogService, useValue: dialogService },
-        { provide: RoleService, useValue: { getRoles: () => of([role, otherRole]) } },
+        { provide: RoleService, useValue: { getRoles: () => of([adminRole, role, otherRole]) } },
         { provide: UserService, useValue: userService },
+        { provide: PasswordResetService, useValue: passwordReset },
       ],
     }).compileComponents();
-
-    messages = [];
-    TestBed.inject(MessageService).messageObserver.subscribe((m) =>
-      messages.push(...(Array.isArray(m) ? m : [m])),
-    );
 
     fixture = TestBed.createComponent(UserFormComponent);
     element = fixture.nativeElement;
@@ -103,13 +92,17 @@ describe('UserFormComponent', () => {
     return element.querySelector<HTMLInputElement>(`input#${id}`)!;
   }
 
-  function passwordInput(): HTMLInputElement {
-    return element.querySelector<HTMLInputElement>('p-password input')!;
-  }
-
   async function type(target: HTMLInputElement, value: string) {
     target.value = value;
     target.dispatchEvent(new Event('input'));
+    target.dispatchEvent(new Event('blur'));
+    await fixture.whenStable();
+  }
+
+  async function chooseGender(label: string) {
+    Array.from(element.querySelectorAll<HTMLElement>('#gender p-togglebutton'))
+      .find((option) => option.textContent?.includes(label))!
+      .click();
     await fixture.whenStable();
   }
 
@@ -117,67 +110,131 @@ describe('UserFormComponent', () => {
     for (const [id, value] of Object.entries(validInput)) {
       await type(input(id), value);
     }
-    await type(passwordInput(), 'Secret123!');
-    element.querySelector<HTMLInputElement>('#gender-female input')!.click();
+    await type(input('password'), PASSWORD);
+    await type(input('password-confirmation'), PASSWORD);
+    await chooseGender('model.gender.female');
+  }
+
+  function button(label: string): HTMLButtonElement {
+    return Array.from(element.querySelectorAll<HTMLButtonElement>('p-button button')).find((b) =>
+      b.textContent?.includes(label),
+    )!;
+  }
+
+  async function click(target: HTMLElement) {
+    target.click();
     await fixture.whenStable();
   }
 
-  async function press(action: 'confirm' | 'cancel' | 'roles') {
-    buttonClick.next(action);
-    await fixture.whenStable();
+  function closeButton(): HTMLButtonElement {
+    return element.querySelector<HTMLButtonElement>(
+      'header p-button button[aria-label="general.button.label.close"]',
+    )!;
   }
 
-  async function closeRolesDialogWith(roleIds: UUID[] | undefined) {
-    await press('roles');
-    rolesDialogClose.next(roleIds);
+  function enabledSwitch(): HTMLInputElement {
+    return input('enabled');
+  }
+
+  function errors(): string[] {
+    return Array.from(element.querySelectorAll('p-message')).map((m) => m.textContent!.trim());
+  }
+
+  function roleOption(name: string): HTMLElement {
+    return Array.from(element.querySelectorAll<HTMLElement>('#roles li[role="option"]')).find(
+      (option) => option.textContent?.includes(name),
+    )!;
+  }
+
+  async function toggleRole(name: string) {
+    await click(roleOption(name));
+  }
+
+  function selectedRoleNames(): string[] {
+    return Array.from(
+      element.querySelectorAll<HTMLElement>('#roles li[role="option"][aria-selected="true"]'),
+    ).map((option) => option.textContent!.trim());
   }
 
   function acceptConfirmation() {
     confirmDialog.confirm.mock.lastCall![2]();
   }
 
-  function roleIdsPassedToRolesDialog(): UUID[] {
-    const config = dialogService.open.mock.lastCall![1];
-    return config.data.selectedRoleIds;
-  }
-
   describe('create', () => {
-    it('should not load any user and require the password', async () => {
+    it('should show the creation title, the password fields and a disabled user', async () => {
       await setUp();
 
       expect(userService.getUserById).not.toHaveBeenCalled();
-      expect(passwordInput().disabled).toBe(false);
-      expect(element.textContent).not.toContain(
-        'modules.user-management.pages.user-form.reset-password.label',
-      );
+      expect(element.querySelector('h2')!.textContent).toContain(`${FORM}.creation-title`);
+      expect(element.querySelector('p-avatar')).toBeNull();
+      expect(input('password').disabled).toBe(false);
+      expect(input('password-confirmation').disabled).toBe(false);
+      expect(element.textContent).not.toContain(RESET_PASSWORD);
+      expect(enabledSwitch().checked).toBe(false);
+      expect(element.textContent).toContain(`${FORM}.enabled-hint.false`);
+      expect(button(CREATE)).toBeDefined();
     });
 
-    it('should publish the validity of the form while it is filled', async () => {
+    it('should show no errors before the fields are touched', async () => {
       await setUp();
 
-      await fillValidForm();
-      expect(formValid.value).toBe(true);
+      expect(errors()).toEqual([]);
+    });
 
+    it('should show the error of a field when it is left invalid', async () => {
+      await setUp();
+
+      await type(input('tax-id-number'), 'ABC');
+      await type(input('mobile-number'), '333-123');
       await type(input('email'), 'not-an-email');
-      expect(formValid.value).toBe(false);
+      await type(input('firstname'), '');
+
+      expect(errors()).toEqual([
+        `${FORM}.errors.required`,
+        `${FORM}.errors.tax-id-number`,
+        `${FORM}.errors.mobile-number`,
+        `${FORM}.errors.email`,
+      ]);
+      expect(input('firstname').classList).toContain('p-invalid');
     });
 
-    it('should mark the invalid fields and not save when the form is invalid', async () => {
+    it('should show an error when the password confirmation does not match', async () => {
       await setUp();
 
-      await press('confirm');
+      await type(input('password'), PASSWORD);
+      await type(input('password-confirmation'), 'Other123!');
+
+      expect(errors()).toEqual([`${FORM}.errors.password-mismatch`]);
+    });
+
+    it('should mark all the invalid fields and not save when the form is invalid', async () => {
+      await setUp();
+
+      await click(button(CREATE));
 
       expect(input('firstname').classList).toContain('p-invalid');
+      expect(errors()).toHaveLength(9);
       expect(userService.createUser).not.toHaveBeenCalled();
       expect(closedWith).toEqual([]);
+    });
+
+    it('should not save when the passwords do not match', async () => {
+      await setUp();
+      await fillValidForm();
+      await type(input('password-confirmation'), 'Other123!');
+
+      await click(button(CREATE));
+
+      expect(userService.createUser).not.toHaveBeenCalled();
     });
 
     it('should create the user with the password and close with the created user', async () => {
       await setUp();
       await fillValidForm();
-      await closeRolesDialogWith([otherRole.id]);
+      await toggleRole('Auditors');
+      await click(enabledSwitch());
 
-      await press('confirm');
+      await click(button(CREATE));
 
       expect(userService.createUser).toHaveBeenCalledWith({
         firstname: 'Luigi',
@@ -189,10 +246,22 @@ describe('UserFormComponent', () => {
         email: 'luigi@test.it',
         username: 'luigi.verdi',
         roleIds: [otherRole.id],
-        enabled: false,
-        password: 'Secret123!',
+        enabled: true,
+        password: PASSWORD,
       });
       expect(closedWith).toEqual([user]);
+    });
+
+    it('should stay open and allow to save again when the creation fails', async () => {
+      userService.createUser.mockReturnValue(throwError(() => new Error('conflict')));
+      await setUp();
+      await fillValidForm();
+
+      await click(button(CREATE));
+      await click(button(CREATE));
+
+      expect(userService.createUser).toHaveBeenCalledTimes(2);
+      expect(closedWith).toEqual([]);
     });
   });
 
@@ -203,30 +272,44 @@ describe('UserFormComponent', () => {
       await setUp(user.id);
 
       expect(element.querySelector('input#firstname')).toBeNull();
+      expect(button(SAVE).disabled).toBe(true);
 
       loadedUser.next(user);
       await fixture.whenStable();
 
       expect(input('firstname').value).toBe('Mario');
+      expect(button(SAVE).disabled).toBe(false);
     });
 
-    it('should fill the form with the user and disable the password', async () => {
+    it('should show the user in the header and fill the form', async () => {
       await setUp(user.id);
 
       expect(userService.getUserById).toHaveBeenCalledWith(user.id);
+      expect(element.querySelector('h2')!.textContent).toContain(`${FORM}.edit-title`);
+      expect(element.querySelector('header p-avatar')!.textContent).toContain('MR');
+      expect(element.querySelector('header')!.textContent).toContain('Mario Rossi · mario.rossi');
       expect(input('firstname').value).toBe('Mario');
       expect(input('lastname').value).toBe('Rossi');
       expect(input('email').value).toBe('mario@test.it');
       expect(input('username').value).toBe('mario.rossi');
-      expect(passwordInput().disabled).toBe(true);
-      expect(formValid.value).toBe(true);
+      expect(enabledSwitch().checked).toBe(true);
+      expect(element.textContent).toContain(`${FORM}.enabled-hint.true`);
+    });
+
+    it('should replace the password fields with the password reset', async () => {
+      await setUp(user.id);
+
+      expect(input('password')).toBeNull();
+      expect(input('password-confirmation')).toBeNull();
+      expect(element.textContent).toContain(`${FORM}.reset-password.description`);
     });
 
     it('should update the user without the password and close with the updated user', async () => {
       await setUp(user.id);
       await type(input('firstname'), 'Marco');
+      await click(enabledSwitch());
 
-      await press('confirm');
+      await click(button(SAVE));
 
       expect(userService.updateUser).toHaveBeenCalledWith(user.id, {
         firstname: 'Marco',
@@ -238,38 +321,18 @@ describe('UserFormComponent', () => {
         email: 'mario@test.it',
         username: 'mario.rossi',
         roleIds: [role.id],
-        enabled: true,
+        enabled: false,
       });
       expect(userService.createUser).not.toHaveBeenCalled();
       expect(closedWith).toEqual([user]);
     });
 
-    it('should reset the password after confirmation and show a message', async () => {
+    it('should ask to reset the password of the edited user', async () => {
       await setUp(user.id);
-      const resetButton = Array.from(
-        element.querySelectorAll<HTMLButtonElement>('p-button button'),
-      ).find((b) =>
-        b.textContent?.includes('modules.user-management.pages.user-form.reset-password.label'),
-      )!;
 
-      resetButton.click();
-      await fixture.whenStable();
-      expect(confirmDialog.confirm).toHaveBeenCalledWith(
-        'modules.user-management.pages.user-form.reset-password.confirmation-title',
-        'modules.user-management.pages.user-form.reset-password.confirmation-message',
-        expect.any(Function),
-      );
-      expect(userService.resetPassword).not.toHaveBeenCalled();
+      await click(button(RESET_PASSWORD));
 
-      acceptConfirmation();
-
-      expect(userService.resetPassword).toHaveBeenCalledWith(user.id);
-      expect(messages).toEqual([
-        {
-          severity: 'success',
-          summary: 'modules.user-management.pages.user-form.reset-password.success',
-        },
-      ]);
+      expect(passwordReset.resetPassword).toHaveBeenCalledWith(user.id);
     });
   });
 
@@ -277,7 +340,7 @@ describe('UserFormComponent', () => {
     it('should close without confirmation when nothing is changed in creation', async () => {
       await setUp();
 
-      await press('cancel');
+      await click(button(CANCEL));
 
       expect(confirmDialog.confirm).not.toHaveBeenCalled();
       expect(closedWith).toEqual([undefined]);
@@ -286,7 +349,7 @@ describe('UserFormComponent', () => {
     it('should close without confirmation when nothing is changed in edit', async () => {
       await setUp(user.id);
 
-      await press('cancel');
+      await click(closeButton());
 
       expect(confirmDialog.confirm).not.toHaveBeenCalled();
       expect(closedWith).toEqual([undefined]);
@@ -297,7 +360,7 @@ describe('UserFormComponent', () => {
       await type(input('firstname'), 'Marco');
       await type(input('firstname'), 'Mario');
 
-      await press('cancel');
+      await click(button(CANCEL));
 
       expect(confirmDialog.confirm).not.toHaveBeenCalled();
       expect(closedWith).toEqual([undefined]);
@@ -305,20 +368,21 @@ describe('UserFormComponent', () => {
 
     it('should ask a confirmation when the roles are changed', async () => {
       await setUp(user.id);
-      await closeRolesDialogWith([role.id, otherRole.id]);
+      await toggleRole('Auditors');
 
-      await press('cancel');
+      await click(closeButton());
 
       expect(confirmDialog.confirm).toHaveBeenCalledOnce();
       expect(closedWith).toEqual([]);
     });
 
-    it('should not ask a confirmation when the same roles are confirmed in another order', async () => {
+    it('should not ask a confirmation when the same roles are selected in another order', async () => {
       userService.getUserById.mockReturnValue(of({ ...user, roles: [role, otherRole] }));
       await setUp(user.id);
-      await closeRolesDialogWith([otherRole.id, role.id]);
+      await toggleRole('Operators');
+      await toggleRole('Operators');
 
-      await press('cancel');
+      await click(button(CANCEL));
 
       expect(confirmDialog.confirm).not.toHaveBeenCalled();
     });
@@ -327,10 +391,10 @@ describe('UserFormComponent', () => {
       await setUp();
       await type(input('firstname'), 'Luigi');
 
-      await press('cancel');
+      await click(button(CANCEL));
       expect(confirmDialog.confirm).toHaveBeenCalledWith(
-        'modules.user-management.pages.user-form.confirmation-cancel-dialog.title',
-        'modules.user-management.pages.user-form.confirmation-cancel-dialog.message',
+        `${FORM}.confirmation-cancel-dialog.title`,
+        `${FORM}.confirmation-cancel-dialog.message`,
         expect.any(Function),
       );
       expect(closedWith).toEqual([]);
@@ -342,43 +406,58 @@ describe('UserFormComponent', () => {
   });
 
   describe('roles', () => {
-    it('should open the roles dialog with all the roles and the roles of the user', async () => {
+    it('should list all the roles and mark the system ones', async () => {
+      await setUp();
+
+      const options = Array.from(element.querySelectorAll<HTMLElement>('#roles li[role="option"]'));
+      expect(options.map((option) => option.textContent)).toEqual([
+        expect.stringContaining('ADMIN'),
+        expect.stringContaining('Operators'),
+        expect.stringContaining('Auditors'),
+      ]);
+      expect(options.map((option) => option.querySelector('p-tag')?.textContent?.trim())).toEqual([
+        `${FORM}.roles.system`,
+        undefined,
+        undefined,
+      ]);
+    });
+
+    it('should select the roles of the edited user', async () => {
       await setUp(user.id);
 
-      await press('roles');
-
-      const config = dialogService.open.mock.lastCall![1];
-      expect(config.data.roles).toEqual([role, otherRole]);
-      expect(config.data.selectedRoleIds).toEqual([role.id]);
+      expect(selectedRoleNames()).toEqual(['Operators']);
     });
 
-    it('should keep the selected roles when the roles dialog confirms them', async () => {
-      await setUp();
+    it('should count the selected roles', async () => {
+      await setUp(user.id);
+      const translateService = TestBed.inject(TranslateService);
+      translateService.setTranslation('en', {
+        modules: {
+          'user-management': {
+            pages: { 'user-form': { roles: { 'selected-count': '{{selected}} of {{total}}' } } },
+          },
+        },
+      });
+      translateService.use('en');
+      await fixture.whenStable();
+      expect(element.textContent).toContain('1 of 3');
 
-      await closeRolesDialogWith([role.id]);
-      await press('roles');
+      await toggleRole('ADMIN');
 
-      expect(roleIdsPassedToRolesDialog()).toEqual([role.id]);
+      expect(element.textContent).toContain('2 of 3');
     });
 
-    it('should clear the roles when the roles dialog confirms an empty selection', async () => {
-      await setUp();
-      await closeRolesDialogWith([role.id]);
+    it('should save the roles toggled in the list', async () => {
+      await setUp(user.id);
 
-      await closeRolesDialogWith([]);
-      await press('roles');
+      await toggleRole('Operators');
+      await toggleRole('ADMIN');
+      await click(button(SAVE));
 
-      expect(roleIdsPassedToRolesDialog()).toEqual([]);
-    });
-
-    it('should keep the previous roles when the roles dialog is closed without confirming', async () => {
-      await setUp();
-      await closeRolesDialogWith([role.id]);
-
-      await closeRolesDialogWith(undefined);
-      await press('roles');
-
-      expect(roleIdsPassedToRolesDialog()).toEqual([role.id]);
+      expect(userService.updateUser).toHaveBeenCalledWith(
+        user.id,
+        expect.objectContaining({ roleIds: [adminRole.id] }),
+      );
     });
   });
 });

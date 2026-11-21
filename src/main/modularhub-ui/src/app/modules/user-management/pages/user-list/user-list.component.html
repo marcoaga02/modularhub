@@ -1,109 +1,148 @@
-<div class="flex flex-col h-full w-full px-15 py-8 gap-4">
-  <div class="flex flex-row justify-between items-center">
+<div class="flex flex-wrap items-center justify-between gap-4">
+  <div class="flex items-center gap-3">
+    <h1 class="text-2xl font-semibold">
+      {{ 'modules.user-management.pages.user-list.title' | translate }}
+    </h1>
+    <p-badge [value]="totalRecords()" class="bg-accent-subtle text-accent" />
+  </div>
+  <div class="flex flex-wrap items-center gap-3">
     <p-iconfield>
       <p-inputicon class="pi pi-search" />
       <input
+        pInputText
         [(ngModel)]="criteria.filter.text"
         (ngModelChange)="filterSubject.next()"
-        pInputText
         [placeholder]="'modules.user-management.pages.user-list.filter-placeholder' | translate"
+        [attr.aria-label]="'modules.user-management.pages.user-list.filter-placeholder' | translate"
       />
     </p-iconfield>
-    <div class="flex flex-row gap-3">
-      <p-button
-        [label]="'general.button.label.add' | translate | uppercase"
-        (onClick)="onAddButtonClick()"
-      />
-      <p-button
-        [label]="'general.button.label.edit' | translate | uppercase"
-        (onClick)="onEditButtonClick()"
-        [disabled]="!singleUserSelected()"
-      />
-      <p-button
-        [label]="'general.button.label.delete' | translate | uppercase"
-        (onClick)="onDeleteButtonClick()"
-        [disabled]="!isDeleteButtonEnabled()"
-        [pTooltip]="
-          isCurrentAccountSelected()
-            ? ('modules.user-management.pages.user-list.delete-button-tooltip' | translate)
-            : ''
-        "
-        tooltipPosition="bottom"
-      />
-    </div>
+    <p-button
+      icon="pi pi-plus"
+      [label]="'modules.user-management.pages.user-list.new-user' | translate"
+      (onClick)="onAddClick()"
+    />
   </div>
-  <div class="flex flex-row flex-1 min-h-0" [ngClass]="{ 'gap-4': singleUserSelected() }">
-    <div class="flex flex-col flex-1 min-h-0 min-w-0">
-      <p-table
-        class="h-full w-full border rounded-xl self-start overflow-hidden"
-        [value]="users()"
-        [lazy]="true"
-        [loading]="loading()"
-        [totalRecords]="totalRecords()"
-        [rows]="criteria.limit"
-        (onLazyLoad)="onLazyLoad($event)"
-        [(selection)]="selectedUsers"
-        [scrollable]="true"
-        [paginator]="true"
-        [(first)]="first"
-        scrollHeight="flex"
-        selectionMode="multiple"
-        stripedRows
-        showGridlines
-        rowHover
-        dataKey="id"
-        tableStyleClass="table-fixed"
-        [pt]="tablePT"
-      >
-        <ng-template pTemplate="header">
-          <tr>
-            <th class="w-16">
-              <p-tableHeaderCheckbox />
-            </th>
-            <th class="uppercase">
-              {{ 'model.user.lastname' | translate }}
-            </th>
-            <th class="uppercase">
-              {{ 'model.user.firstname' | translate }}
-            </th>
-            <th class="uppercase">
-              {{ 'model.user.username' | translate }}
-            </th>
-            <th class="uppercase">
-              {{ 'model.user.email' | translate }}
-            </th>
-            <th class="uppercase">
-              {{ 'model.user.enabled.label' | translate }}
-            </th>
-          </tr>
-        </ng-template>
-        <ng-template [appTableRow]="users()" pTemplate="body" let-user>
-          <tr [pSelectableRow]="user">
-            <td>
-              <p-tableCheckbox [value]="user" />
-            </td>
-            <td>{{ user.lastname }}</td>
-            <td>{{ user.firstname }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.email }}</td>
-            <td>
-              @if (user.enabled) {
-                <i class="pi pi-check-circle text-green-500"></i>
-              } @else {
-                <i class="pi pi-times-circle text-red-500"></i>
+</div>
+
+<div class="flex min-h-0 flex-1 items-start">
+  @if (isEmpty()) {
+    <div
+      class="flex flex-1 flex-col items-center gap-3 rounded-xl border bg-content px-6 py-12 text-center"
+    >
+      <i class="pi pi-users text-3xl text-muted"></i>
+      <div class="flex flex-col gap-1">
+        <h2 class="font-semibold">
+          {{ 'modules.user-management.pages.user-list.empty.title' | translate }}
+        </h2>
+        <p class="text-sm text-muted">
+          {{
+            (criteria.filter.text
+              ? 'modules.user-management.pages.user-list.empty.filtered'
+              : 'modules.user-management.pages.user-list.empty.no-users'
+            ) | translate
+          }}
+        </p>
+      </div>
+      @if (criteria.filter.text) {
+        <p-button
+          icon="pi pi-filter-slash"
+          severity="secondary"
+          [outlined]="true"
+          [label]="'modules.user-management.pages.user-list.empty.clear-filters' | translate"
+          (onClick)="onClearFiltersClick()"
+        />
+      } @else {
+        <p-button
+          icon="pi pi-plus"
+          [label]="'modules.user-management.pages.user-list.new-user' | translate"
+          (onClick)="onAddClick()"
+        />
+      }
+    </div>
+  }
+  <div
+    class="@container max-h-full min-w-68 flex-1 overflow-auto rounded-xl border bg-content"
+    [class.hidden]="isEmpty()"
+  >
+    <p-table
+      [value]="users()"
+      [lazy]="true"
+      [loading]="loading()"
+      [totalRecords]="totalRecords()"
+      [rows]="criteria.limit"
+      (onLazyLoad)="onLazyLoad($event)"
+      selectionMode="single"
+      [(selection)]="selectedUser"
+      dataKey="id"
+      [paginator]="totalRecords() > criteria.limit"
+      [(first)]="first"
+      [rowHover]="true"
+    >
+      <ng-template #header>
+        <tr>
+          <th>{{ 'modules.user-management.pages.user-list.columns.user' | translate }}</th>
+          <th class="hidden @xl:table-cell">{{ 'model.user.email' | translate }}</th>
+          <th class="hidden @3xl:table-cell">{{ 'model.user.roles' | translate }}</th>
+          <th class="hidden @sm:table-cell">
+            {{ 'modules.user-management.pages.user-list.columns.status' | translate }}
+          </th>
+        </tr>
+      </ng-template>
+      <ng-template #body [appTableRow]="users()" let-user>
+        <tr [pSelectableRow]="user" class="cursor-pointer">
+          <td>
+            <div class="flex min-w-56 items-center gap-3">
+              <p-avatar
+                [label]="getInitials(user.firstname, user.lastname)"
+                shape="circle"
+                class="shrink-0"
+                [class]="
+                  user.id === selectedUser()?.id
+                    ? 'bg-primary text-on-primary'
+                    : 'bg-content-hover text-muted'
+                "
+              />
+              <div class="flex min-w-0 flex-col">
+                <span class="truncate font-medium">
+                  {{ getFullName(user.firstname, user.lastname) }}
+                </span>
+                <span class="truncate text-sm text-muted">{{ user.username }}</span>
+              </div>
+            </div>
+          </td>
+          <td class="hidden @xl:table-cell">
+            <span class="break-all">{{ user.email }}</span>
+          </td>
+          <td class="hidden @3xl:table-cell">
+            <div class="flex flex-wrap gap-1">
+              @for (role of user.roles; track role.id) {
+                <p-tag [value]="role.name" severity="secondary" class="border bg-content" />
               }
-            </td>
-          </tr>
-        </ng-template>
-        <ng-template #emptymessage>
-          <tr>
-            <td colspan="6">
-              {{ 'modules.user-management.pages.user-list.empty-message' | translate }}
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-    </div>
-    <app-user-detail [isOpen]="singleUserSelected()" [userId]="selectedUserId()" />
+            </div>
+          </td>
+          <td class="hidden @sm:table-cell">
+            <p-tag
+              [value]="'model.user.enabled.' + user.enabled | translate"
+              [severity]="user.enabled ? 'success' : 'secondary'"
+            />
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
   </div>
+
+  @if (selectedUser(); as user) {
+    <div
+      class="flex max-h-full w-110 shrink-0 justify-end overflow-hidden transition-[width,opacity] duration-300 ease-out starting:w-0 starting:opacity-0"
+      animate.leave="w-0! opacity-0"
+    >
+      <app-user-detail
+        class="w-104 shrink-0"
+        [user]="user"
+        (edit)="onEdit($event)"
+        (remove)="onRemove($event)"
+        (dismiss)="selectedUser.set(null)"
+      />
+    </div>
+  }
 </div>

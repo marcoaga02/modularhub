@@ -1,29 +1,33 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NgClass, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { BehaviorSubject, debounceTime, retry, Subject } from 'rxjs';
+import { debounceTime, retry, Subject } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { TableLazyLoadEvent, TableModule, TablePassThrough } from 'primeng/table';
+import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { InputText } from 'primeng/inputtext';
 import { Button } from 'primeng/button';
 import { InputIcon } from 'primeng/inputicon';
 import { IconField } from 'primeng/iconfield';
-import { Tooltip } from 'primeng/tooltip';
+import { Avatar } from 'primeng/avatar';
+import { Tag } from 'primeng/tag';
+import { Badge } from 'primeng/badge';
 import { DialogService } from 'primeng/dynamicdialog';
 import { MessageService } from 'primeng/api';
 import { UserService } from 'app/modules/user-management/api/services/user.service';
 import { UserResponse } from 'app/modules/user-management/api/generated';
 import { UserCriteria } from 'app/modules/user-management/api/user-criteria';
-import { UserFormComponent } from 'app/modules/user-management/pages/user-form/user-form.component';
-import { UserFormFooterComponent } from 'app/modules/user-management/pages/user-form/user-form-footer/user-form-footer.component';
+import {
+  UserFormComponent,
+  UserFormConfig,
+} from 'app/modules/user-management/pages/user-form/user-form.component';
 import { UserDetailComponent } from 'app/modules/user-management/pages/user-detail/user-detail.component';
 import { AccountService } from 'app/core/api/services/account.service';
 import { HttpHeader } from 'app/core/api/http-header';
 import { MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS } from 'app/core/utils/constants/retry';
+import { FORM_DIALOG_CONFIG } from 'app/core/utils/constants/dialog';
 import { TableRowDirective } from 'app/core/utils/directives/table-row.directive';
 import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
-import { getFullName } from 'app/core/utils/functions/person-name';
+import { getFullName, getInitials } from 'app/core/utils/functions/person-name';
 
 @Component({
   selector: 'app-user-list',
@@ -33,16 +37,16 @@ import { getFullName } from 'app/core/utils/functions/person-name';
     TableRowDirective,
     InputText,
     Button,
-    UpperCasePipe,
     InputIcon,
     IconField,
+    Avatar,
+    Tag,
+    Badge,
     UserDetailComponent,
     FormsModule,
-    NgClass,
-    Tooltip,
   ],
   templateUrl: './user-list.component.html',
-  styleUrl: './user-list.component.css',
+  host: { class: 'flex h-full flex-col gap-6' },
 })
 export class UserListComponent {
   private readonly dialogService = inject(DialogService);
@@ -52,29 +56,15 @@ export class UserListComponent {
   private readonly userService = inject(UserService);
   private readonly accountService = inject(AccountService);
 
-  protected readonly tablePT: TablePassThrough = {
-    thead: {
-      class: '[&_th]:overflow-hidden [&_th]:text-ellipsis [&_th]:whitespace-nowrap',
-    },
-    tbody: {
-      class: '[&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:whitespace-nowrap',
-    },
-  };
+  protected readonly getFullName = getFullName;
+  protected readonly getInitials = getInitials;
 
   protected readonly loading = signal(true);
   protected readonly users = signal<UserResponse[]>([]);
-  protected readonly selectedUsers = signal<UserResponse[]>([]);
+  protected readonly selectedUser = signal<UserResponse | null>(null);
   protected readonly totalRecords = signal(0);
   protected readonly first = signal(0);
-
-  protected readonly singleUserSelected = computed(() => this.selectedUsers().length === 1);
-  protected readonly selectedUserId = computed(() => this.selectedUsers()[0]?.id);
-  protected readonly isCurrentAccountSelected = computed(() =>
-    this.selectedUsers().some((u) => u.username === this.accountService.account()?.username),
-  );
-  protected readonly isDeleteButtonEnabled = computed(
-    () => this.selectedUsers().length > 0 && !this.isCurrentAccountSelected(),
-  );
+  protected readonly isEmpty = computed(() => !this.loading() && this.totalRecords() === 0);
 
   protected readonly filterSubject = new Subject<void>();
   protected readonly criteria = new UserCriteria(0, 20);
@@ -100,7 +90,11 @@ export class UserListComponent {
       .pipe(retry({ count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS }))
       .subscribe({
         next: (response) => {
-          this.users.set(response.body ?? []);
+          const users = response.body ?? [];
+          this.users.set(users);
+          this.selectedUser.update(
+            (selected) => selected && (users.find((u) => u.id === selected.id) ?? null),
+          );
           this.totalRecords.set(Number(response.headers.get(HttpHeader.TotalCount)));
           this.loading.set(false);
         },
@@ -108,91 +102,73 @@ export class UserListComponent {
       });
   }
 
-  protected onAddButtonClick() {
-    this.openUserFormDialog();
-  }
-
-  protected onEditButtonClick() {
-    this.openUserFormDialog(this.selectedUsers()[0]);
-  }
-
-  private openUserFormDialog(user?: UserResponse) {
-    let header: string;
-    let detail: string;
-
-    if (user) {
-      header = this.translateService.instant('modules.user-management.pages.user-form.edit-title', {
-        fullName: getFullName(user.firstname, user.lastname),
-      });
-      detail = this.translateService.instant(
-        'modules.user-management.pages.user-list.edit-message',
-      );
-    } else {
-      header = this.translateService.instant(
-        'modules.user-management.pages.user-form.creation-title',
-      );
-      detail = this.translateService.instant(
-        'modules.user-management.pages.user-list.creation-message',
-      );
-    }
-
-    this.dialogService
-      .open(UserFormComponent, {
-        header,
-        width: '60vw',
-        data: {
-          buttonClick: new Subject<string>(),
-          formValid: new BehaviorSubject(false),
-          userId: user?.id,
-        },
-        templates: {
-          footer: UserFormFooterComponent,
-        },
-      })
-      ?.onClose.subscribe((result: UserResponse | undefined) => {
-        if (!result) {
-          return;
-        }
-
-        if (user && user.username === this.accountService.account()?.username) {
-          this.accountService.reload();
-        }
-
-        this.messageService.add({ severity: 'success', detail });
-        this.reset();
-      });
-  }
-
-  private reset() {
-    this.selectedUsers.set([]);
+  private loadFirstPage() {
     this.criteria.offset = 0;
     this.first.set(0);
 
     this.loadPage();
   }
 
-  protected onDeleteButtonClick() {
+  protected onClearFiltersClick() {
+    this.criteria.filter.text = '';
+    this.loadFirstPage();
+  }
+
+  protected onAddClick() {
+    this.dialogService
+      .open<UserFormComponent, UserFormConfig>(UserFormComponent, {
+        ...FORM_DIALOG_CONFIG,
+        data: {},
+      })
+      ?.onClose.subscribe((created: UserResponse | undefined) => {
+        if (!created) {
+          return;
+        }
+
+        this.showSuccess('modules.user-management.pages.user-list.creation-message');
+        this.loadFirstPage();
+      });
+  }
+
+  protected onEdit(user: UserResponse) {
+    this.dialogService
+      .open<UserFormComponent, UserFormConfig>(UserFormComponent, {
+        ...FORM_DIALOG_CONFIG,
+        data: { userId: user.id },
+      })
+      ?.onClose.subscribe((updated: UserResponse | undefined) => {
+        if (!updated) {
+          return;
+        }
+
+        if (user.username === this.accountService.account()?.username) {
+          this.accountService.reload();
+        }
+
+        this.showSuccess('modules.user-management.pages.user-list.edit-message');
+        this.loadPage();
+      });
+  }
+
+  protected onRemove(user: UserResponse) {
     this.confirmDialog.confirm(
       'modules.user-management.pages.user-list.confirmation-delete-dialog.title',
       'modules.user-management.pages.user-list.confirmation-delete-dialog.message',
-      () => this.deleteSelectedUsers(),
+      () => this.deleteUser(user),
     );
   }
 
-  private deleteSelectedUsers() {
-    this.userService.deleteUsers(this.selectedUsers()).subscribe({
+  private deleteUser(user: UserResponse) {
+    this.userService.deleteUser(user.id).subscribe({
       next: () => {
-        this.selectedUsers.set([]);
-        this.messageService.add({
-          severity: 'success',
-          summary: this.translateService.instant(
-            'modules.user-management.pages.user-list.delete-message',
-          ),
-        });
-
+        this.showSuccess('modules.user-management.pages.user-list.delete-message');
         this.loadPage();
       },
       error: () => this.loadPage(),
     });
+  }
+
+  private showSuccess(key: string) {
+    this.messageService.add({ severity: 'success', detail: this.translateService.instant(key) });
   }
 }

@@ -1,174 +1,373 @@
-@if (!loading()) {
-  <div class="w-full h-full flex flex-row gap-10 px-6 pb-2" [formGroup]="userForm">
-    <div class="flex flex-col gap-4 w-1/2">
-      <div class="flex flex-col w-full gap-2">
-        <label for="firstname" class="italic pl-1"
-          >{{ 'model.user.firstname' | translate }} *</label
-        >
-        <input
-          id="firstname"
-          pInputText
-          formControlName="firstname"
-          class="w-full"
-          [ngClass]="{
-            'p-invalid': userForm.get('firstname')?.invalid && userForm.get('firstname')?.touched,
-          }"
-        />
-      </div>
-      <div class="flex flex-col w-full gap-2">
-        <label for="lastname" class="italic pl-1">{{ 'model.user.lastname' | translate }} *</label>
-        <input
-          id="lastname"
-          pInputText
-          formControlName="lastname"
-          class="w-full"
-          [ngClass]="{
-            'p-invalid': userForm.get('lastname')?.invalid && userForm.get('lastname')?.touched,
-          }"
-        />
-      </div>
-      <div class="flex flex-col w-full gap-2">
-        <label for="tax-id-number" class="italic pl-1"
-          >{{ 'model.user.tax-id-number' | translate }} *</label
-        >
-        <input
-          id="tax-id-number"
-          pInputText
-          formControlName="taxIdNumber"
-          class="w-full"
-          [ngClass]="{
-            'p-invalid':
-              userForm.get('taxIdNumber')?.invalid && userForm.get('taxIdNumber')?.touched,
-          }"
-        />
-      </div>
-      <div class="flex flex-col w-full gap-2">
-        <label for="mobile-number" class="italic pl-1"
-          >{{ 'model.user.mobile-number' | translate }} *</label
-        >
-        <input
-          id="mobile-number"
-          pInputText
-          formControlName="mobileNumber"
-          class="w-full"
-          [ngClass]="{
-            'p-invalid':
-              userForm.get('mobileNumber')?.invalid && userForm.get('mobileNumber')?.touched,
-          }"
-        />
-      </div>
-      <div class="flex items-center gap-2 pt-2">
-        <p-checkbox id="enabled" formControlName="enabled" [binary]="true" />
-        <label for="enabled" class="italic pl-1">{{
-          'model.user.enabled.label' | translate
-        }}</label>
-      </div>
-    </div>
-    <div class="flex flex-col gap-4 w-1/2">
-      <div class="flex flex-col w-full gap-2">
-        <label for="email" class="italic pl-1">{{ 'model.user.email' | translate }} *</label>
-        <input
-          id="email"
-          pInputText
-          formControlName="email"
-          class="w-full"
-          [ngClass]="{
-            'p-invalid': userForm.get('email')?.invalid && userForm.get('email')?.touched,
-          }"
-        />
-      </div>
-      <div class="flex flex-col w-full gap-2">
-        <label for="username" class="italic pl-1">{{ 'model.user.username' | translate }} *</label>
-        <input
-          id="username"
-          pInputText
-          formControlName="username"
-          class="w-full"
-          [ngClass]="{
-            'p-invalid': userForm.get('username')?.invalid && userForm.get('username')?.touched,
-          }"
-        />
-      </div>
-      <div class="flex flex-col w-full gap-2">
-        <label for="password" class="italic pl-1">
-          {{ 'model.user.password' | translate }} *
+<header class="flex shrink-0 items-center gap-3 border-b px-6 py-4">
+  @if (userEdited(); as user) {
+    <p-avatar [label]="initials()" shape="circle" size="large" />
+  }
+  <div class="flex min-w-0 flex-1 flex-col">
+    <h2 class="text-lg font-semibold">
+      {{
+        (isUserEdit
+          ? 'modules.user-management.pages.user-form.edit-title'
+          : 'modules.user-management.pages.user-form.creation-title'
+        ) | translate
+      }}
+    </h2>
+    @if (userEdited(); as user) {
+      <span class="truncate text-sm text-muted">{{ fullName() }} · {{ user.username }}</span>
+    }
+  </div>
+  @if (!loading()) {
+    <div class="flex items-center gap-3">
+      <div class="flex flex-col items-end">
+        <label for="enabled" class="text-sm font-medium">
+          {{ 'model.user.enabled.label' | translate }}
         </label>
-        <div class="flex gap-5">
-          <p-password
-            class="flex-1"
-            fluid
-            id="password"
-            formControlName="password"
-            variant="filled"
-            [placeholder]="isUserEdit() ? '********' : ''"
-            [toggleMask]="true"
-            [ngClass]="{
-              'p-invalid': userForm.get('password')?.invalid && userForm.get('password')?.touched,
-            }"
+        <span class="text-xs text-muted">
+          {{ 'modules.user-management.pages.user-form.enabled-hint.' + enabled() | translate }}
+        </span>
+      </div>
+      <p-toggleswitch inputId="enabled" [formControl]="userForm.controls.enabled" />
+    </div>
+  }
+  <p-button
+    icon="pi pi-times"
+    severity="secondary"
+    [text]="true"
+    [rounded]="true"
+    [ariaLabel]="'general.button.label.close' | translate"
+    (onClick)="onCancelClick()"
+  />
+</header>
+
+<div class="min-h-0 flex-1 overflow-y-auto">
+  @if (loading()) {
+    <div class="flex justify-center p-10">
+      <p-progress-spinner />
+    </div>
+  } @else {
+    <form class="flex flex-col gap-2 px-6 py-4" [formGroup]="userForm">
+      <p-divider align="left">
+        <app-section-title icon="pi pi-id-card">{{
+          'modules.user-management.pages.user-form.sections.personal-details' | translate
+        }}</app-section-title>
+      </p-divider>
+      <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+        <div class="flex flex-col gap-1.5">
+          <label for="firstname" class="text-sm font-medium">
+            {{ 'model.user.firstname' | translate }} <span class="text-danger">*</span>
+          </label>
+          <input
+            id="firstname"
+            pInputText
+            formControlName="firstname"
+            [placeholder]="
+              'modules.user-management.pages.user-form.placeholders.firstname' | translate
+            "
+            [invalid]="!!errorOf('firstname')"
           />
-          @if (isUserEdit()) {
-            <p-button
-              [label]="'modules.user-management.pages.user-form.reset-password.label' | translate"
-              [pTooltip]="
-                'modules.user-management.pages.user-form.reset-password.tooltip-message' | translate
-              "
-              (onClick)="onResetPasswordClick()"
-            />
+          @if (errorOf('firstname'); as error) {
+            <p-message severity="error" size="small" variant="simple">{{
+              error | translate
+            }}</p-message>
           }
         </div>
-        <div class="flex flex-row w-full justify-between">
-          <div class="flex flex-col gap-2 w-2/3">
-            <label for="language" class="italic pl-1"
-              >{{ 'model.user.language' | translate }} *</label
-            >
-            <p-select
-              id="language"
-              [options]="languages"
-              formControlName="language"
-              appendTo="body"
-              [placeholder]="
-                'modules.user-management.pages.user-form.select-language-placeholder' | translate
-              "
-              [ngClass]="{
-                'p-invalid': userForm.get('language')?.invalid && userForm.get('language')?.touched,
-              }"
-            >
-              <ng-template #selectedItem let-language>
-                {{ 'model.language.' + language | translate }}
-              </ng-template>
-              <ng-template #item let-language>
-                {{ 'model.language.' + language | translate }}
-              </ng-template>
-            </p-select>
-          </div>
-          <div class="flex flex-col gap-2 pt-6 pr-2">
-            <div class="flex items-center gap-2">
-              <p-radio-button
-                id="gender-male"
-                formControlName="gender"
-                value="M"
-                variant="filled"
-                [ngClass]="{
-                  'p-invalid': userForm.get('gender')?.invalid && userForm.get('gender')?.touched,
-                }"
-              ></p-radio-button>
-              <label for="gender-male">{{ 'model.gender.male' | translate }}</label>
-            </div>
-            <div class="flex items-center gap-2">
-              <p-radio-button
-                id="gender-female"
-                formControlName="gender"
-                value="F"
-                variant="filled"
-                [ngClass]="{
-                  'p-invalid': userForm.get('gender')?.invalid && userForm.get('gender')?.touched,
-                }"
-              ></p-radio-button>
-              <label for="gender-female">{{ 'model.gender.female' | translate }}</label>
-            </div>
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="lastname" class="text-sm font-medium">
+            {{ 'model.user.lastname' | translate }} <span class="text-danger">*</span>
+          </label>
+          <input
+            id="lastname"
+            pInputText
+            formControlName="lastname"
+            [placeholder]="
+              'modules.user-management.pages.user-form.placeholders.lastname' | translate
+            "
+            [invalid]="!!errorOf('lastname')"
+          />
+          @if (errorOf('lastname'); as error) {
+            <p-message severity="error" size="small" variant="simple">{{
+              error | translate
+            }}</p-message>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="tax-id-number" class="text-sm font-medium">
+            {{ 'model.user.tax-id-number' | translate }} <span class="text-danger">*</span>
+          </label>
+          <input
+            id="tax-id-number"
+            pInputText
+            formControlName="taxIdNumber"
+            [placeholder]="
+              'modules.user-management.pages.user-form.placeholders.tax-id-number' | translate
+            "
+            [invalid]="!!errorOf('taxIdNumber')"
+          />
+          @if (errorOf('taxIdNumber'); as error) {
+            <p-message severity="error" size="small" variant="simple">{{
+              error | translate
+            }}</p-message>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="mobile-number" class="text-sm font-medium">
+            {{ 'model.user.mobile-number' | translate }} <span class="text-danger">*</span>
+          </label>
+          <input
+            id="mobile-number"
+            pInputText
+            formControlName="mobileNumber"
+            inputmode="numeric"
+            [placeholder]="
+              'modules.user-management.pages.user-form.placeholders.mobile-number' | translate
+            "
+            [invalid]="!!errorOf('mobileNumber')"
+          />
+          @if (errorOf('mobileNumber'); as error) {
+            <p-message severity="error" size="small" variant="simple">{{
+              error | translate
+            }}</p-message>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <span id="gender-label" class="text-sm font-medium">
+            {{ 'model.user.gender' | translate }} <span class="text-danger">*</span>
+          </span>
+          <p-selectbutton
+            id="gender"
+            formControlName="gender"
+            [options]="genders"
+            optionValue="value"
+            [allowEmpty]="false"
+            ariaLabelledBy="gender-label"
+            fluid
+            [invalid]="!!errorOf('gender')"
+          >
+            <ng-template #item let-option>
+              {{ option.label | translate }}
+            </ng-template>
+          </p-selectbutton>
+          @if (errorOf('gender'); as error) {
+            <p-message severity="error" size="small" variant="simple">{{
+              error | translate
+            }}</p-message>
+          }
         </div>
       </div>
-    </div>
+
+      <p-divider align="left">
+        <app-section-title icon="pi pi-user">{{
+          'modules.user-management.pages.user-form.sections.account' | translate
+        }}</app-section-title>
+      </p-divider>
+      <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+        <div class="flex flex-col gap-1.5">
+          <label for="email" class="text-sm font-medium">
+            {{ 'model.user.email' | translate }} <span class="text-danger">*</span>
+          </label>
+          <input
+            id="email"
+            pInputText
+            formControlName="email"
+            type="email"
+            [placeholder]="'modules.user-management.pages.user-form.placeholders.email' | translate"
+            [invalid]="!!errorOf('email')"
+          />
+          @if (errorOf('email'); as error) {
+            <p-message severity="error" size="small" variant="simple">{{
+              error | translate
+            }}</p-message>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="username" class="text-sm font-medium">
+            {{ 'model.user.username' | translate }} <span class="text-danger">*</span>
+          </label>
+          <input
+            id="username"
+            pInputText
+            formControlName="username"
+            [placeholder]="
+              'modules.user-management.pages.user-form.placeholders.username' | translate
+            "
+            [invalid]="!!errorOf('username')"
+          />
+          @if (errorOf('username'); as error) {
+            <p-message severity="error" size="small" variant="simple">{{
+              error | translate
+            }}</p-message>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="language" class="text-sm font-medium">
+            {{ 'model.user.language' | translate }} <span class="text-danger">*</span>
+          </label>
+          <p-select
+            inputId="language"
+            [options]="languages"
+            formControlName="language"
+            appendTo="body"
+            [placeholder]="
+              'modules.user-management.pages.user-form.select-language-placeholder' | translate
+            "
+            [invalid]="!!errorOf('language')"
+          >
+            <ng-template #selectedItem let-language>
+              {{ 'model.language.' + language | translate }}
+            </ng-template>
+            <ng-template #item let-language>
+              {{ 'model.language.' + language | translate }}
+            </ng-template>
+          </p-select>
+          @if (errorOf('language'); as error) {
+            <p-message severity="error" size="small" variant="simple">{{
+              error | translate
+            }}</p-message>
+          }
+        </div>
+      </div>
+
+      <p-divider align="left">
+        <app-section-title icon="pi pi-lock">{{
+          'modules.user-management.pages.user-form.sections.security' | translate
+        }}</app-section-title>
+      </p-divider>
+      @if (isUserEdit) {
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex min-w-0 flex-col">
+            <span class="text-sm font-medium">{{ 'model.user.password' | translate }}</span>
+            <span class="text-xs text-muted">
+              {{ 'modules.user-management.pages.user-form.reset-password.description' | translate }}
+            </span>
+          </div>
+          <p-button
+            class="shrink-0"
+            icon="pi pi-refresh"
+            severity="warn"
+            [outlined]="true"
+            [label]="'modules.user-management.reset-password.label' | translate"
+            (onClick)="onResetPasswordClick()"
+          />
+        </div>
+      } @else {
+        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+          <div class="flex flex-col gap-1.5">
+            <label for="password" class="text-sm font-medium">
+              {{ 'model.user.password' | translate }} <span class="text-danger">*</span>
+            </label>
+            <p-password
+              inputId="password"
+              formControlName="password"
+              [feedback]="false"
+              [toggleMask]="true"
+              fluid
+              [placeholder]="
+                'modules.user-management.pages.user-form.placeholders.password' | translate
+              "
+              [invalid]="!!errorOf('password')"
+            />
+            @if (errorOf('password'); as error) {
+              <p-message severity="error" size="small" variant="simple">{{
+                error | translate
+              }}</p-message>
+            }
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label for="password-confirmation" class="text-sm font-medium">
+              {{ 'modules.user-management.pages.user-form.password-confirmation' | translate }}
+              <span class="text-danger">*</span>
+            </label>
+            <p-password
+              inputId="password-confirmation"
+              formControlName="passwordConfirmation"
+              [feedback]="false"
+              [toggleMask]="true"
+              fluid
+              [placeholder]="
+                'modules.user-management.pages.user-form.placeholders.password-confirmation'
+                  | translate
+              "
+              [invalid]="!!errorOf('passwordConfirmation')"
+            />
+            @if (errorOf('passwordConfirmation'); as error) {
+              <p-message severity="error" size="small" variant="simple">{{
+                error | translate
+              }}</p-message>
+            }
+          </div>
+        </div>
+      }
+
+      <p-divider align="left">
+        <app-section-title icon="pi pi-shield">{{
+          'model.user.roles' | translate
+        }}</app-section-title>
+      </p-divider>
+      <p-listbox
+        id="roles"
+        formControlName="roleIds"
+        [options]="roles()"
+        optionLabel="name"
+        optionValue="id"
+        [multiple]="true"
+        [checkbox]="true"
+        [metaKeySelection]="false"
+        [showToggleAll]="false"
+        [filter]="true"
+        [filterPlaceHolder]="
+          'modules.user-management.pages.user-form.roles.filter-placeholder' | translate
+        "
+        [emptyMessage]="'modules.user-management.pages.user-form.roles.empty' | translate"
+        scrollHeight="12rem"
+        fluid
+      >
+        <ng-template #item let-role>
+          <div class="flex w-full items-center justify-between gap-2">
+            <span>{{ role.name }}</span>
+            @if (role.system) {
+              <p-tag
+                [value]="'modules.user-management.pages.user-form.roles.system' | translate"
+                severity="secondary"
+              />
+            }
+          </div>
+        </ng-template>
+        <ng-template #footer>
+          <div class="border-t px-3 py-2 text-xs text-muted">
+            {{
+              'modules.user-management.pages.user-form.roles.selected-count'
+                | translate: { selected: selectedRolesCount(), total: roles().length }
+            }}
+          </div>
+        </ng-template>
+      </p-listbox>
+    </form>
+  }
+</div>
+
+<footer
+  class="flex shrink-0 items-center justify-between gap-4 border-t bg-content-hover px-6 py-3"
+>
+  <span class="text-sm text-muted">
+    <span class="text-danger">*</span>
+    {{ 'modules.user-management.pages.user-form.required-fields' | translate }}
+  </span>
+  <div class="flex gap-3">
+    <p-button
+      severity="secondary"
+      [outlined]="true"
+      [label]="'general.button.label.cancel' | translate"
+      (onClick)="onCancelClick()"
+    />
+    <p-button
+      [label]="
+        (isUserEdit
+          ? 'modules.user-management.pages.user-form.save'
+          : 'modules.user-management.pages.user-form.create'
+        ) | translate
+      "
+      [loading]="saving()"
+      [disabled]="loading()"
+      (onClick)="onSaveClick()"
+    />
   </div>
-}
+</footer>
