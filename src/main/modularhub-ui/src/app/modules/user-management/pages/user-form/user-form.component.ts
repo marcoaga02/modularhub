@@ -8,7 +8,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { retry } from 'rxjs';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { InputText } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { Password } from 'primeng/password';
@@ -22,7 +22,6 @@ import { Divider } from 'primeng/divider';
 import { Message } from 'primeng/message';
 import { ProgressSpinner } from 'primeng/progressspinner';
 import { SectionTitleComponent } from 'app/core/components/section-title/section-title.component';
-import { MessageService } from 'primeng/api';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { Gender, Language } from 'app/core/api/generated';
 import { UUID } from 'app/core/api/models/uuid';
@@ -38,6 +37,7 @@ import {
 } from 'app/modules/user-management/api/generated';
 import { UserService } from 'app/modules/user-management/api/services/user.service';
 import { RoleService } from 'app/modules/user-management/api/services/role.service';
+import { PasswordResetService } from 'app/modules/user-management/utils/services/password-reset.service';
 
 export type UserFormConfig = { userId?: UUID };
 
@@ -81,10 +81,9 @@ export class UserFormComponent {
   private readonly config = inject<DynamicDialogConfig<UserFormConfig>>(DynamicDialogConfig);
   private readonly ref = inject(DynamicDialogRef);
   private readonly confirmDialog = inject(ConfirmDialogService);
-  private readonly translateService = inject(TranslateService);
   private readonly userService = inject(UserService);
   private readonly roleService = inject(RoleService);
-  private readonly messageService = inject(MessageService);
+  private readonly passwordReset = inject(PasswordResetService);
 
   protected readonly userForm = this.formBuilder.nonNullable.group(
     {
@@ -276,24 +275,6 @@ export class UserFormComponent {
   }
 
   protected onResetPasswordClick() {
-    this.confirmDialog.confirm(
-      'modules.user-management.pages.user-form.reset-password.confirmation-title',
-      'modules.user-management.pages.user-form.reset-password.confirmation-message',
-      () => this.resetPassword(),
-    );
-  }
-
-  private resetPassword() {
-    this.userService.resetPassword(this.userEdited()!.id).subscribe({
-      next: () => {
-        this.messageService.add({
-          severity: 'success',
-          summary: this.translateService.instant(
-            'modules.user-management.pages.user-form.reset-password.success',
-          ),
-        });
-      },
-      error: () => undefined,
-    });
+    this.passwordReset.resetPassword(this.userEdited()!.id);
   }
 }

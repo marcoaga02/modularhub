@@ -68,7 +68,8 @@
         "delete": "Elimina",
         "edit": "Modifica",
         "save": "Salva",
-        "close": "Chiudi"
+        "close": "Chiudi",
+        "more": "Altre azioni"
       }
     },
     "error": "Errore",
@@ -129,12 +130,12 @@
       "description": "Gestione Utenti",
       "pages": {
         "user-detail": {
-          "account": "Account",
-          "personal-info": "Informazioni personali",
           "no-roles": "Nessun ruolo assegnato",
-          "delete-current-account": "Non puoi eliminare l'account con cui hai effettuato l'accesso",
-          "created": "Creato il {{date}} da {{user}}",
-          "updated": "Modificato il {{date}} da {{user}}"
+          "contacts": "Contatti",
+          "personal-details": "Dati anagrafici",
+          "access": "Accesso",
+          "history": "Cronologia",
+          "edit": "Modifica utente"
         },
         "user-form": {
           "confirmation-cancel-dialog": {
@@ -144,11 +145,6 @@
           "creation-title": "Nuovo utente",
           "edit-title": "Modifica utente",
           "reset-password": {
-            "confirmation-message": "Sei sicuro di voler inviare una mail all'utente per reimpostare la password?",
-            "confirmation-title": "Conferma reset password",
-            "label": "Reimposta password",
-            "success": "Email per reset della password inviata con successo",
-            "tooltip-message": "Invia un'email all'utente per cambiare la password",
             "description": "La password non viene mai mostrata. Il reset invia all'utente un link per sceglierne una nuova."
           },
           "select-language-placeholder": "Seleziona lingua",
@@ -206,6 +202,12 @@
             "status": "Stato"
           }
         }
+      },
+      "reset-password": {
+        "label": "Reimposta password",
+        "confirmation-title": "Conferma reset password",
+        "confirmation-message": "Sei sicuro di voler inviare una mail all'utente per reimpostare la password?",
+        "success": "Email per reset della password inviata con successo"
       }
     }
   },

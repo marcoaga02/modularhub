@@ -6,6 +6,7 @@ import { registerLocaleData } from '@angular/common';
 import localeIt from '@angular/common/locales/it';
 import { UserDetailComponent } from 'app/modules/user-management/pages/user-detail/user-detail.component';
 import { UserService } from 'app/modules/user-management/api/services/user.service';
+import { PasswordResetService } from 'app/modules/user-management/utils/services/password-reset.service';
 import { RoleSummary, UserResponse } from 'app/modules/user-management/api/generated';
 import { AccountService } from 'app/core/api/services/account.service';
 import { Account, Gender, Language } from 'app/core/api/generated';
@@ -52,9 +53,11 @@ describe('UserDetailComponent', () => {
   let fixture: ComponentFixture<UserDetailComponent>;
   let element: HTMLElement;
   let userService: { getUserById: ReturnType<typeof vi.fn> };
+  let passwordReset: { resetPassword: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     userService = { getUserById: vi.fn().mockReturnValue(of(loadedUser)) };
+    passwordReset = { resetPassword: vi.fn() };
   });
 
   afterEach(() => {
@@ -67,6 +70,7 @@ describe('UserDetailComponent', () => {
       providers: [
         provideTranslateService({ lang: 'en' }),
         { provide: UserService, useValue: userService },
+        { provide: PasswordResetService, useValue: passwordReset },
         { provide: AccountService, useValue: { account: signal(signedIn).asReadonly() } },
       ],
     }).compileComponents();
@@ -91,8 +95,31 @@ describe('UserDetailComponent', () => {
     )!;
   }
 
+  async function click(target: HTMLElement) {
+    target.click();
+    await fixture.whenStable();
+  }
+
+  async function openActions() {
+    await click(button('general.button.label.more'));
+  }
+
+  function content(item: HTMLElement): HTMLElement {
+    return item.querySelector<HTMLElement>('.p-menu-item-content')!;
+  }
+
+  function action(label: string): HTMLElement {
+    return Array.from(document.querySelectorAll<HTMLElement>('.p-menu-item')).find((item) =>
+      item.textContent?.includes(label),
+    )!;
+  }
+
   function auditText(): string | undefined {
-    return element.querySelector('footer')?.textContent ?? undefined;
+    return (
+      Array.from(element.querySelectorAll('section')).find((section) =>
+        section.textContent?.includes(`${DETAIL}.history`),
+      )?.textContent ?? undefined
+    );
   }
 
   it('should show the data of the user', async () => {
@@ -109,6 +136,8 @@ describe('UserDetailComponent', () => {
     expect(text).toContain('model.language.it');
     expect(text).toContain('model.user.enabled.true');
     expect(text).toContain('Operators');
+    expect(element.querySelector('a[href="mailto:mario@test.it"]')).not.toBeNull();
+    expect(element.querySelector('a[href="tel:3331234567"]')).not.toBeNull();
   });
 
   it('should show the no roles message when the user has no roles', async () => {
@@ -121,29 +150,21 @@ describe('UserDetailComponent', () => {
     await setUp();
 
     expect(userService.getUserById).toHaveBeenCalledWith(user.id);
-    expect(auditText()).toContain(`${DETAIL}.created`);
-    expect(auditText()).toContain(`${DETAIL}.updated`);
+    expect(auditText()).toContain('model.audit.created-on');
+    expect(auditText()).toContain('Admin');
+    expect(auditText()).toContain('model.audit.updated-on');
+    expect(auditText()).toContain('Luigi Verdi');
   });
 
-  it('should show who changed the user and when', async () => {
+  it('should show the dates of the audit in the current language', async () => {
     registerLocaleData(localeIt, 'it');
     await setUp();
-    const translateService = TestBed.inject(TranslateService);
-    translateService.setTranslation('it', {
-      modules: {
-        'user-management': {
-          pages: { 'user-detail': { created: '{{date}} {{user}}', updated: '{{date}} {{user}}' } },
-        },
-      },
-    });
 
-    translateService.use('it');
+    TestBed.inject(TranslateService).use('it');
     await fixture.whenStable();
 
     expect(auditText()).toContain('01/01/26');
-    expect(auditText()).toContain('Admin');
     expect(auditText()).toContain('02/01/26');
-    expect(auditText()).toContain('Luigi Verdi');
   });
 
   it('should show the system as author when the audit has no author', async () => {
@@ -153,8 +174,8 @@ describe('UserDetailComponent', () => {
 
     await setUp();
 
-    expect(auditText()).toContain(`${DETAIL}.created`);
-    expect(auditText()).not.toContain(`${DETAIL}.updated`);
+    expect(auditText()).toContain('model.audit.system');
+    expect(auditText()).not.toContain('model.audit.updated-on');
   });
 
   it('should not show the audit while it is loading', async () => {
@@ -206,27 +227,55 @@ describe('UserDetailComponent', () => {
     expect(element.querySelector('h2')!.textContent).toContain('marco rossi');
   });
 
-  it('should emit the user to edit, to remove and the dismiss request', async () => {
+  it('should emit the user to edit', async () => {
     await setUp();
     const edited: UserResponse[] = [];
-    const removed: UserResponse[] = [];
-    let dismissed = 0;
     fixture.componentInstance.edit.subscribe((u) => edited.push(u));
-    fixture.componentInstance.remove.subscribe((u) => removed.push(u));
-    fixture.componentInstance.dismiss.subscribe(() => dismissed++);
 
-    button('general.button.label.edit').click();
-    button('general.button.label.delete').click();
-    button('general.button.label.close').click();
+    button(`${DETAIL}.edit`).click();
 
     expect(edited).toEqual([user]);
-    expect(removed).toEqual([user]);
+  });
+
+  it('should emit the dismiss request when it is closed', async () => {
+    await setUp();
+    let dismissed = 0;
+    fixture.componentInstance.dismiss.subscribe(() => dismissed++);
+
+    button('general.button.label.close').click();
+
     expect(dismissed).toBe(1);
+  });
+
+  it('should ask to reset the password from the actions menu', async () => {
+    await setUp();
+    await openActions();
+
+    await click(content(action('modules.user-management.reset-password.label')));
+
+    expect(passwordReset.resetPassword).toHaveBeenCalledWith(user.id);
+  });
+
+  it('should emit the user to remove from the actions menu', async () => {
+    await setUp();
+    const removed: UserResponse[] = [];
+    fixture.componentInstance.remove.subscribe((u) => removed.push(u));
+    await openActions();
+
+    await click(content(action('general.button.label.delete')));
+
+    expect(removed).toEqual([user]);
   });
 
   it('should not allow to remove the account the user is signed in with', async () => {
     await setUp(user, { ...account, username: user.username });
+    const removed: UserResponse[] = [];
+    fixture.componentInstance.remove.subscribe((u) => removed.push(u));
+    await openActions();
 
-    expect(button('general.button.label.delete').disabled).toBe(true);
+    await click(content(action('general.button.label.delete')));
+
+    expect(action('general.button.label.delete').getAttribute('aria-disabled')).toBe('true');
+    expect(removed).toEqual([]);
   });
 });

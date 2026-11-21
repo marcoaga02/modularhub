@@ -46,6 +46,7 @@ import { getFullName, getInitials } from 'app/core/utils/functions/person-name';
     FormsModule,
   ],
   templateUrl: './user-list.component.html',
+  host: { class: 'flex h-full flex-col gap-6' },
 })
 export class UserListComponent {
   private readonly dialogService = inject(DialogService);

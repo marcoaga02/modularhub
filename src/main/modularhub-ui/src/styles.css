@@ -5,7 +5,9 @@
 
 @theme inline {
   --color-primary: var(--p-primary-color);
+  --color-on-primary: var(--p-primary-contrast-color);
   --color-accent: var(--p-accent-700);
+  --color-accent-subtle: var(--p-accent-100);
   --color-muted: var(--p-text-muted-color);
   --color-content: var(--p-content-background);
   --color-content-hover: var(--p-content-hover-background);

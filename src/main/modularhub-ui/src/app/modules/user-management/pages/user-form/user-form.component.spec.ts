@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { MessageService, ToastMessageOptions } from 'primeng/api';
 import { provideTranslateService, TranslateService } from '@ngx-translate/core';
 import { UserFormComponent } from 'app/modules/user-management/pages/user-form/user-form.component';
 import { RoleService } from 'app/modules/user-management/api/services/role.service';
@@ -10,12 +9,14 @@ import { RoleSummary, UserResponse } from 'app/modules/user-management/api/gener
 import { Gender, Language } from 'app/core/api/generated';
 import { UUID } from 'app/core/api/models/uuid';
 import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
+import { PasswordResetService } from 'app/modules/user-management/utils/services/password-reset.service';
 
 describe('UserFormComponent', () => {
   const FORM = 'modules.user-management.pages.user-form';
   const SAVE = `${FORM}.save`;
   const CREATE = `${FORM}.create`;
   const CANCEL = 'general.button.label.cancel';
+  const RESET_PASSWORD = 'modules.user-management.reset-password.label';
 
   const adminRole: RoleSummary = { id: 'admin-role-id' as UUID, name: 'ADMIN', system: true };
   const role: RoleSummary = { id: 'role-id' as UUID, name: 'Operators', system: false };
@@ -51,10 +52,9 @@ describe('UserFormComponent', () => {
     getUserById: ReturnType<typeof vi.fn>;
     createUser: ReturnType<typeof vi.fn>;
     updateUser: ReturnType<typeof vi.fn>;
-    resetPassword: ReturnType<typeof vi.fn>;
   };
   let confirmDialog: { confirm: ReturnType<typeof vi.fn> };
-  let messages: ToastMessageOptions[];
+  let passwordReset: { resetPassword: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     ref = new DynamicDialogRef();
@@ -64,9 +64,9 @@ describe('UserFormComponent', () => {
       getUserById: vi.fn().mockReturnValue(of(user)),
       createUser: vi.fn().mockReturnValue(of(user)),
       updateUser: vi.fn().mockReturnValue(of(user)),
-      resetPassword: vi.fn().mockReturnValue(of(undefined)),
     };
     confirmDialog = { confirm: vi.fn() };
+    passwordReset = { resetPassword: vi.fn() };
   });
 
   async function setUp(userId?: UUID) {
@@ -74,19 +74,14 @@ describe('UserFormComponent', () => {
       imports: [UserFormComponent],
       providers: [
         provideTranslateService(),
-        MessageService,
         { provide: ConfirmDialogService, useValue: confirmDialog },
         { provide: DynamicDialogConfig, useValue: { data: { userId } } },
         { provide: DynamicDialogRef, useValue: ref },
         { provide: RoleService, useValue: { getRoles: () => of([adminRole, role, otherRole]) } },
         { provide: UserService, useValue: userService },
+        { provide: PasswordResetService, useValue: passwordReset },
       ],
     }).compileComponents();
-
-    messages = [];
-    TestBed.inject(MessageService).messageObserver.subscribe((m) =>
-      messages.push(...(Array.isArray(m) ? m : [m])),
-    );
 
     fixture = TestBed.createComponent(UserFormComponent);
     element = fixture.nativeElement;
@@ -174,7 +169,7 @@ describe('UserFormComponent', () => {
       expect(element.querySelector('p-avatar')).toBeNull();
       expect(input('password').disabled).toBe(false);
       expect(input('password-confirmation').disabled).toBe(false);
-      expect(element.textContent).not.toContain(`${FORM}.reset-password.label`);
+      expect(element.textContent).not.toContain(RESET_PASSWORD);
       expect(enabledSwitch().checked).toBe(false);
       expect(element.textContent).toContain(`${FORM}.enabled-hint.false`);
       expect(button(CREATE)).toBeDefined();
@@ -332,26 +327,12 @@ describe('UserFormComponent', () => {
       expect(closedWith).toEqual([user]);
     });
 
-    it('should reset the password after confirmation and show a message', async () => {
+    it('should ask to reset the password of the edited user', async () => {
       await setUp(user.id);
 
-      await click(button(`${FORM}.reset-password.label`));
-      expect(confirmDialog.confirm).toHaveBeenCalledWith(
-        `${FORM}.reset-password.confirmation-title`,
-        `${FORM}.reset-password.confirmation-message`,
-        expect.any(Function),
-      );
-      expect(userService.resetPassword).not.toHaveBeenCalled();
+      await click(button(RESET_PASSWORD));
 
-      acceptConfirmation();
-
-      expect(userService.resetPassword).toHaveBeenCalledWith(user.id);
-      expect(messages).toEqual([
-        {
-          severity: 'success',
-          summary: `${FORM}.reset-password.success`,
-        },
-      ]);
+      expect(passwordReset.resetPassword).toHaveBeenCalledWith(user.id);
     });
   });
 

@@ -31,7 +31,7 @@ export class TopbarComponent {
       class: 'text-sm',
     },
     root: {
-      class: 'w-10 h-10 cursor-pointer',
+      class: 'cursor-pointer',
     },
   };
 

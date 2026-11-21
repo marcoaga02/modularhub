@@ -137,6 +137,16 @@ describe('UserListComponent', () => {
     await fixture.whenStable();
   }
 
+  function content(item: HTMLElement): HTMLElement {
+    return item.querySelector<HTMLElement>('.p-menu-item-content')!;
+  }
+
+  function menuItem(label: string): HTMLElement {
+    return Array.from(document.querySelectorAll<HTMLElement>('.p-menu-item')).find((item) =>
+      item.textContent?.includes(label),
+    )!;
+  }
+
   function lastCriteria(): UserCriteria {
     return userService.getUsers.mock.lastCall![0];
   }
@@ -266,7 +276,7 @@ describe('UserListComponent', () => {
       await setUp();
       await selectRow(1);
 
-      await click(button('general.button.label.edit', detail()!));
+      await click(button('modules.user-management.pages.user-detail.edit', detail()!));
 
       const config = dialogService.open.mock.lastCall![1];
       expect(config.data.userId).toBe(luigi.id);
@@ -275,7 +285,7 @@ describe('UserListComponent', () => {
     it('should reload the page and keep the detail updated when a user is edited', async () => {
       await setUp();
       await selectRow(1);
-      await click(button('general.button.label.edit', detail()!));
+      await click(button('modules.user-management.pages.user-detail.edit', detail()!));
       const updated = { ...luigi, email: 'luigi@new.it' };
       userService.getUsers.mockReturnValue(page([mario, updated]));
 
@@ -290,7 +300,7 @@ describe('UserListComponent', () => {
     it('should reload the current account when the current account is edited', async () => {
       await setUp();
       await selectRow(0);
-      await click(button('general.button.label.edit', detail()!));
+      await click(button('modules.user-management.pages.user-detail.edit', detail()!));
 
       formDialogClose.next(mario);
       await fixture.whenStable();
@@ -303,7 +313,8 @@ describe('UserListComponent', () => {
     it('should delete the user after confirmation, show a message and close the detail', async () => {
       await setUp();
       await selectRow(1);
-      await click(button('general.button.label.delete', detail()!));
+      await click(button('general.button.label.more', detail()!));
+      await click(content(menuItem('general.button.label.delete')));
       expect(confirmDialog.confirm).toHaveBeenCalledWith(
         `${LIST}.confirmation-delete-dialog.title`,
         `${LIST}.confirmation-delete-dialog.message`,

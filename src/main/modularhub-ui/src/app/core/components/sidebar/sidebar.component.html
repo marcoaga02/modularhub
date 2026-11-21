@@ -4,7 +4,7 @@
   [class.w-16]="!isOpen()"
 >
   <div class="flex h-14 shrink-0 items-center gap-3 border-b px-4">
-    <img src="/logo.svg" class="size-8 shrink-0" width="32" height="32" alt="" />
+    <img src="/logo.svg" class="size-8 shrink-0" alt="" />
     @if (isOpen()) {
       <span class="truncate font-semibold">ModularHub</span>
     }
@@ -16,13 +16,18 @@
         <a
           [routerLink]="['/', plugin.path]"
           routerLinkActive="bg-highlight text-on-highlight"
+          #link="routerLinkActive"
           class="flex h-10 items-center gap-3 rounded-lg px-3 hover:bg-content-hover"
+          [class.justify-center]="!isOpen()"
           [pTooltip]="isOpen() ? '' : (plugin.description | translate)"
           tooltipPosition="right"
         >
           <i class="shrink-0 text-lg" [class]="plugin.icon"></i>
           @if (isOpen()) {
-            <span class="truncate text-sm">{{ plugin.description | translate }}</span>
+            <span class="flex-1 truncate text-sm">{{ plugin.description | translate }}</span>
+            @if (link.isActive) {
+              <span class="size-1.5 shrink-0 rounded-full bg-accent"></span>
+            }
           }
         </a>
       </li>
@@ -33,6 +38,7 @@
     <button
       type="button"
       class="flex h-10 items-center gap-3 rounded-lg px-3 text-muted hover:bg-content-hover"
+      [class.justify-center]="!isOpen()"
       [pTooltip]="isOpen() ? '' : ('core.components.sidebar.expand' | translate)"
       tooltipPosition="right"
       (click)="toggle()"
@@ -49,6 +55,7 @@
     <button
       type="button"
       class="flex h-10 items-center gap-3 rounded-lg px-3 text-muted hover:bg-content-hover hover:text-danger"
+      [class.justify-center]="!isOpen()"
       [pTooltip]="isOpen() ? '' : ('general.logout.label' | translate)"
       tooltipPosition="right"
       (click)="logout()"

@@ -1,13 +1,21 @@
-<article class="flex flex-col rounded-xl border bg-content">
-  <header class="flex items-start gap-3 border-b p-5">
-    <p-avatar [label]="initials()" shape="circle" size="large" />
-    <div class="flex min-w-0 flex-1 flex-col items-start gap-1">
-      <h2 class="w-full truncate text-lg font-semibold">{{ fullName() }}</h2>
-      <span class="w-full truncate text-sm text-muted">{{ user().username }}</span>
-      <p-tag
-        [value]="'model.user.enabled.' + user().enabled | translate"
-        [severity]="user().enabled ? 'success' : 'secondary'"
-      />
+<article class="flex max-h-full min-h-0 flex-col rounded-xl border bg-content">
+  <header class="flex shrink-0 items-center gap-3 border-b p-5">
+    <p-avatar
+      [label]="initials()"
+      shape="circle"
+      size="large"
+      class="shrink-0 bg-primary text-on-primary"
+    />
+    <div class="flex min-w-0 flex-1 flex-col">
+      <div class="flex min-w-0 items-center gap-2">
+        <h2 class="truncate text-lg font-semibold">{{ fullName() }}</h2>
+        <p-tag
+          class="shrink-0"
+          [value]="'model.user.enabled.' + user().enabled | translate"
+          [severity]="user().enabled ? 'success' : 'secondary'"
+        />
+      </div>
+      <span class="truncate text-sm text-muted">{{ user().username }}</span>
     </div>
     <p-button
       icon="pi pi-times"
@@ -19,121 +27,113 @@
     />
   </header>
 
-  <div class="flex gap-2 border-b px-5 py-3">
-    <p-button
-      icon="pi pi-pencil"
-      size="small"
-      [outlined]="true"
-      [label]="'general.button.label.edit' | translate"
-      (onClick)="edit.emit(user())"
-    />
-    <span
-      [pTooltip]="
-        isCurrentAccount()
-          ? ('modules.user-management.pages.user-detail.delete-current-account' | translate)
-          : ''
-      "
-      tooltipPosition="bottom"
-    >
-      <p-button
-        icon="pi pi-trash"
-        size="small"
-        severity="danger"
-        [outlined]="true"
-        [label]="'general.button.label.delete' | translate"
-        [disabled]="isCurrentAccount()"
-        (onClick)="remove.emit(user())"
-      />
-    </span>
+  <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-5">
+    <section class="flex flex-col gap-1">
+      <app-section-title icon="pi pi-envelope">
+        {{ 'modules.user-management.pages.user-detail.contacts' | translate }}
+      </app-section-title>
+      <dl class="text-sm">
+        <div app-detail-row [label]="'model.user.email' | translate">
+          <a class="text-primary hover:underline" [href]="'mailto:' + user().email">
+            {{ user().email }}
+          </a>
+        </div>
+        <div app-detail-row [label]="'model.user.mobile-number' | translate">
+          <a class="text-primary hover:underline" [href]="'tel:' + user().mobileNumber">
+            {{ user().mobileNumber }}
+          </a>
+        </div>
+      </dl>
+    </section>
+
+    <section class="flex flex-col gap-1">
+      <app-section-title icon="pi pi-id-card">
+        {{ 'modules.user-management.pages.user-detail.personal-details' | translate }}
+      </app-section-title>
+      <dl class="text-sm">
+        <div app-detail-row [label]="'model.user.firstname' | translate">
+          {{ user().firstname }}
+        </div>
+        <div app-detail-row [label]="'model.user.lastname' | translate">
+          {{ user().lastname }}
+        </div>
+        <div app-detail-row [label]="'model.user.gender' | translate">
+          {{ (user().gender === 'M' ? 'model.gender.male' : 'model.gender.female') | translate }}
+        </div>
+        <div app-detail-row [label]="'model.user.tax-id-number' | translate">
+          <span class="font-mono uppercase">{{ user().taxIdNumber }}</span>
+        </div>
+      </dl>
+    </section>
+
+    <section class="flex flex-col gap-1">
+      <app-section-title icon="pi pi-key">
+        {{ 'modules.user-management.pages.user-detail.access' | translate }}
+      </app-section-title>
+      <dl class="text-sm">
+        <div app-detail-row [label]="'model.user.username' | translate">
+          {{ user().username }}
+        </div>
+        <div app-detail-row [label]="'model.user.language' | translate">
+          {{ 'model.language.' + user().language | translate }}
+        </div>
+        <div app-detail-row [label]="'model.user.roles' | translate">
+          <div class="flex flex-wrap gap-1">
+            @for (role of user().roles; track role.id) {
+              <p-tag [value]="role.name" severity="secondary" class="border bg-content" />
+            } @empty {
+              <span class="text-muted">
+                {{ 'modules.user-management.pages.user-detail.no-roles' | translate }}
+              </span>
+            }
+          </div>
+        </div>
+      </dl>
+    </section>
+
+    @if (audit(); as audit) {
+      <section class="flex flex-col gap-1">
+        <app-section-title icon="pi pi-history">
+          {{ 'modules.user-management.pages.user-detail.history' | translate }}
+        </app-section-title>
+        <dl class="text-sm">
+          <div app-detail-row [label]="'model.audit.created-on' | translate">
+            {{ audit.createdOn | localizedDate: 'short' }} ·
+            {{ audit.createdBy ?? ('model.audit.system' | translate) }}
+          </div>
+          @if (audit.updatedOn) {
+            <div app-detail-row [label]="'model.audit.updated-on' | translate">
+              {{ audit.updatedOn | localizedDate: 'short' }} ·
+              {{ audit.updatedBy ?? ('model.audit.system' | translate) }}
+            </div>
+          }
+        </dl>
+      </section>
+    }
   </div>
 
-  <section class="flex flex-col gap-3 px-5 pt-5">
-    <app-section-title icon="pi pi-id-card">
-      {{ 'modules.user-management.pages.user-detail.personal-info' | translate }}
-    </app-section-title>
-    <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-      <div class="min-w-0">
-        <dt class="text-xs text-muted">{{ 'model.user.firstname' | translate }}</dt>
-        <dd class="wrap-break-word">{{ user().firstname }}</dd>
-      </div>
-      <div class="min-w-0">
-        <dt class="text-xs text-muted">{{ 'model.user.lastname' | translate }}</dt>
-        <dd class="wrap-break-word">{{ user().lastname }}</dd>
-      </div>
-      <div class="min-w-0">
-        <dt class="text-xs text-muted">{{ 'model.user.gender' | translate }}</dt>
-        <dd>
-          {{ (user().gender === 'M' ? 'model.gender.male' : 'model.gender.female') | translate }}
-        </dd>
-      </div>
-      <div class="min-w-0">
-        <dt class="text-xs text-muted">{{ 'model.user.language' | translate }}</dt>
-        <dd>{{ 'model.language.' + user().language | translate }}</dd>
-      </div>
-      <div class="min-w-0">
-        <dt class="text-xs text-muted">{{ 'model.user.tax-id-number' | translate }}</dt>
-        <dd class="break-all uppercase">{{ user().taxIdNumber }}</dd>
-      </div>
-      <div class="min-w-0">
-        <dt class="text-xs text-muted">{{ 'model.user.mobile-number' | translate }}</dt>
-        <dd class="break-all">{{ user().mobileNumber }}</dd>
-      </div>
-    </dl>
-  </section>
-
-  <section class="flex flex-col gap-3 px-5 pt-5">
-    <app-section-title icon="pi pi-user">
-      {{ 'modules.user-management.pages.user-detail.account' | translate }}
-    </app-section-title>
-    <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-      <div class="col-span-2 min-w-0">
-        <dt class="text-xs text-muted">{{ 'model.user.email' | translate }}</dt>
-        <dd class="break-all">{{ user().email }}</dd>
-      </div>
-      <div class="col-span-2 min-w-0">
-        <dt class="text-xs text-muted">{{ 'model.user.username' | translate }}</dt>
-        <dd class="break-all">{{ user().username }}</dd>
-      </div>
-    </dl>
-  </section>
-
-  <section class="flex flex-col gap-3 p-5">
-    <app-section-title icon="pi pi-shield">{{ 'model.user.roles' | translate }}</app-section-title>
-    <div class="flex flex-wrap gap-2">
-      @for (role of user().roles; track role.id) {
-        <p-tag [value]="role.name" icon="pi pi-shield" severity="secondary" />
-      } @empty {
-        <span class="text-sm text-muted">
-          {{ 'modules.user-management.pages.user-detail.no-roles' | translate }}
+  <footer class="flex shrink-0 gap-2 border-t p-4">
+    <p-button
+      class="flex-1"
+      icon="pi pi-pencil"
+      [fluid]="true"
+      [label]="'modules.user-management.pages.user-detail.edit' | translate"
+      (onClick)="edit.emit(user())"
+    />
+    <p-button
+      icon="pi pi-ellipsis-h"
+      severity="secondary"
+      [outlined]="true"
+      [ariaLabel]="'general.button.label.more' | translate"
+      (onClick)="menu.toggle($event)"
+    />
+    <p-menu #menu [model]="actions()" [popup]="true" appendTo="body">
+      <ng-template #item let-item>
+        <span class="flex items-center gap-2 px-3 py-2" [class.text-danger]="item.danger">
+          <i [class]="item.icon"></i>
+          {{ item.label | translate }}
         </span>
-      }
-    </div>
-  </section>
-
-  @if (audit(); as audit) {
-    <footer class="flex flex-col gap-1 border-t px-5 py-4 text-xs text-muted">
-      <span>
-        {{
-          'modules.user-management.pages.user-detail.created'
-            | translate
-              : {
-                  date: audit.createdOn | localizedDate: 'short',
-                  user: audit.createdBy ?? ('model.audit.system' | translate),
-                }
-        }}
-      </span>
-      @if (audit.updatedOn) {
-        <span>
-          {{
-            'modules.user-management.pages.user-detail.updated'
-              | translate
-                : {
-                    date: audit.updatedOn | localizedDate: 'short',
-                    user: audit.updatedBy ?? ('model.audit.system' | translate),
-                  }
-          }}
-        </span>
-      }
-    </footer>
-  }
+      </ng-template>
+    </p-menu>
+  </footer>
 </article>

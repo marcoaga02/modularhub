@@ -131,6 +131,11 @@
         "borderRadius": "0",
         "padding": "0.75rem 1.5rem"
       }
+    },
+    "datatable": {
+      "row": {
+        "selectedColor": "{content.color}"
+      }
     }
   }
 }

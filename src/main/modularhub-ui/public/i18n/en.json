@@ -68,7 +68,8 @@
         "delete": "Delete",
         "edit": "Edit",
         "save": "Save",
-        "close": "Close"
+        "close": "Close",
+        "more": "More actions"
       }
     },
     "error": "Error",
@@ -129,12 +130,12 @@
       "description": "User Management",
       "pages": {
         "user-detail": {
-          "account": "Account",
-          "personal-info": "Personal information",
           "no-roles": "No roles assigned",
-          "delete-current-account": "You cannot delete the account you are signed in with",
-          "created": "Created on {{date}} by {{user}}",
-          "updated": "Updated on {{date}} by {{user}}"
+          "contacts": "Contacts",
+          "personal-details": "Personal details",
+          "access": "Access",
+          "history": "History",
+          "edit": "Edit user"
         },
         "user-form": {
           "confirmation-cancel-dialog": {
@@ -144,11 +145,6 @@
           "creation-title": "New user",
           "edit-title": "Edit user",
           "reset-password": {
-            "confirmation-message": "Are you sure you want to send the user an email to reset their password?",
-            "confirmation-title": "Confirm password reset",
-            "label": "Reset password",
-            "success": "Password reset email sent successfully",
-            "tooltip-message": "Send the user an email to change their password",
             "description": "The password is never shown. The reset sends the user a link to choose a new one."
           },
           "select-language-placeholder": "Select language",
@@ -206,6 +202,12 @@
             "status": "Status"
           }
         }
+      },
+      "reset-password": {
+        "label": "Reset password",
+        "confirmation-title": "Confirm password reset",
+        "confirmation-message": "Are you sure you want to send the user an email to reset their password?",
+        "success": "Password reset email sent successfully"
       }
     }
   },
