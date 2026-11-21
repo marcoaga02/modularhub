@@ -16,7 +16,7 @@
     <description>com.marcoaga02.modularhub</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
         <assertj.version>3.27.7</assertj.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <testcontainers.version>1.21.4</testcontainers.version>
@@ -35,25 +35,8 @@
         <npm.version>11.9.0</npm.version>
         <frontend.dir>${project.basedir}/src/main/modularhub-ui</frontend.dir>
         <skip.ui>false</skip.ui>
-
-        <sonar.organization>marcoaga02</sonar.organization>
-        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-        <sonar.projectKey>marcoaga02_modularhub-be</sonar.projectKey>
-        <sonar.coverage.exclusions>
-            **/model/*.*,
-            **/dto/*.*,
-            **/config/*.*,
-            **/constant/*.*,
-            **/ModularhubApplication.*
-        </sonar.coverage.exclusions>
-        <sonar.tests>
-            ${project.basedir}/src/test/java,
-            ${project.basedir}/src/it/java
-        </sonar.tests>
-        <sonar.junit.reportPaths>
-            ${project.build.directory}/surefire-reports,
-            ${project.build.directory}/failsafe-reports
-        </sonar.junit.reportPaths>
+        <argLine/>
+        <mockito.agent.argLine>-javaagent:${org.mockito:mockito-core:jar}</mockito.agent.argLine>
     </properties>
 
     <dependencyManagement>
@@ -266,6 +249,7 @@
                             <param>com.marcoaga02.modularhub.core.infrastructure.keycloak.KeycloakIdentityProviderService</param>
                         </excludedClasses>
                         <mutationThreshold>80</mutationThreshold>
+                        <argLine>${mockito.agent.argLine}</argLine>
                     </configuration>
                 </plugin>
             </plugins>
@@ -362,7 +346,29 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>mockito-agent-path</id>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>@{argLine} ${mockito.agent.argLine}</argLine>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <argLine>@{argLine} ${mockito.agent.argLine}</argLine>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
@@ -440,6 +446,16 @@
                         <phase>generate-resources</phase>
                         <configuration>
                             <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-test</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <phase>test</phase>
+                        <configuration>
+                            <arguments>run test:coverage</arguments>
                         </configuration>
                     </execution>
                 </executions>

@@ -5,7 +5,6 @@
   <p-button icon="pi pi-th-large" class="p-1 border-b" [text]="true" (onClick)="toggle()" />
   <div class="flex flex-col p-1 gap-0.5 flex-1 border-b">
     @for (plugin of plugins(); track plugin.path) {
-      <!-- NOSONAR -->
       <div
         class="flex items-center gap-3 h-12 px-3 border rounded-xl cursor-pointer"
         [pTooltip]="!isOpen() ? (plugin.description | translate) : ''"
