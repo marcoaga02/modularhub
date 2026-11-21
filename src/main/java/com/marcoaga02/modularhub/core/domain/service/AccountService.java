@@ -3,10 +3,8 @@ package com.marcoaga02.modularhub.core.domain.service;
 import com.marcoaga02.modularhub.core.api.dto.AccountDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesUpdateDTO;
-import com.marcoaga02.modularhub.core.api.dto.AccountProfileDTO;
 import com.marcoaga02.modularhub.core.api.exception.InternalStateException;
-import com.marcoaga02.modularhub.core.infrastructure.keycloak.KeycloakClaims;
-import com.marcoaga02.modularhub.core.spi.AccountDetailsProvider;
+import com.marcoaga02.modularhub.core.api.mapper.AccountMapper;
 import com.marcoaga02.modularhub.core.util.constant.SecurityConstants;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -27,13 +25,16 @@ public class AccountService {
 
     // TODO valutare se fare chaching
 
-    private final AccountPreferencesService accountPreferencesService;
+    private final UserAccountService userAccountService;
 
-    private final AccountDetailsProvider accountDetailsProvider;
+    private final AccountMapper accountMapper;
 
-    public AccountService(AccountPreferencesService accountPreferencesService, AccountDetailsProvider accountDetailsProvider) {
-        this.accountPreferencesService = accountPreferencesService;
-        this.accountDetailsProvider = accountDetailsProvider;
+    private final PermissionService permissionService;
+
+    public AccountService(UserAccountService userAccountService, AccountMapper accountMapper, PermissionService permissionService) {
+        this.userAccountService = userAccountService;
+        this.accountMapper = accountMapper;
+        this.permissionService = permissionService;
     }
 
     private JwtAuthenticationToken getJwtAuthentication() {
@@ -47,47 +48,33 @@ public class AccountService {
 
     public AccountDTO getCurrentAccount() {
         Jwt jwt = getJwtAuthentication().getToken();
-        String identityId = jwt.getSubject();
+        AccountDTO accountDTO = accountMapper.toDto(userAccountService.syncUser(jwt));
+        accountDTO.setPermissions(permissionService.getEffectivePermissions(jwt.getSubject()));
 
-        AccountPreferencesResponseDTO accountPreferencesResponseDTO = accountPreferencesService.getAccountPreferences(identityId);
-
-        AccountProfileDTO accountProfileDTO = accountDetailsProvider.getDetails(identityId);
-
-        return AccountDTO.builder()
-                .identityId(identityId)
-                .email(jwt.getClaimAsString(KeycloakClaims.EMAIL))
-                .username(jwt.getClaimAsString(KeycloakClaims.USERNAME))
-                .firstName(jwt.getClaimAsString(KeycloakClaims.FIRST_NAME))
-                .lastName(jwt.getClaimAsString(KeycloakClaims.LAST_NAME))
-                .roles(getRoles())
-                .preferences(accountPreferencesResponseDTO)
-                .gender(accountProfileDTO.getGender())
-                .mobileNumber(accountProfileDTO.getMobileNumber())
-                .taxIdNumber(accountProfileDTO.getTaxIdNumber())
-                .build();
+        return accountDTO;
     }
 
-    public Set<String> getRoles() {
+    public Set<String> getPermissions() {
         return getJwtAuthentication().getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
                 .filter(Objects::nonNull)
-                .filter(a -> a.startsWith(SecurityConstants.ROLE_PREFIX))
-                .map(a -> a.substring(SecurityConstants.ROLE_PREFIX.length()))
+                .filter(a -> a.startsWith(SecurityConstants.PERMISSION_PREFIX))
+                .map(a -> a.substring(SecurityConstants.PERMISSION_PREFIX.length()))
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    public boolean hasRole(String role) {
-        return getRoles().contains(role);
+    public boolean hasPermission(String permission) {
+        return getPermissions().contains(permission);
     }
 
-    public boolean hasAnyRole(String... roles) {
-        Set<String> userRoles = getRoles();
-        return Arrays.stream(roles).anyMatch(userRoles::contains);
+    public boolean hasAnyPermission(String... permissions) {
+        Set<String> userPermissions = getPermissions();
+        return Arrays.stream(permissions).anyMatch(userPermissions::contains);
     }
 
     public AccountPreferencesResponseDTO updateCurrentAccountPreferences(AccountPreferencesUpdateDTO dto) {
-        return accountPreferencesService.updateAccountPreferencesByIdentityId(getCurrentIdentityId(), dto);
+        return userAccountService.updatePreferences(getJwtAuthentication().getToken(), dto);
     }
 
     public String getCurrentIdentityId() {

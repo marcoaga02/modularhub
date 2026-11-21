@@ -1,30 +1,37 @@
 package com.marcoaga02.modularhub.modules.usermanagement.domain.service;
 
-import com.marcoaga02.modularhub.core.api.dto.*;
-import com.marcoaga02.modularhub.core.api.exception.ExceptionCodes;
-import com.marcoaga02.modularhub.core.api.exception.LanguageNotFoundException;
-import com.marcoaga02.modularhub.core.domain.model.Gender;
+import com.marcoaga02.modularhub.core.api.dto.AuditDTO;
+import com.marcoaga02.modularhub.core.api.dto.GenderDTO;
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
+import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
+import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
 import com.marcoaga02.modularhub.core.domain.model.Language;
-import com.marcoaga02.modularhub.core.domain.repository.LanguageRepository;
-import com.marcoaga02.modularhub.core.domain.service.AccountPreferencesService;
+import com.marcoaga02.modularhub.core.domain.model.Role;
+import com.marcoaga02.modularhub.core.domain.model.User;
+import com.marcoaga02.modularhub.core.domain.repository.RoleRepository;
+import com.marcoaga02.modularhub.core.domain.repository.UserRepository;
 import com.marcoaga02.modularhub.core.domain.service.AccountService;
 import com.marcoaga02.modularhub.core.domain.service.IdentityService;
+import com.marcoaga02.modularhub.core.domain.service.UserAccountService;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCreateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserCriteriaDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserResponseDTO;
-import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserAlreadyExistsException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.dto.UserUpdateRequestDTO;
 import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserManagementExceptionCodes;
-import com.marcoaga02.modularhub.modules.usermanagement.api.exception.UserNotFoundException;
-import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.AccountProfileMapper;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.role.RoleNotFoundException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.LastAdminException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserAlreadyExistsException;
+import com.marcoaga02.modularhub.modules.usermanagement.api.exception.user.UserNotFoundException;
 import com.marcoaga02.modularhub.modules.usermanagement.api.mapper.UserMapper;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.model.User;
-import com.marcoaga02.modularhub.modules.usermanagement.domain.repository.UserRepository;
-import org.apache.logging.log4j.util.Strings;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,35 +40,45 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpStatus;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+import static com.marcoaga02.modularhub.fixture.UserFixtures.adminRole;
+import static com.marcoaga02.modularhub.fixture.UserFixtures.role;
+import static com.marcoaga02.modularhub.fixture.UserFixtures.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-    private static final OffsetDateTime CREATED_ON = OffsetDateTime.parse("2026-01-01T10:15:30+01:00");
-    private static final OffsetDateTime UPDATED_ON = OffsetDateTime.parse("2026-02-01T10:15:30+01:00");
-
-    public static final String TAX_ID_NUMBER_USER_1 = "TAX_ID_01";
-    public static final String USERNAME_USER_1 = "username1";
-    public static final String EMAIL_USER_1 = "email@mock.it";
-
-    public static final String TAX_ID_NUMBER_USER_2 = "TAX_ID_02";
-    public static final String USERNAME_USER_2 = "username2";
-    public static final String EMAIL_USER_2 = "vittoria@mock.it";
+    private static final String UNKNOWN_UUID = "unknown-uuid";
+    private static final String IDENTITY_ID = "identity-id";
+    private static final String CURRENT_IDENTITY_ID = "current-identity-id";
+    private static final String NEW_TAX_ID = "NEW-TAX";
+    private static final String NEW_USERNAME = "new.username";
+    private static final String NEW_EMAIL = "new@test.com";
+    private static final String ADMIN = "ADMIN";
+    private static final OffsetDateTime CREATED_ON = OffsetDateTime.parse("2026-01-01T10:00:00+01:00");
+    private static final OffsetDateTime UPDATED_ON = OffsetDateTime.parse("2026-02-01T10:00:00+01:00");
 
     @Mock
     private UserRepository userRepository;
-
-    @Mock
-    private LanguageRepository languageRepository;
 
     @Mock
     private UserMapper userMapper;
@@ -73,1091 +90,619 @@ class UserServiceTest {
     private AccountService accountService;
 
     @Mock
-    private AccountPreferencesService accountPreferencesService;
+    private UserAccountService userAccountService;
 
     @Mock
-    private AccountProfileMapper accountProfileMapper;
+    private RoleRepository roleRepository;
 
     @InjectMocks
     private UserService userService;
 
-    private User user1, user2;
-
-    private UserResponseDTO userResponseDTO1, userResponseDTO2;
-
-    private Language language;
-
-    private LanguageResponseDTO languageResponseDTO;
+    private User existingUser;
 
     @BeforeEach
     void setUp() {
-        language = new Language();
-        language.setCode("it-IT");
-        language.setLabel("Italiano");
-        language.setIsDefault(true);
-
-        languageResponseDTO = new LanguageResponseDTO();
-        languageResponseDTO.setId(language.getUuid());
-        languageResponseDTO.setCode("it-IT");
-        languageResponseDTO.setLabel("Italiano");
-        languageResponseDTO.setIsDefault(true);
-
-        user1 = new User();
-        user1.setFirstname("Mario");
-        user1.setLastname("Rossi");
-        user1.setGender(Gender.M);
-        user1.setMobileNumber("0000");
-        user1.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        user1.setEmail(EMAIL_USER_1);
-        user1.setUsername(USERNAME_USER_1);
-        user1.setEnabled(true);
-        user1.setCreatedOn(CREATED_ON);
-        user1.setUpdatedOn(UPDATED_ON);
-        user1.setCreatedBy("Vittoria Bianchi");
-        user1.setUpdatedBy("Mario Rossi");
-
-        userResponseDTO1 = new UserResponseDTO();
-        userResponseDTO1.setId(user1.getUuid());
-        userResponseDTO1.setFirstname("Mario");
-        userResponseDTO1.setLastname("Rossi");
-        userResponseDTO1.setGender(Gender.M.name());
-        userResponseDTO1.setLanguage(languageResponseDTO);
-        userResponseDTO1.setMobileNumber("0000");
-        userResponseDTO1.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        userResponseDTO1.setEmail("mario@mock.it");
-        userResponseDTO1.setUsername(USERNAME_USER_1);
-        userResponseDTO1.setEnabled(true);
-
-        user2 = new User();
-        user2.setFirstname("Vittoria");
-        user2.setLastname("Bianchi");
-        user2.setGender(Gender.F);
-        user2.setMobileNumber("1111");
-        user2.setTaxIdNumber(TAX_ID_NUMBER_USER_2);
-        user2.setEmail(EMAIL_USER_2);
-        user2.setUsername(USERNAME_USER_2);
-        user2.setEnabled(false);
-
-        userResponseDTO2 = new UserResponseDTO();
-        userResponseDTO2.setId(user1.getUuid());
-        userResponseDTO2.setFirstname("Vittoria");
-        userResponseDTO2.setLastname("Bianci");
-        userResponseDTO2.setGender(Gender.F.name());
-        userResponseDTO2.setLanguage(languageResponseDTO);
-        userResponseDTO2.setMobileNumber("1111");
-        userResponseDTO2.setTaxIdNumber(TAX_ID_NUMBER_USER_2);
-        userResponseDTO2.setEmail(EMAIL_USER_2);
-        userResponseDTO2.setUsername(USERNAME_USER_2);
-        userResponseDTO2.setEnabled(false);
+        TransactionSynchronizationManager.initSynchronization();
+        existingUser = user("existing", Language.EN);
+        existingUser.setIdentityId(IDENTITY_ID);
     }
 
-    @Test
-    void getAllUsers_shouldReturnEmptyPage_whenNoUsersMatch() {
-        UserCriteriaDTO criteria = new UserCriteriaDTO();
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<User> emptyPage = Page.empty(pageable);
-
-        when(userRepository.findAll(ArgumentMatchers.<Specification<User>>any(), eq(pageable)))
-                .thenReturn(emptyPage);
-
-        Page<UserResponseDTO> result = userService.getAllUsers(criteria, pageable);
-
-        assertThat(result).isEmpty();
-
-        verify(userRepository).findAll(ArgumentMatchers.<Specification<User>>any(), eq(pageable));
-        verify(userMapper, never()).toDto(any());
+    @AfterEach
+    void tearDown() {
+        TransactionSynchronizationManager.clear();
     }
 
-    @Test
-    void getAllUsers_shouldReturnMappedPage_whenSingleUser() {
-        UserCriteriaDTO criteria = new UserCriteriaDTO();
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<User> userPage = new PageImpl<>(List.of(user1), pageable, 1);
+    @Nested
+    class GetAllUsers {
 
-        when(userRepository.findAll(ArgumentMatchers.<Specification<User>>any(), eq(pageable)))
-                .thenReturn(userPage);
-        when(userMapper.toDto(user1))
-                .thenReturn(userResponseDTO1);
+        @Test
+        void getAllUsers_shouldReturnMappedPageKeepingPagination_whenUsersMatch() {
+            Pageable pageable = PageRequest.of(1, 2);
+            User otherUser = user("other", Language.EN);
+            UserResponseDTO existingDto = new UserResponseDTO().id("existing");
+            UserResponseDTO otherDto = new UserResponseDTO().id("other");
+            when(userRepository.findAll(anySpecification(), eq(pageable)))
+                    .thenReturn(new PageImpl<>(List.of(existingUser, otherUser), pageable, 5));
+            when(userMapper.toDto(existingUser)).thenReturn(existingDto);
+            when(userMapper.toDto(otherUser)).thenReturn(otherDto);
 
-        Page<UserResponseDTO> result = userService.getAllUsers(criteria, pageable);
+            Page<UserResponseDTO> result = userService.getAllUsers(new UserCriteriaDTO("text"), pageable);
 
-        assertThat(result).isNotNull();
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent()).containsExactly(userResponseDTO1);
+            assertThat(result.getContent()).containsExactly(existingDto, otherDto);
+            assertThat(result.getTotalElements()).isEqualTo(5);
+            assertThat(result.getPageable()).isEqualTo(pageable);
+        }
 
-        verify(userRepository).findAll(ArgumentMatchers.<Specification<User>>any(), eq(pageable));
-        verify(userMapper).toDto(user1);
+        @Test
+        void getAllUsers_shouldReturnEmptyPage_whenNoUserMatches() {
+            Pageable pageable = PageRequest.of(0, 10);
+            when(userRepository.findAll(anySpecification(), eq(pageable))).thenReturn(Page.empty(pageable));
+
+            Page<UserResponseDTO> result = userService.getAllUsers(new UserCriteriaDTO(), pageable);
+
+            assertThat(result).isEmpty();
+            verifyNoInteractions(userMapper);
+        }
+
+        private static Specification<User> anySpecification() {
+            return ArgumentMatchers.any();
+        }
     }
 
-    @Test
-    void getAllUsers_shouldReturnMappedPage_whenMultipleUsers() {
-        UserCriteriaDTO criteria = new UserCriteriaDTO();
-        Pageable pageable = PageRequest.of(0, 10);
+    @Nested
+    class GetUserByUuid {
 
-        Page<User> userPage = new PageImpl<>(List.of(user1, user2), pageable, 2);
+        @Test
+        void getUserByUuid_shouldReturnMappedUserWithResolvedAudit_whenUserExists() {
+            existingUser.setCreatedOn(CREATED_ON);
+            existingUser.setCreatedBy("creator-id");
+            existingUser.setUpdatedOn(UPDATED_ON);
+            existingUser.setUpdatedBy("updater-id");
+            UserResponseDTO dto = new UserResponseDTO().id(existingUser.getUuid());
+            mockExistingUser();
+            when(userMapper.toDto(existingUser)).thenReturn(dto);
+            when(userAccountService.resolveFullName("creator-id")).thenReturn("Creator Name");
+            when(userAccountService.resolveFullName("updater-id")).thenReturn("Updater Name");
 
-        when(userRepository.findAll(ArgumentMatchers.<Specification<User>>any(), eq(pageable)))
-                .thenReturn(userPage);
-        when(userMapper.toDto(user1)).thenReturn(userResponseDTO1);
-        when(userMapper.toDto(user2)).thenReturn(userResponseDTO2);
+            UserResponseDTO result = userService.getUserByUuid(existingUser.getUuid());
 
-        Page<UserResponseDTO> result = userService.getAllUsers(criteria, pageable);
+            assertThat(result).isSameAs(dto);
+            assertThat(result.getAudit())
+                    .extracting(AuditDTO::getCreatedOn, AuditDTO::getCreatedBy, AuditDTO::getUpdatedOn,
+                            AuditDTO::getUpdatedBy)
+                    .containsExactly(CREATED_ON, "Creator Name", UPDATED_ON, "Updater Name");
+            verifyNoInteractions(identityService);
+        }
 
-        assertThat(result.getContent()).containsExactly(userResponseDTO1, userResponseDTO2);
+        @Test
+        void getUserByUuid_shouldThrowUserNotFoundException_whenUserDoesNotExist() {
+            when(userRepository.findByUuidAndDeletedOnIsNull(UNKNOWN_UUID)).thenReturn(Optional.empty());
 
-        verify(userRepository).findAll(ArgumentMatchers.<Specification<User>>any(), eq(pageable));
-        verify(userMapper).toDto(user1);
-        verify(userMapper).toDto(user2);
+            assertUserNotFound(() -> userService.getUserByUuid(UNKNOWN_UUID));
+
+            verifyNoInteractions(userMapper, userAccountService, identityService);
+        }
     }
 
-    @Test
-    void getUserByUuid_shouldReturnDTO_whenUserExists() {
-        final String userUuid = "abc-123";
-        final String identityId1 = "identityId1";
-        final String identityId2 = "identityId2";
+    @Nested
+    class CreateUser {
 
-        user1.setIdentityId(identityId1);
-        user1.setCreatedBy(identityId2);
-        user1.setUpdatedBy(identityId1);
+        @Test
+        void createUser_shouldCreateIdentityUserAndPersistMappedUserWithIdentityId_whenRequestIsValid() {
+            UserCreateRequestDTO request = createRequest();
+            User persisted = new User();
+            UserResponseDTO dto = new UserResponseDTO();
+            mockValidCreation();
+            when(userRepository.saveAndFlush(any(User.class))).thenReturn(persisted);
+            when(userMapper.toDto(persisted)).thenReturn(dto);
 
-        IdentityGroupDTO groupDTO = new IdentityGroupDTO();
-        groupDTO.setId("group-id");
-        groupDTO.setName("First Group");
-        groupDTO.setDescription("First Group Description");
+            UserResponseDTO result = userService.createUser(request);
 
-        IdentityUserResponseDTO userResponseDTO = new IdentityUserResponseDTO();
-        userResponseDTO.setId(identityId1);
-        userResponseDTO.setUsername("username");
-        userResponseDTO.setEmail("email");
-        userResponseDTO.setFirstName("firstName");
-        userResponseDTO.setLastName("lastName");
-        userResponseDTO.setEnabled(true);
-        userResponseDTO.setGroups(List.of(groupDTO));
+            assertThat(result).isSameAs(dto);
+            User saved = captureSavedUser();
+            assertThat(saved.getIdentityId()).isEqualTo(IDENTITY_ID);
+            verify(userMapper).updateEntity(request, saved);
+        }
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
+        @Test
+        void createUser_shouldSendRequestDataToIdentityProviderWithVerifiedEmail() {
+            mockValidCreation();
 
-        when(userRepository.findByUuidAndDeletedOnIsNull(userUuid))
-                .thenReturn(Optional.of(user1));
-        when(userRepository.findByIdentityId(identityId2))
-                .thenReturn(Optional.of(user2));
-        when(userRepository.findByIdentityId(identityId1))
-                .thenReturn(Optional.of(user1));
-        when(userMapper.toDto(user1))
-                .thenReturn(userResponseDTO1);
-        when(identityService.getUserById(identityId1))
-                .thenReturn(userResponseDTO);
-        when(accountPreferencesService.getAccountPreferences(identityId1))
-                .thenReturn(preferencesResponseDTO);
+            userService.createUser(createRequest());
 
-        UserResponseDTO result = userService.getUserByUuid(userUuid);
+            verify(identityService).createUser(new IdentityUserCreateRequestDTO(NEW_USERNAME, NEW_EMAIL, "Mario",
+                    "Rossi", true, true, "password"));
+        }
 
-        assertThat(result).isNotNull().isEqualTo(userResponseDTO1);
-        assertThat(result.getAudit()).isNotNull();
-        assertThat(result.getAudit().getCreatedBy()).isEqualTo("Vittoria Bianchi");
-        assertThat(result.getAudit().getUpdatedBy()).isEqualTo("Mario Rossi");
-        assertThat(result.getAudit().getCreatedOn()).isEqualTo(CREATED_ON);
-        assertThat(result.getAudit().getUpdatedOn()).isEqualTo(UPDATED_ON);
+        @Test
+        void createUser_shouldCreateIdentityUserBeforeSavingTheUser() {
+            mockValidCreation();
 
-        assertThat(result.getGroups()).hasSize(1).containsExactly(groupDTO);
-        assertThat(result.getLanguage()).isEqualTo(languageResponseDTO);
+            userService.createUser(createRequest());
 
-        verify(userRepository).findByUuidAndDeletedOnIsNull(userUuid);
-        verify(userRepository).findByIdentityId(identityId2);
-        verify(userRepository).findByIdentityId(identityId1);
-        verify(identityService).getUserById(identityId1);
-        verify(accountPreferencesService).getAccountPreferences(identityId1);
-        verify(userMapper).toDto(user1);
+            InOrder inOrder = inOrder(identityService, userRepository);
+            inOrder.verify(identityService).createUser(any());
+            inOrder.verify(userRepository).saveAndFlush(any(User.class));
+        }
+
+        @Test
+        void createUser_shouldDeleteIdentityUser_whenTransactionRollsBack() {
+            mockValidCreation();
+
+            userService.createUser(createRequest());
+            completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
+
+            verify(identityService).rollbackCreatedUser(IDENTITY_ID);
+        }
+
+        @Test
+        void createUser_shouldKeepIdentityUser_whenTransactionCommits() {
+            mockValidCreation();
+
+            userService.createUser(createRequest());
+            completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
+
+            verify(identityService, never()).rollbackCreatedUser(anyString());
+        }
+
+        @Test
+        void createUser_shouldPropagateErrorAndKeepRollbackRegistered_whenSaveFails() {
+            RuntimeException dbError = new RuntimeException("db error");
+            mockValidCreation();
+            when(userRepository.saveAndFlush(any(User.class))).thenThrow(dbError);
+            UserCreateRequestDTO request = createRequest();
+
+            assertThatThrownBy(() -> userService.createUser(request)).isSameAs(dbError);
+
+            completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
+            verify(identityService).rollbackCreatedUser(IDENTITY_ID);
+            verify(userMapper, never()).toDto(any());
+        }
+
+        @Test
+        void createUser_shouldNotSaveUser_whenIdentityCreationFails() {
+            RuntimeException identityError = new RuntimeException("identity error");
+            when(identityService.createUser(any())).thenThrow(identityError);
+            UserCreateRequestDTO request = createRequest();
+
+            assertThatThrownBy(() -> userService.createUser(request)).isSameAs(identityError);
+
+            verify(userRepository, never()).saveAndFlush(any());
+            assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+        }
+
+        @Test
+        void createUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberIsTaken() {
+            when(userRepository.findByTaxIdNumberAndDeletedOnIsNull(NEW_TAX_ID)).thenReturn(Optional.of(existingUser));
+            UserCreateRequestDTO request = createRequest();
+
+            assertAlreadyExists(() -> userService.createUser(request),
+                    UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID, NEW_TAX_ID);
+
+            assertNothingCreated();
+        }
+
+        @Test
+        void createUser_shouldThrowUserAlreadyExistsException_whenUsernameIsTaken() {
+            when(userRepository.findByUsernameAndDeletedOnIsNull(NEW_USERNAME)).thenReturn(Optional.of(existingUser));
+            UserCreateRequestDTO request = createRequest();
+
+            assertAlreadyExists(() -> userService.createUser(request),
+                    UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_USERNAME, NEW_USERNAME);
+
+            assertNothingCreated();
+        }
+
+        @Test
+        void createUser_shouldThrowUserAlreadyExistsException_whenEmailIsTaken() {
+            when(userRepository.findByEmailAndDeletedOnIsNull(NEW_EMAIL)).thenReturn(Optional.of(existingUser));
+            UserCreateRequestDTO request = createRequest();
+
+            assertAlreadyExists(() -> userService.createUser(request),
+                    UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_EMAIL, NEW_EMAIL);
+
+            assertNothingCreated();
+        }
+
+        @Test
+        void createUser_shouldAssignRequestedRoles_whenRolesExist() {
+            Role custom = role("custom");
+            UserCreateRequestDTO request = createRequest().roleIds(Set.of(custom.getUuid()));
+            mockValidCreation();
+            when(roleRepository.findAllByUuidIn(Set.of(custom.getUuid()))).thenReturn(List.of(custom));
+
+            userService.createUser(request);
+
+            assertThat(captureSavedUser().getRoles()).containsExactly(custom);
+        }
+
+        @Test
+        void createUser_shouldThrowRoleNotFoundException_whenARoleDoesNotExist() {
+            UserCreateRequestDTO request = createRequest().roleIds(Set.of(UNKNOWN_UUID));
+            when(roleRepository.findAllByUuidIn(Set.of(UNKNOWN_UUID))).thenReturn(List.of());
+
+            assertThatThrownBy(() -> userService.createUser(request))
+                    .isInstanceOfSatisfying(RoleNotFoundException.class, ex ->
+                            assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.Role.NOT_FOUND));
+
+            assertNothingCreated();
+        }
+
+        private void mockValidCreation() {
+            when(identityService.createUser(any())).thenReturn(IDENTITY_ID);
+        }
+
+        private User captureSavedUser() {
+            ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+            verify(userRepository).saveAndFlush(captor.capture());
+            return captor.getValue();
+        }
+
+        private void assertNothingCreated() {
+            verifyNoInteractions(identityService);
+            verify(userRepository, never()).saveAndFlush(any());
+            assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+        }
+
+        private static UserCreateRequestDTO createRequest() {
+            return new UserCreateRequestDTO()
+                    .firstname("Mario")
+                    .lastname("Rossi")
+                    .gender(GenderDTO.M)
+                    .language(LanguageDTO.EN)
+                    .taxIdNumber(NEW_TAX_ID)
+                    .email(NEW_EMAIL)
+                    .username(NEW_USERNAME)
+                    .password("password")
+                    .enabled(true);
+        }
     }
 
-    @Test
-    void getUserByUuid_shouldReturnDTO_whenUserExistsAndUnresolvedFullName() {
-        final String userUuid = "abc-123";
-        final String identityId1 = "identityId1";
-        final String identityId2 = "identityId2";
+    @Nested
+    class UpdateUser {
 
-        user1.setIdentityId(identityId1);
-        user1.setCreatedBy(identityId2);
-        user1.setUpdatedBy(null);
+        @Test
+        void updateUser_shouldUpdateEntityAndIdentityUser_whenRequestIsValid() {
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
+            UserResponseDTO dto = new UserResponseDTO();
+            mockExistingUser();
+            when(userMapper.toDto(existingUser)).thenReturn(dto);
 
-        IdentityGroupDTO groupDTO = new IdentityGroupDTO();
-        groupDTO.setId("group-id");
-        groupDTO.setName("First Group");
-        groupDTO.setDescription("First Group Description");
+            UserResponseDTO result = userService.updateUser(existingUser.getUuid(), request);
 
-        IdentityUserResponseDTO userResponseDTO = new IdentityUserResponseDTO();
-        userResponseDTO.setId(identityId1);
-        userResponseDTO.setUsername("username");
-        userResponseDTO.setEmail("email");
-        userResponseDTO.setFirstName("firstName");
-        userResponseDTO.setLastName("lastName");
-        userResponseDTO.setEnabled(true);
-        userResponseDTO.setGroups(List.of(groupDTO));
+            assertThat(result).isSameAs(dto);
+            verify(userMapper).updateEntity(request, existingUser);
+            verify(identityService).updateUser(IDENTITY_ID, new IdentityUserUpdateRequestDTO(
+                    request.getUsername(), request.getEmail(), "Luigi", "Verdi", false));
+        }
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
+        @Test
+        void updateUser_shouldSaveUserBeforeUpdatingIdentityUser() {
+            mockExistingUser();
 
-        when(userRepository.findByUuidAndDeletedOnIsNull(userUuid))
-                .thenReturn(Optional.of(user1));
-        when(userRepository.findByIdentityId(identityId2))
-                .thenReturn(Optional.empty());
-        when(userMapper.toDto(user1))
-                .thenReturn(userResponseDTO1);
-        when(identityService.getUserById(identityId1))
-                .thenReturn(userResponseDTO);
-        when(accountPreferencesService.getAccountPreferences(identityId1))
-                .thenReturn(preferencesResponseDTO);
+            userService.updateUser(existingUser.getUuid(), updateRequestKeepingUniqueFields());
 
-        UserResponseDTO result = userService.getUserByUuid(userUuid);
+            InOrder inOrder = inOrder(userRepository, identityService);
+            inOrder.verify(userRepository).saveAndFlush(existingUser);
+            inOrder.verify(identityService).updateUser(eq(IDENTITY_ID), any());
+        }
 
-        assertThat(result).isNotNull().isEqualTo(userResponseDTO1);
-        assertThat(result.getAudit()).isNotNull();
-        assertThat(result.getAudit().getCreatedBy()).isEqualTo(Strings.EMPTY);
-        assertThat(result.getAudit().getUpdatedBy()).isEqualTo(Strings.EMPTY);
-        assertThat(result.getAudit().getCreatedOn()).isEqualTo(CREATED_ON);
-        assertThat(result.getAudit().getUpdatedOn()).isEqualTo(UPDATED_ON);
+        @Test
+        void updateUser_shouldNotCheckDuplicates_whenUniqueFieldsAreUnchanged() {
+            mockExistingUser();
 
-        assertThat(result.getGroups()).hasSize(1).containsExactly(groupDTO);
-        assertThat(result.getLanguage()).isEqualTo(languageResponseDTO);
+            userService.updateUser(existingUser.getUuid(), updateRequestKeepingUniqueFields());
 
-        verify(userRepository).findByUuidAndDeletedOnIsNull(userUuid);
-        verify(userRepository).findByIdentityId(identityId2);
-        verify(userRepository, times(1)).findByIdentityId(any());
-        verify(identityService).getUserById(identityId1);
-        verify(accountPreferencesService).getAccountPreferences(identityId1);
-        verify(userMapper).toDto(user1);
+            verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(anyString());
+            verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
+            verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
+        }
+
+        @Test
+        void updateUser_shouldCheckDuplicatesAndUpdate_whenUniqueFieldsChangeToFreeValues() {
+            mockExistingUser();
+
+            userService.updateUser(existingUser.getUuid(), updateRequestChangingUniqueFields());
+
+            verify(userRepository).findByTaxIdNumberAndDeletedOnIsNull(NEW_TAX_ID);
+            verify(userRepository).findByUsernameAndDeletedOnIsNull(NEW_USERNAME);
+            verify(userRepository).findByEmailAndDeletedOnIsNull(NEW_EMAIL);
+            verify(userRepository).saveAndFlush(existingUser);
+        }
+
+        @Test
+        void updateUser_shouldThrowUserAlreadyExistsException_whenNewTaxIdNumberIsTaken() {
+            mockExistingUser();
+            when(userRepository.findByTaxIdNumberAndDeletedOnIsNull(NEW_TAX_ID)).thenReturn(Optional.of(new User()));
+            UserUpdateRequestDTO request = updateRequestChangingUniqueFields();
+
+            assertAlreadyExists(() -> userService.updateUser(existingUser.getUuid(), request),
+                    UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_TAX_ID, NEW_TAX_ID);
+
+            assertNothingUpdated();
+        }
+
+        @Test
+        void updateUser_shouldThrowUserAlreadyExistsException_whenNewUsernameIsTaken() {
+            mockExistingUser();
+            when(userRepository.findByUsernameAndDeletedOnIsNull(NEW_USERNAME)).thenReturn(Optional.of(new User()));
+            UserUpdateRequestDTO request = updateRequestChangingUniqueFields();
+
+            assertAlreadyExists(() -> userService.updateUser(existingUser.getUuid(), request),
+                    UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_USERNAME, NEW_USERNAME);
+
+            assertNothingUpdated();
+        }
+
+        @Test
+        void updateUser_shouldThrowUserAlreadyExistsException_whenNewEmailIsTaken() {
+            mockExistingUser();
+            when(userRepository.findByEmailAndDeletedOnIsNull(NEW_EMAIL)).thenReturn(Optional.of(new User()));
+            UserUpdateRequestDTO request = updateRequestChangingUniqueFields();
+
+            assertAlreadyExists(() -> userService.updateUser(existingUser.getUuid(), request),
+                    UserManagementExceptionCodes.Model.User.ALREADY_EXISTS_EMAIL, NEW_EMAIL);
+
+            assertNothingUpdated();
+        }
+
+        @Test
+        void updateUser_shouldThrowUserNotFoundException_whenUserDoesNotExist() {
+            when(userRepository.findByUuidAndDeletedOnIsNull(UNKNOWN_UUID)).thenReturn(Optional.empty());
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
+
+            assertUserNotFound(() -> userService.updateUser(UNKNOWN_UUID, request));
+
+            assertNothingUpdated();
+        }
+
+        @Test
+        void updateUser_shouldPropagateError_whenIdentityUpdateFails() {
+            RuntimeException identityError = new RuntimeException("identity error");
+            mockExistingUser();
+            doThrow(identityError).when(identityService).updateUser(eq(IDENTITY_ID), any());
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
+
+            assertThatThrownBy(() -> userService.updateUser(existingUser.getUuid(), request)).isSameAs(identityError);
+
+            verify(userMapper, never()).toDto(any());
+        }
+
+        @Test
+        void updateUser_shouldReplaceRolesWithRequestedOnes_whenRolesExist() {
+            Role previous = role("previous");
+            Role requested = role("requested");
+            existingUser.getRoles().add(previous);
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields().roleIds(Set.of(requested.getUuid()));
+            mockExistingUser();
+            when(roleRepository.findAllByUuidIn(Set.of(requested.getUuid()))).thenReturn(List.of(requested));
+
+            userService.updateUser(existingUser.getUuid(), request);
+
+            assertThat(existingUser.getRoles()).containsExactly(requested);
+            verify(userRepository).saveAndFlush(existingUser);
+        }
+
+        @Test
+        void updateUser_shouldThrowRoleNotFoundException_whenARoleDoesNotExist() {
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields().roleIds(Set.of(UNKNOWN_UUID));
+            mockExistingUser();
+            when(roleRepository.findAllByUuidIn(Set.of(UNKNOWN_UUID))).thenReturn(List.of());
+
+            assertThatThrownBy(() -> userService.updateUser(existingUser.getUuid(), request))
+                    .isInstanceOf(RoleNotFoundException.class);
+
+            verify(userRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(identityService);
+        }
+
+        @Test
+        void updateUser_shouldThrowLastAdminException_whenRemovingAdminFromTheLastActiveAdmin() {
+            existingUser.getRoles().add(adminRole());
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
+            mockExistingUser();
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(0L);
+
+            assertLastAdmin(() -> userService.updateUser(existingUser.getUuid(), request));
+
+            verify(userRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(identityService);
+        }
+
+        @Test
+        void updateUser_shouldThrowLastAdminException_whenDisablingTheLastActiveAdmin() {
+            Role admin = adminRole();
+            existingUser.getRoles().add(admin);
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields().roleIds(Set.of(admin.getUuid()));
+            mockExistingUser();
+            when(roleRepository.findAllByUuidIn(Set.of(admin.getUuid()))).thenReturn(List.of(admin));
+            doAnswer(invocation -> {
+                existingUser.setEnabled(false);
+                return existingUser;
+            }).when(userMapper).updateEntity(request, existingUser);
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(0L);
+
+            assertLastAdmin(() -> userService.updateUser(existingUser.getUuid(), request));
+
+            verify(userRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        void updateUser_shouldRemoveAdmin_whenAnotherActiveAdminExists() {
+            existingUser.getRoles().add(adminRole());
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields();
+            mockExistingUser();
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(1L);
+
+            userService.updateUser(existingUser.getUuid(), request);
+
+            assertThat(existingUser.getRoles()).isEmpty();
+            verify(userRepository).saveAndFlush(existingUser);
+        }
+
+        @Test
+        void updateUser_shouldNotCountAdmins_whenTheAdminKeepsTheRoleAndStaysEnabled() {
+            Role admin = adminRole();
+            existingUser.getRoles().add(admin);
+            UserUpdateRequestDTO request = updateRequestKeepingUniqueFields().roleIds(Set.of(admin.getUuid()));
+            mockExistingUser();
+            when(roleRepository.findAllByUuidIn(Set.of(admin.getUuid()))).thenReturn(List.of(admin));
+
+            userService.updateUser(existingUser.getUuid(), request);
+
+            verify(userRepository, never()).countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(any(), any());
+            verify(userRepository).saveAndFlush(existingUser);
+        }
+
+        private void assertNothingUpdated() {
+            verify(userMapper, never()).updateEntity(any(UserUpdateRequestDTO.class), any());
+            verify(userRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(identityService);
+        }
+
+        private UserUpdateRequestDTO updateRequestKeepingUniqueFields() {
+            return updateRequest(existingUser.getTaxIdNumber(), existingUser.getUsername(), existingUser.getEmail());
+        }
+
+        private static UserUpdateRequestDTO updateRequestChangingUniqueFields() {
+            return updateRequest(NEW_TAX_ID, NEW_USERNAME, NEW_EMAIL);
+        }
+
+        private static UserUpdateRequestDTO updateRequest(String taxIdNumber, String username, String email) {
+            return new UserUpdateRequestDTO()
+                    .firstname("Luigi")
+                    .lastname("Verdi")
+                    .gender(GenderDTO.M)
+                    .language(LanguageDTO.EN)
+                    .taxIdNumber(taxIdNumber)
+                    .email(email)
+                    .username(username)
+                    .enabled(false);
+        }
     }
 
-    @Test
-    void getUserByUuid_shouldReturnDTO_whenUserExistsWithNullGroups() {
-        final String userUuid = "abc-123";
-        final String identityId1 = "identityId1";
-        final String identityId2 = "identityId2";
+    @Nested
+    class DeleteUser {
 
-        user1.setIdentityId(identityId1);
-        user1.setCreatedBy(identityId2);
-        user1.setUpdatedBy(identityId1);
+        @Test
+        void deleteUser_shouldSoftDeleteUserWithCurrentIdentityAndDeleteIdentityUser_whenUserExists() {
+            mockExistingUser();
+            when(accountService.getCurrentIdentityId()).thenReturn(CURRENT_IDENTITY_ID);
+            OffsetDateTime before = OffsetDateTime.now();
 
-        IdentityGroupDTO groupDTO = new IdentityGroupDTO();
-        groupDTO.setId("group-id");
-        groupDTO.setName("First Group");
-        groupDTO.setDescription("First Group Description");
+            userService.deleteUser(existingUser.getUuid());
 
-        IdentityUserResponseDTO userResponseDTO = new IdentityUserResponseDTO();
-        userResponseDTO.setId(identityId1);
-        userResponseDTO.setUsername("username");
-        userResponseDTO.setEmail("email");
-        userResponseDTO.setFirstName("firstName");
-        userResponseDTO.setLastName("lastName");
-        userResponseDTO.setEnabled(true);
-        userResponseDTO.setGroups(null);
+            assertThat(existingUser.getDeletedBy()).isEqualTo(CURRENT_IDENTITY_ID);
+            assertThat(existingUser.getDeletedOn()).isBetween(before, OffsetDateTime.now());
+            assertThat(existingUser.getRoles()).isEmpty();
+            InOrder inOrder = inOrder(userRepository, identityService);
+            inOrder.verify(userRepository).saveAndFlush(existingUser);
+            inOrder.verify(identityService).deleteUser(IDENTITY_ID);
+        }
 
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
+        @Test
+        void deleteUser_shouldThrowLastAdminException_whenDeletingTheLastActiveAdmin() {
+            existingUser.getRoles().add(adminRole());
+            mockExistingUser();
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(0L);
 
-        when(userRepository.findByUuidAndDeletedOnIsNull(userUuid))
-                .thenReturn(Optional.of(user1));
-        when(userRepository.findByIdentityId(identityId2))
-                .thenReturn(Optional.of(user2));
-        when(userRepository.findByIdentityId(identityId1))
-                .thenReturn(Optional.of(user1));
-        when(userMapper.toDto(user1))
-                .thenReturn(userResponseDTO1);
-        when(identityService.getUserById(identityId1))
-                .thenReturn(userResponseDTO);
-        when(accountPreferencesService.getAccountPreferences(identityId1))
-                .thenReturn(preferencesResponseDTO);
+            assertLastAdmin(() -> userService.deleteUser(existingUser.getUuid()));
 
-        UserResponseDTO result = userService.getUserByUuid(userUuid);
+            assertThat(existingUser.getDeletedOn()).isNull();
+            verify(userRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(identityService);
+        }
 
-        assertThat(result).isNotNull().isEqualTo(userResponseDTO1);
-        assertThat(result.getAudit()).isNotNull();
-        assertThat(result.getAudit().getCreatedBy()).isEqualTo("Vittoria Bianchi");
-        assertThat(result.getAudit().getUpdatedBy()).isEqualTo("Mario Rossi");
-        assertThat(result.getAudit().getCreatedOn()).isEqualTo(CREATED_ON);
-        assertThat(result.getAudit().getUpdatedOn()).isEqualTo(UPDATED_ON);
+        @Test
+        void deleteUser_shouldDeleteAdminAndClearRoles_whenAnotherActiveAdminExists() {
+            existingUser.getRoles().add(adminRole());
+            mockExistingUser();
+            when(userRepository.countByRoles_CodeAndEnabledTrueAndDeletedOnIsNullAndIdNot(ADMIN, existingUser.getId()))
+                    .thenReturn(1L);
+            when(accountService.getCurrentIdentityId()).thenReturn(CURRENT_IDENTITY_ID);
 
-        assertThat(result.getGroups()).isEmpty();
+            userService.deleteUser(existingUser.getUuid());
 
-        verify(userRepository).findByUuidAndDeletedOnIsNull(userUuid);
-        verify(userRepository).findByIdentityId(identityId2);
-        verify(userRepository).findByIdentityId(identityId1);
-        verify(identityService).getUserById(identityId1);
-        verify(accountPreferencesService).getAccountPreferences(identityId1);
-        verify(userMapper).toDto(user1);
+            assertThat(existingUser.getRoles()).isEmpty();
+            assertThat(existingUser.getDeletedOn()).isNotNull();
+            verify(identityService).deleteUser(IDENTITY_ID);
+        }
+
+        @Test
+        void deleteUser_shouldPropagateError_whenIdentityDeletionFails() {
+            RuntimeException identityError = new RuntimeException("identity error");
+            mockExistingUser();
+            when(accountService.getCurrentIdentityId()).thenReturn(CURRENT_IDENTITY_ID);
+            doThrow(identityError).when(identityService).deleteUser(IDENTITY_ID);
+
+            assertThatThrownBy(() -> userService.deleteUser(existingUser.getUuid())).isSameAs(identityError);
+        }
+
+        @Test
+        void deleteUser_shouldThrowUserNotFoundException_whenUserDoesNotExist() {
+            when(userRepository.findByUuidAndDeletedOnIsNull(UNKNOWN_UUID)).thenReturn(Optional.empty());
+
+            assertUserNotFound(() -> userService.deleteUser(UNKNOWN_UUID));
+
+            verify(userRepository, never()).saveAndFlush(any());
+            verifyNoInteractions(accountService, identityService);
+        }
     }
 
-    @Test
-    void getUserByUuid_shouldThrowNotFoundException_whenUserNotFound() {
-        final String uuid = "not-existing";
-        when(userRepository.findByUuidAndDeletedOnIsNull(uuid))
-                .thenReturn(Optional.empty());
+    @Nested
+    class ResetPassword {
 
-        assertThatThrownBy(() -> userService.getUserByUuid(uuid))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'not-existing' not found");
-                });
+        @Test
+        void resetPassword_shouldResetIdentityUserPassword_whenUserExists() {
+            mockExistingUser();
 
-        verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
-        verify(userRepository, never()).findByIdentityId(anyString());
-        verify(userMapper, never()).toDto(any());
+            userService.resetPassword(existingUser.getUuid());
+
+            verify(identityService).resetPassword(IDENTITY_ID);
+        }
+
+        @Test
+        void resetPassword_shouldThrowUserNotFoundException_whenUserDoesNotExist() {
+            when(userRepository.findByUuidAndDeletedOnIsNull(UNKNOWN_UUID)).thenReturn(Optional.empty());
+
+            assertUserNotFound(() -> userService.resetPassword(UNKNOWN_UUID));
+
+            verifyNoInteractions(identityService);
+        }
     }
 
-    @Test
-    void createUser_shouldCreateAndReturnDTO_whenTaxIdNumberNotExists() {
-        final String identityId = "identityId";
-
-        UserRequestDTO dto = buildUserRequestDTO();
-
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByTaxIdNumberAndDeletedOnIsNull("TAX_ID_NEW"))
-                .thenReturn(Optional.empty());
-        when(userRepository.findByUsernameAndDeletedOnIsNull("new username"))
-                .thenReturn(Optional.empty());
-        when(userRepository.findByEmailAndDeletedOnIsNull("new@email.com"))
-                .thenReturn(Optional.empty());
-        when(userRepository.save(any(User.class)))
-                .thenReturn(user1);
-        when(userMapper.toDto(user1))
-                .thenReturn(userResponseDTO1);
-        when(identityService.createUser(any(IdentityUserCreateRequestDTO.class)))
-                .thenReturn(identityId);
-        when(accountPreferencesService.createAccountPreferences(any(AccountPreferencesCreateDTO.class)))
-                .thenReturn(preferencesResponseDTO);
-
-        UserResponseDTO result = userService.createUser(dto);
-
-        assertThat(result).isNotNull().isEqualTo(userResponseDTO1);
-
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository).findByTaxIdNumberAndDeletedOnIsNull("TAX_ID_NEW");
-        verify(userRepository).findByUsernameAndDeletedOnIsNull("new username");
-        verify(userRepository).findByEmailAndDeletedOnIsNull("new@email.com");
-
-        ArgumentCaptor<IdentityUserCreateRequestDTO> identityCaptor =
-                ArgumentCaptor.forClass(IdentityUserCreateRequestDTO.class);
-
-        verify(identityService).createUser(identityCaptor.capture());
-
-        IdentityUserCreateRequestDTO captured = identityCaptor.getValue();
-
-        assertThat(captured.getUsername()).isEqualTo("new username");
-        assertThat(captured.getEmail()).isEqualTo("new@email.com");
-        assertThat(captured.getFirstName()).isEqualTo("new firstname");
-        assertThat(captured.getLastName()).isEqualTo("new lastname");
-        assertThat(captured.getEnabled()).isFalse();
-        assertThat(captured.getPassword()).isEqualTo("password");
-        assertThat(captured.getGroupIds()).containsExactly("group-id");
-        assertThat(captured.getEmailVerified()).isTrue();
-
-        ArgumentCaptor<AccountPreferencesCreateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesCreateDTO.class);
-
-        verify(accountPreferencesService).createAccountPreferences(preferencesCaptor.capture());
-
-        AccountPreferencesCreateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getIdentityId()).isEqualTo(identityId);
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
-
-        verify(userMapper).toDto(user1);
-
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-
-        verify(userRepository).save(userCaptor.capture());
-
-        User savedUser = userCaptor.getValue();
-        assertThat(savedUser.getIdentityId()).isEqualTo(identityId);
+    private void mockExistingUser() {
+        when(userRepository.findByUuidAndDeletedOnIsNull(existingUser.getUuid())).thenReturn(Optional.of(existingUser));
     }
 
-    @Test
-    void createUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
-        UserRequestDTO dto = new UserRequestDTO();
-        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        dto.setLanguageId("LANG_ID_01");
-
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByTaxIdNumberAndDeletedOnIsNull(TAX_ID_NUMBER_USER_1))
-                .thenReturn(Optional.of(user1));
-
-        assertThatThrownBy(() -> userService.createUser(dto))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .satisfies(e -> {
-                    UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_TAX_ID_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with taxIdNumber 'TAX_ID_01' already exists");
-                });
-
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository).findByTaxIdNumberAndDeletedOnIsNull(TAX_ID_NUMBER_USER_1);
-        verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(identityService, never()).createUser(any(IdentityUserCreateRequestDTO.class));
-        verify(accountPreferencesService, never()).createAccountPreferences(any(AccountPreferencesCreateDTO.class));
-        verify(userRepository, never()).save(any());
-        verify(userMapper, never()).toDto(any());
+    private static void completeTransaction(int status) {
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(synchronization -> synchronization.afterCompletion(status));
     }
 
-    @Test
-    void createUser_shouldThrowUserAlreadyExistsException_whenUsernameAlreadyExists() {
-        UserRequestDTO dto = new UserRequestDTO();
-        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        dto.setUsername("existing.username");
-        dto.setLanguageId("LANG_ID_01");
-
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByTaxIdNumberAndDeletedOnIsNull(TAX_ID_NUMBER_USER_1))
-                .thenReturn(Optional.empty());
-        when(userRepository.findByUsernameAndDeletedOnIsNull("existing.username"))
-                .thenReturn(Optional.of(user1));
-
-        assertThatThrownBy(() -> userService.createUser(dto))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .satisfies(e -> {
-                    UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_USERNAME_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with username 'existing.username' already exists");
-                });
-
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository).findByTaxIdNumberAndDeletedOnIsNull(TAX_ID_NUMBER_USER_1);
-        verify(userRepository).findByUsernameAndDeletedOnIsNull("existing.username");
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(identityService, never()).createUser(any(IdentityUserCreateRequestDTO.class));
-        verify(accountPreferencesService, never()).createAccountPreferences(any(AccountPreferencesCreateDTO.class));
-        verify(userRepository, never()).save(any());
-        verify(userMapper, never()).toDto(any());
-    }
-
-    @Test
-    void createUser_shouldThrowUserAlreadyExistsException_whenEmailAlreadyExists() {
-        UserRequestDTO dto = new UserRequestDTO();
-        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        dto.setUsername("new.username");
-        dto.setEmail("existing@email.it");
-        dto.setLanguageId("LANG_ID_01");
-
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByTaxIdNumberAndDeletedOnIsNull(TAX_ID_NUMBER_USER_1))
-                .thenReturn(Optional.empty());
-        when(userRepository.findByUsernameAndDeletedOnIsNull("new.username"))
-                .thenReturn(Optional.empty());
-        when(userRepository.findByEmailAndDeletedOnIsNull("existing@email.it"))
-                .thenReturn(Optional.of(user1));
-
-        assertThatThrownBy(() -> userService.createUser(dto))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .satisfies(e -> {
-                    UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_EMAIL_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with email 'existing@email.it' already exists");
-                });
-
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository).findByTaxIdNumberAndDeletedOnIsNull(TAX_ID_NUMBER_USER_1);
-        verify(userRepository).findByUsernameAndDeletedOnIsNull("new.username");
-        verify(userRepository).findByEmailAndDeletedOnIsNull("existing@email.it");
-        verify(identityService, never()).createUser(any(IdentityUserCreateRequestDTO.class));
-        verify(accountPreferencesService, never()).createAccountPreferences(any(AccountPreferencesCreateDTO.class));
-        verify(userRepository, never()).save(any());
-        verify(userMapper, never()).toDto(any());
-    }
-
-    @Test
-    void createUser_shouldThrowLanguageNotFoundException_whenInvalidLanguageId() {
-        final String languageId = "INVALID-LANG";
-
-        UserRequestDTO dto = new UserRequestDTO();
-        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        dto.setLanguageId(languageId);
-
-        when(languageRepository.findByUuid(languageId))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.createUser(dto))
-                .isInstanceOf(LanguageNotFoundException.class)
-                .satisfies(e -> {
-                    LanguageNotFoundException ex = (LanguageNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.LANGUAGE_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("Language with uuid 'INVALID-LANG' not found");
-                });
-
-        verify(languageRepository).findByUuid(languageId);
-        verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(any());
-        verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(identityService, never()).createUser(any(IdentityUserCreateRequestDTO.class));
-        verify(accountPreferencesService, never()).createAccountPreferences(any(AccountPreferencesCreateDTO.class));
-        verify(userRepository, never()).save(any());
-        verify(userMapper, never()).toDto(any());
-    }
-
-    @Test
-    void updateUser_shouldUpdateAndReturnDTO_whenValid() {
-        final String identityId = "identityId";
-        user1.setIdentityId(identityId);
-
-        UserRequestDTO dto = buildUserRequestDTO();
-        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        dto.setUsername(USERNAME_USER_1);
-        dto.setEmail(EMAIL_USER_1);
-
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userMapper.toDto(user1))
-                .thenReturn(userResponseDTO1);
-        when(accountPreferencesService.updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                any(AccountPreferencesUpdateDTO.class)
-        )).thenReturn(preferencesResponseDTO);
-
-        UserResponseDTO result = userService.updateUser(user1.getUuid(), dto);
-
-        assertThat(result).isNotNull().isEqualTo(userResponseDTO1);
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(any());
-        verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(userMapper).updateEntity(dto, user1);
-
-        ArgumentCaptor<IdentityUserUpdateRequestDTO> captor =
-                ArgumentCaptor.forClass(IdentityUserUpdateRequestDTO.class);
-
-        verify(identityService).updateUser(eq(identityId), captor.capture());
-
-        IdentityUserUpdateRequestDTO captured = captor.getValue();
-
-        assertThat(captured.getUsername()).isEqualTo(USERNAME_USER_1);
-        assertThat(captured.getEmail()).isEqualTo(EMAIL_USER_1);
-        assertThat(captured.getFirstName()).isEqualTo("new firstname");
-        assertThat(captured.getLastName()).isEqualTo("new lastname");
-        assertThat(captured.getEnabled()).isFalse();
-        assertThat(captured.getGroupIds()).containsExactly("group-id");
-
-        ArgumentCaptor<AccountPreferencesUpdateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesUpdateDTO.class);
-
-        verify(accountPreferencesService).updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                preferencesCaptor.capture()
-        );
-
-        AccountPreferencesUpdateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
-
-        verify(userMapper).toDto(user1);
-    }
-
-    @Test
-    void updateUser_shouldThrowNotFoundException_whenUserNotFound() {
-        UserRequestDTO dto = buildUserRequestDTO();
-
-        final String uuid = "not-existing";
-        when(userRepository.findByUuidAndDeletedOnIsNull(uuid))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.updateUser(uuid, dto))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'not-existing' not found");
-                });
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
-        verify(languageRepository, never()).findByUuid(any());
-        verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(any());
-        verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(userMapper, never()).updateEntity(any(), any());
-        verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
-        verify(userMapper, never()).toDto(any());
-    }
-
-    @Test
-    void updateUser_shouldThrowLanguageNotFoundException_whenInvalidLanguage() {
-        UserRequestDTO dto = buildUserRequestDTO();
-        dto.setLanguageId("INVALID-LANG");
-
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-        when(languageRepository.findByUuid("INVALID-LANG"))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.updateUser(user1.getUuid(), dto))
-                .isInstanceOf(LanguageNotFoundException.class)
-                .satisfies(e -> {
-                    LanguageNotFoundException ex = (LanguageNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(ExceptionCodes.LANGUAGE_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("Language with uuid 'INVALID-LANG' not found");
-                });
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(languageRepository).findByUuid("INVALID-LANG");
-        verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(any());
-        verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(userMapper, never()).updateEntity(any(), any());
-        verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
-        verify(userMapper, never()).toDto(any());
-    }
-
-    @Test
-    void updateUser_shouldThrowUserAlreadyExistsException_whenTaxIdNumberAlreadyExists() {
-        final String taxIdNumber = TAX_ID_NUMBER_USER_2;
-
-        UserRequestDTO dto = buildUserRequestDTO();
-        dto.setTaxIdNumber(taxIdNumber);
-        dto.setUsername(USERNAME_USER_1);
-        dto.setEmail(EMAIL_USER_1);
-
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByTaxIdNumberAndDeletedOnIsNull(taxIdNumber))
-                .thenReturn(Optional.of(user2));
-
-        assertThatThrownBy(() -> userService.updateUser(user1.getUuid(), dto))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .satisfies(e -> {
-                    UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_TAX_ID_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with taxIdNumber 'TAX_ID_02' already exists");
-                });
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository).findByTaxIdNumberAndDeletedOnIsNull(taxIdNumber);
-        verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(userMapper, never()).updateEntity(any(), any());
-        verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
-        verify(userMapper, never()).toDto(any());
-    }
-
-    @Test
-    void updateUser_shouldUpdateAndReturnDTO_whenTaxIdNumberChangedAndNotExists() {
-        final String identityId = "identityId";
-        user1.setIdentityId(identityId);
-
-        UserRequestDTO dto = buildUserRequestDTO();
-        dto.setUsername(USERNAME_USER_1);
-        dto.setEmail(EMAIL_USER_1);
-
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByTaxIdNumberAndDeletedOnIsNull("TAX_ID_NEW"))
-                .thenReturn(Optional.empty());
-        when(userMapper.toDto(user1))
-                .thenReturn(userResponseDTO1);
-        when(accountPreferencesService.updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                any(AccountPreferencesUpdateDTO.class)
-        )).thenReturn(preferencesResponseDTO);
-
-        UserResponseDTO result = userService.updateUser(user1.getUuid(), dto);
-
-        assertThat(result).isNotNull().isEqualTo(userResponseDTO1);
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository).findByTaxIdNumberAndDeletedOnIsNull("TAX_ID_NEW");
-        verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(userMapper).updateEntity(dto, user1);
-
-        ArgumentCaptor<IdentityUserUpdateRequestDTO> captor =
-                ArgumentCaptor.forClass(IdentityUserUpdateRequestDTO.class);
-
-        verify(identityService).updateUser(eq(identityId), captor.capture());
-
-        IdentityUserUpdateRequestDTO captured = captor.getValue();
-
-        assertThat(captured.getUsername()).isEqualTo(USERNAME_USER_1);
-        assertThat(captured.getEmail()).isEqualTo(EMAIL_USER_1);
-        assertThat(captured.getFirstName()).isEqualTo("new firstname");
-        assertThat(captured.getLastName()).isEqualTo("new lastname");
-        assertThat(captured.getEnabled()).isFalse();
-        assertThat(captured.getGroupIds()).containsExactly("group-id");
-
-        ArgumentCaptor<AccountPreferencesUpdateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesUpdateDTO.class);
-
-        verify(accountPreferencesService).updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                preferencesCaptor.capture()
-        );
-
-        AccountPreferencesUpdateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
-
-        verify(userMapper).toDto(user1);
-    }
-
-    @Test
-    void updateUser_shouldThrowUserAlreadyExistsException_whenUsernameAlreadyExists() {
-        final String username = USERNAME_USER_2;
-
-        UserRequestDTO dto = buildUserRequestDTO();
-        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        dto.setUsername(username);
-        dto.setEmail(EMAIL_USER_1);
-
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByUsernameAndDeletedOnIsNull(username))
-                .thenReturn(Optional.of(user2));
-
-        assertThatThrownBy(() -> userService.updateUser(user1.getUuid(), dto))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .satisfies(e -> {
-                    UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_USERNAME_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with username 'username2' already exists");
-                });
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(anyString());
-        verify(userRepository).findByUsernameAndDeletedOnIsNull(username);
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(any());
-        verify(userMapper, never()).updateEntity(any(), any());
-        verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
-        verify(userMapper, never()).toDto(any());
-    }
-
-    @Test
-    void updateUser_shouldUpdateAndReturnDTO_whenUsernameChangedAndNotExists() {
-        final String identityId = "identityId";
-        user1.setIdentityId(identityId);
-
-        UserRequestDTO dto = buildUserRequestDTO();
-        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        dto.setEmail(EMAIL_USER_1);
-
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByUsernameAndDeletedOnIsNull("new username"))
-                .thenReturn(Optional.empty());
-        when(userMapper.toDto(user1))
-                .thenReturn(userResponseDTO1);
-        when(accountPreferencesService.updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                any(AccountPreferencesUpdateDTO.class)
-        )).thenReturn(preferencesResponseDTO);
-
-        UserResponseDTO result = userService.updateUser(user1.getUuid(), dto);
-
-        assertThat(result).isNotNull().isEqualTo(userResponseDTO1);
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(anyString());
-        verify(userRepository).findByUsernameAndDeletedOnIsNull("new username");
-        verify(userRepository, never()).findByEmailAndDeletedOnIsNull(anyString());
-        verify(userMapper).updateEntity(dto, user1);
-
-        ArgumentCaptor<IdentityUserUpdateRequestDTO> captor =
-                ArgumentCaptor.forClass(IdentityUserUpdateRequestDTO.class);
-
-        verify(identityService).updateUser(eq(identityId), captor.capture());
-
-        IdentityUserUpdateRequestDTO captured = captor.getValue();
-
-        assertThat(captured.getUsername()).isEqualTo("new username");
-        assertThat(captured.getEmail()).isEqualTo(EMAIL_USER_1);
-        assertThat(captured.getFirstName()).isEqualTo("new firstname");
-        assertThat(captured.getLastName()).isEqualTo("new lastname");
-        assertThat(captured.getEnabled()).isFalse();
-        assertThat(captured.getGroupIds()).containsExactly("group-id");
-
-        ArgumentCaptor<AccountPreferencesUpdateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesUpdateDTO.class);
-
-        verify(accountPreferencesService).updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                preferencesCaptor.capture()
-        );
-
-        AccountPreferencesUpdateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
-
-        verify(userMapper).toDto(user1);
-    }
-
-    @Test
-    void updateUser_shouldThrowUserAlreadyExistsException_whenEmailAlreadyExists() {
-        final String email = EMAIL_USER_2;
-
-        UserRequestDTO dto = buildUserRequestDTO();
-        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        dto.setUsername(USERNAME_USER_1);
-        dto.setEmail(email);
-
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByEmailAndDeletedOnIsNull(email))
-                .thenReturn(Optional.of(user2));
-
-        assertThatThrownBy(() -> userService.updateUser(user1.getUuid(), dto))
-                .isInstanceOf(UserAlreadyExistsException.class)
-                .satisfies(e -> {
-                    UserAlreadyExistsException ex = (UserAlreadyExistsException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_EMAIL_ALREADY_EXISTS);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with email 'vittoria@mock.it' already exists");
-                });
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(anyString());
-        verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
-        verify(userRepository).findByEmailAndDeletedOnIsNull(email);
-        verify(userMapper, never()).updateEntity(any(), any());
-        verify(identityService, never()).updateUser(any(), any());
-        verify(accountPreferencesService, never()).updateAccountPreferencesByIdentityId(anyString(), any(AccountPreferencesUpdateDTO.class));
-        verify(userMapper, never()).toDto(any());
-    }
-
-    @Test
-    void updateUser_shouldUpdateAndReturnDTO_whenEmailChangedAndNotExists() {
-        final String identityId = "identityId";
-        user1.setIdentityId(identityId);
-
-        UserRequestDTO dto = buildUserRequestDTO();
-        dto.setTaxIdNumber(TAX_ID_NUMBER_USER_1);
-        dto.setUsername(USERNAME_USER_1);
-
-        AccountPreferencesResponseDTO preferencesResponseDTO = new AccountPreferencesResponseDTO();
-        preferencesResponseDTO.setLanguage(languageResponseDTO);
-
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-        when(languageRepository.findByUuid("LANG_ID_01"))
-                .thenReturn(Optional.of(language));
-        when(userRepository.findByEmailAndDeletedOnIsNull("new@email.com"))
-                .thenReturn(Optional.empty());
-        when(userMapper.toDto(user1))
-                .thenReturn(userResponseDTO1);
-        when(accountPreferencesService.updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                any(AccountPreferencesUpdateDTO.class)
-        )).thenReturn(preferencesResponseDTO);
-
-        UserResponseDTO result = userService.updateUser(user1.getUuid(), dto);
-
-        assertThat(result).isNotNull().isEqualTo(userResponseDTO1);
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(languageRepository).findByUuid("LANG_ID_01");
-        verify(userRepository, never()).findByTaxIdNumberAndDeletedOnIsNull(anyString());
-        verify(userRepository, never()).findByUsernameAndDeletedOnIsNull(anyString());
-        verify(userRepository).findByEmailAndDeletedOnIsNull("new@email.com");
-        verify(userMapper).updateEntity(dto, user1);
-
-        ArgumentCaptor<IdentityUserUpdateRequestDTO> captor =
-                ArgumentCaptor.forClass(IdentityUserUpdateRequestDTO.class);
-
-        verify(identityService).updateUser(eq(identityId), captor.capture());
-
-        IdentityUserUpdateRequestDTO captured = captor.getValue();
-
-        assertThat(captured.getUsername()).isEqualTo(USERNAME_USER_1);
-        assertThat(captured.getEmail()).isEqualTo("new@email.com");
-        assertThat(captured.getFirstName()).isEqualTo("new firstname");
-        assertThat(captured.getLastName()).isEqualTo("new lastname");
-        assertThat(captured.getEnabled()).isFalse();
-        assertThat(captured.getGroupIds()).containsExactly("group-id");
-
-        ArgumentCaptor<AccountPreferencesUpdateDTO> preferencesCaptor =
-                ArgumentCaptor.forClass(AccountPreferencesUpdateDTO.class);
-
-        verify(accountPreferencesService).updateAccountPreferencesByIdentityId(
-                eq(identityId),
-                preferencesCaptor.capture()
-        );
-
-        AccountPreferencesUpdateDTO preferencesCaptured = preferencesCaptor.getValue();
-
-        assertThat(preferencesCaptured.getLanguageId()).isEqualTo("LANG_ID_01");
-
-        verify(userMapper).toDto(user1);
-    }
-
-    @Test
-    void deleteUser_shouldSoftDeleteUser_whenValid() {
-        final String identityId = "identityId";
-
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-        when(accountService.getCurrentIdentityId())
-                .thenReturn(identityId);
-
-        assertThat(user1.getDeletedOn()).isNull();
-
-        userService.deleteUser(user1.getUuid());
-
-        assertThat(user1.getDeletedBy()).isEqualTo(identityId);
-        assertThat(user1.getDeletedOn()).isNotNull();
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(identityService).deleteUser(user1.getIdentityId());
-        verify(accountService).getCurrentIdentityId();
-        verify(userRepository).save(user1);
-    }
-
-    @Test
-    void deleteUser_shouldThrowNotFoundException_whenUserNotFound() {
-        final String uuid = "non-existing";
-        when(userRepository.findByUuidAndDeletedOnIsNull(uuid))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.deleteUser(uuid))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'non-existing' not found");
-                });
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
-        verify(identityService, never()).updateUser(any(), any());
-        verify(accountService, never()).getCurrentAccount();
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void resetPassword_shouldResetPassword_whenValid() {
-        when(userRepository.findByUuidAndDeletedOnIsNull(user1.getUuid()))
-                .thenReturn(Optional.of(user1));
-
-        userService.resetPassword(user1.getUuid());
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(user1.getUuid());
-        verify(identityService).resetPassword(user1.getIdentityId());
-    }
-
-    @Test
-    void resetPassword_shouldThrowNotFoundException_whenUserNotFound() {
-        final String uuid = "not-existing";
-        when(userRepository.findByUuidAndDeletedOnIsNull(uuid))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.resetPassword(uuid))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'not-existing' not found");
-                });
-
-        verify(userRepository).findByUuidAndDeletedOnIsNull(uuid);
-        verify(identityService, never()).resetPassword(any());
-    }
-
-    @Test
-    void getDetails_shouldReturnDetails_whenValid() {
-        final String identityId = "identityId";
-
-        AccountProfileDTO accountProfileDTO = new AccountProfileDTO();
-        accountProfileDTO.setGender(Gender.M);
-        accountProfileDTO.setMobileNumber("mobile-number");
-        accountProfileDTO.setTaxIdNumber("tax-id-number");
-
-        when(userRepository.findByIdentityId(identityId))
-                .thenReturn(Optional.of(user1));
-        when(accountProfileMapper.toAccountProfileDTO(user1))
-                .thenReturn(accountProfileDTO);
-
-        AccountProfileDTO result = userService.getDetails(identityId);
-
-        assertThat(result).isEqualTo(accountProfileDTO);
-
-        verify(userRepository).findByIdentityId(identityId);
-        verify(accountProfileMapper).toAccountProfileDTO(user1);
-    }
-
-    @Test
-    void getDetails_shouldThrowUserNotFoundException_whenInvalidUuid() {
-        final String identityId = "not-existing";
-
-        when(userRepository.findByIdentityId(identityId))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.getDetails(identityId))
-                .isInstanceOf(UserNotFoundException.class)
-                .satisfies(e -> {
-                    UserNotFoundException ex = (UserNotFoundException) e;
-                    assertThat(ex.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.USER_NOT_FOUND);
-                    assertThat(ex.getLogMessage()).isEqualTo("User with uuid 'not-existing' not found");
+    private static void assertUserNotFound(ThrowingCallable call) {
+        assertThatThrownBy(call)
+                .isInstanceOfSatisfying(UserNotFoundException.class, ex -> {
+                    assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.NOT_FOUND);
+                    assertThat(ex).hasMessage("User not found: " + UNKNOWN_UUID);
                 });
     }
 
-    private UserRequestDTO buildUserRequestDTO() {
-        UserRequestDTO dto = new UserRequestDTO();
-        dto.setFirstname("new firstname");
-        dto.setLastname("new lastname");
-        dto.setGender(Gender.F);
-        dto.setLanguageId("LANG_ID_01");
-        dto.setMobileNumber("9999");
-        dto.setTaxIdNumber("TAX_ID_NEW");
-        dto.setEmail("new@email.com");
-        dto.setUsername("new username");
-        dto.setEnabled(false);
-        dto.setPassword("password");
-        dto.setGroupIds(List.of("group-id"));
-        return dto;
+    private static void assertLastAdmin(ThrowingCallable call) {
+        assertThatThrownBy(call)
+                .isInstanceOfSatisfying(LastAdminException.class, ex ->
+                        assertThat(ex.getErrorCode()).isEqualTo(UserManagementExceptionCodes.Model.User.LAST_ADMIN));
     }
 
+    private static void assertAlreadyExists(ThrowingCallable call, String errorCode, String value) {
+        assertThatThrownBy(call)
+                .isInstanceOfSatisfying(UserAlreadyExistsException.class, ex -> {
+                    assertThat(ex.getErrorCode()).isEqualTo(errorCode);
+                    assertThat(ex.getParams()).containsEntry("value", value);
+                });
+    }
 }

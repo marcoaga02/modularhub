@@ -1,60 +1,66 @@
 package com.marcoaga02.modularhub.core.api.mapper;
 
 import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesResponseDTO;
+import com.marcoaga02.modularhub.core.api.dto.AccountPreferencesUpdateDTO;
+import com.marcoaga02.modularhub.core.api.dto.LanguageDTO;
 import com.marcoaga02.modularhub.core.domain.model.AccountPreferences;
 import com.marcoaga02.modularhub.core.domain.model.Language;
-import com.marcoaga02.modularhub.core.domain.repository.AccountPreferencesRepository;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@ExtendWith(SpringExtension.class)
-@Import({AccountPreferencesMapperImpl.class, LanguageMapperImpl.class})
 class AccountPreferencesMapperTest {
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private AccountPreferencesMapper mapper;
+    private final AccountPreferencesMapper mapper = new AccountPreferencesMapperImpl();
 
-    @MockitoBean
-    private AccountPreferencesRepository repository;
+    @Nested
+    class ToDto {
 
-    private Language lang;
+        @Test
+        void toDto_shouldConvertLanguage() {
+            AccountPreferences preferences = new AccountPreferences();
+            preferences.setLanguage(Language.IT);
 
-    @BeforeEach
-    void setUp() {
-        lang = new Language();
-        lang.setCode("it-IT");
-        lang.setLabel("Italiano");
-        lang.setIsDefault(true);
+            AccountPreferencesResponseDTO dto = mapper.toDto(preferences);
+
+            assertThat(dto.getLanguage()).isEqualTo(LanguageDTO.IT);
+        }
+
+        @Test
+        void toDto_shouldLeaveLanguageNull_whenPreferencesHaveNoLanguage() {
+            AccountPreferencesResponseDTO dto = mapper.toDto(new AccountPreferences());
+
+            assertThat(dto.getLanguage()).isNull();
+        }
+
+        @Test
+        void toDto_shouldReturnNull_whenPreferencesAreNull() {
+            assertThat(mapper.toDto(null)).isNull();
+        }
     }
 
-    @Test
-    void toDto_shouldMapAllFields() {
-        final String identityId = "identity-id";
+    @Nested
+    class UpdateEntity {
 
-        AccountPreferences preferences = new AccountPreferences();
-        preferences.setIdentityId(identityId);
-        preferences.setLanguage(lang);
+        @Test
+        void updateEntity_shouldConvertLanguageIntoPreferences() {
+            AccountPreferences preferences = new AccountPreferences();
+            preferences.setLanguage(Language.EN);
 
-        AccountPreferencesResponseDTO dto =  mapper.toDto(preferences);
+            mapper.updateEntity(new AccountPreferencesUpdateDTO().language(LanguageDTO.IT), preferences);
 
-        assertThat(dto).isNotNull();
-        assertThat(dto.getLanguage()).isNotNull();
-        assertThat(dto.getLanguage().getId()).isEqualTo(lang.getUuid());
-        assertThat(dto.getLanguage().getCode()).isEqualTo("it-IT");
-        assertThat(dto.getLanguage().getLabel()).isEqualTo("Italiano");
-        assertThat(dto.getLanguage().getIsDefault()).isTrue();
-    }
+            assertThat(preferences.getLanguage()).isEqualTo(Language.IT);
+        }
 
-    @Test
-    void toDto_shouldReturnNull_whenInputIsNull() {
-        assertThat(mapper.toDto(null)).isNull();
+        @Test
+        void updateEntity_shouldLeavePreferencesUnchanged_whenRequestIsNull() {
+            AccountPreferences preferences = new AccountPreferences();
+            preferences.setLanguage(Language.EN);
+
+            mapper.updateEntity(null, preferences);
+
+            assertThat(preferences.getLanguage()).isEqualTo(Language.EN);
+        }
     }
 }

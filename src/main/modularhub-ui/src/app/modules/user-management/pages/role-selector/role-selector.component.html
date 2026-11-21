@@ -1,0 +1,28 @@
+<p-pickList
+  [pt]="pickListPT"
+  [source]="availableRoles"
+  [target]="selectedRoles"
+  [dragdrop]="true"
+  [responsive]="true"
+  filterBy="name"
+  [sourceFilterPlaceholder]="'modules.user-management.pages.role-selector.filter-placeholder' | translate"
+  [targetFilterPlaceholder]="'modules.user-management.pages.role-selector.filter-placeholder' | translate"
+>
+  <ng-template pTemplate="sourceHeader">
+    <span class="font-bold">
+      {{ 'modules.user-management.pages.role-selector.available-roles' | translate }}
+    </span>
+  </ng-template>
+  <ng-template [appPickListItem]="availableRoles" let-role pTemplate="sourceItem">
+    <span>{{ role.name }}</span>
+  </ng-template>
+
+  <ng-template pTemplate="targetHeader">
+    <span class="font-bold">
+      {{ 'modules.user-management.pages.role-selector.selected-roles' | translate }}
+    </span>
+  </ng-template>
+  <ng-template [appPickListItem]="selectedRoles" let-role pTemplate="targetItem">
+    <span>{{ role.name }}</span>
+  </ng-template>
+</p-pickList>

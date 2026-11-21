@@ -1,18 +1,19 @@
 package com.marcoaga02.modularhub.core.domain.service;
 
-import com.marcoaga02.modularhub.core.api.dto.IdentityGroupDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserCreateRequestDTO;
-import com.marcoaga02.modularhub.core.api.dto.IdentityUserResponseDTO;
 import com.marcoaga02.modularhub.core.api.dto.IdentityUserUpdateRequestDTO;
-import com.marcoaga02.modularhub.core.api.exception.SelfDeletionException;
+import com.marcoaga02.modularhub.core.api.exception.account.SelfDeletionException;
 import com.marcoaga02.modularhub.core.spi.IdentityProviderService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
 
 @Service
 public class IdentityService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(IdentityService.class);
 
     private final IdentityProviderService identityProvider;
 
@@ -27,18 +28,27 @@ public class IdentityService {
         String userId = identityProvider.createUser(user);
 
         if (StringUtils.hasText(user.getPassword())) {
-            identityProvider.updatePassword(userId, user.getPassword());
+            try {
+                identityProvider.updatePassword(userId, user.getPassword());
+            } catch (RuntimeException e) {
+                rollbackCreatedUser(userId);
+                throw e;
+            }
         }
 
         return userId;
     }
 
-    public void updateUser(String identityId, IdentityUserUpdateRequestDTO user) {
-        identityProvider.updateUser(identityId, user);
+    public void rollbackCreatedUser(String identityId) {
+        try {
+            identityProvider.deleteUser(identityId);
+        } catch (RuntimeException e) {
+            LOGGER.warn("Unable to rollback created identity user '{}'", identityId, e);
+        }
     }
 
-    public IdentityUserResponseDTO getUserById(String identityId) {
-        return identityProvider.getUserById(identityId);
+    public void updateUser(String identityId, IdentityUserUpdateRequestDTO user) {
+        identityProvider.updateUser(identityId, user);
     }
 
     public void resetPassword(String identityId) {
@@ -53,9 +63,5 @@ public class IdentityService {
         }
 
         identityProvider.deleteUser(identityId);
-    }
-
-    public List<IdentityGroupDTO> getGroups() {
-        return identityProvider.getGroups();
     }
 }

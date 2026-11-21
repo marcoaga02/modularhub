@@ -12,6 +12,6 @@ public interface ModulePlugin {
 
     String getIcon();
 
-    List<String> getRequiredRoles();
+    List<String> getPermissions();
 
 }

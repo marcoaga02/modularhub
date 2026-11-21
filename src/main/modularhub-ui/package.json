@@ -6,7 +6,13 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:coverage": "ng test --watch=false --coverage",
+    "clean:api": "node -e \"const fs = require('fs'); Object.values(require('./openapitools.json')['generator-cli'].generators).forEach(g => fs.rmSync(g.output, {recursive: true, force: true}))\"",
+    "generate:api": "npm run clean:api && openapi-generator-cli generate",
+    "prestart": "npm run generate:api",
+    "prebuild": "npm run generate:api",
+    "pretest": "npm run generate:api"
   },
   "private": true,
   "packageManager": "npm@11.9.0",
@@ -30,19 +36,14 @@
     "@angular/build": "^21.2.3",
     "@angular/cli": "^21.2.3",
     "@angular/compiler-cli": "^21.2.0",
+    "@openapitools/openapi-generator-cli": "2.42.0",
     "@tailwindcss/postcss": "^4.1.12",
-    "jasmine-core": "^6.1.0",
+    "@vitest/coverage-v8": "^4.1.0",
     "jsdom": "^28.0.0",
-    "karma": "^6.4.4",
-    "karma-chrome-launcher": "^3.2.0",
-    "karma-coverage": "^2.2.1",
-    "karma-jasmine": "^5.1.0",
-    "karma-jasmine-html-reporter": "^2.2.0",
     "postcss": "8.5.10",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.12",
     "typescript": "~5.9.2",
-    "vitest": "^4.0.8",
-    "zone.js": "^0.16.2"
+    "vitest": "^4.0.8"
   }
 }

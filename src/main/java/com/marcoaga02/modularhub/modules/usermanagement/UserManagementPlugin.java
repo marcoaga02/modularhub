@@ -1,7 +1,7 @@
 package com.marcoaga02.modularhub.modules.usermanagement;
 
 import com.marcoaga02.modularhub.core.ModulePlugin;
-import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserRoles;
+import com.marcoaga02.modularhub.modules.usermanagement.util.constant.UserManagementPermissions;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -30,9 +30,9 @@ public class UserManagementPlugin implements ModulePlugin {
     }
 
     @Override
-    public List<String> getRequiredRoles() {
+    public List<String> getPermissions() {
         return List.of(
-                UserRoles.USER_MANAGEMENT
+                UserManagementPermissions.USER_MANAGEMENT
         );
     }
 }

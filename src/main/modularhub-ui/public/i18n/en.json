@@ -1,0 +1,173 @@
+{
+  "core": {
+    "components": {
+      "top-bar": {
+        "profile": "My profile"
+      }
+    },
+    "pages": {
+      "account-detail": {
+        "account": "Account",
+        "edit-preferences-message": "Account preferences have been updated successfully",
+        "personal-info": "Personal information",
+        "preferences": "Preferences"
+      }
+    }
+  },
+  "exception": {
+    "identity-provider": {
+      "error": "Identity provider error: please try again later",
+      "not-found": "Item not found on the identity provider",
+      "conflict": "The identity provider already contains an item with the same data",
+      "invalid-request": "Request rejected by the identity provider: check the entered data (e.g. the password requirements)"
+    },
+    "internal": {
+      "error": "Internal server error: please try again later"
+    },
+    "model": {
+      "account": {
+        "self-deletion": "Cannot delete the current user"
+      },
+      "user": {
+        "already-exists": {
+          "email": "A user with the same email already exists",
+          "tax-id": "A user with the same tax ID already exists",
+          "username": "A user with the same username already exists"
+        },
+        "not-found": "User not found",
+        "last-admin": "At least one active administrator must remain"
+      },
+      "role": {
+        "not-found": "Role not found"
+      }
+    },
+    "validation": {
+      "invalid-fields": "The following fields are invalid: {{fields}}",
+      "invalid-request": "Invalid request"
+    },
+    "access": {
+      "unauthorized": "Session expired or invalid: please log in again",
+      "denied": "You are not allowed to perform this operation"
+    },
+    "generic": {
+      "not-found": "Resource not found",
+      "method-not-allowed": "Operation not allowed",
+      "concurrent-modification": "The data was modified by another user: reload and try again"
+    }
+  },
+  "general": {
+    "button": {
+      "label": {
+        "add": "Add",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "delete": "Delete",
+        "edit": "Edit",
+        "save": "Save"
+      }
+    },
+    "error": "Error",
+    "logout": {
+      "label": "Logout",
+      "message": "Are you sure you want to log out?",
+      "title": "Confirm logout"
+    }
+  },
+  "model": {
+    "account": {
+      "email": "Email",
+      "firstname": "First name",
+      "gender": "Gender",
+      "lastname": "Last name",
+      "mobile-number": "Mobile number",
+      "tax-id-number": "Tax ID number",
+      "username": "Username"
+    },
+    "account-preferences": {
+      "language": "Language"
+    },
+    "audit": {
+      "created-by": "Created by",
+      "created-on": "Created on",
+      "system": "System",
+      "updated-by": "Updated by",
+      "updated-on": "Updated on"
+    },
+    "gender": {
+      "female": "Female",
+      "male": "Male"
+    },
+    "language": {
+      "en": "English",
+      "it": "Italian"
+    },
+    "user": {
+      "email": "Email",
+      "enabled": {
+        "false": "Inactive",
+        "label": "Enabled",
+        "true": "Active"
+      },
+      "firstname": "First name",
+      "gender": "Gender",
+      "language": "Language",
+      "lastname": "Last name",
+      "mobile-number": "Mobile number",
+      "password": "Password",
+      "tax-id-number": "Tax ID number",
+      "username": "Username",
+      "roles": "Roles"
+    }
+  },
+  "modules": {
+    "user-management": {
+      "description": "User Management",
+      "pages": {
+        "user-detail": {
+          "account": "Account",
+          "audit": "Audit",
+          "personal-info": "Personal information",
+          "title": "User detail {{fullName}}",
+          "no-roles": "No roles assigned"
+        },
+        "user-form": {
+          "confirmation-cancel-dialog": {
+            "message": "All changes will be lost. Continue?",
+            "title": "Confirm discard changes"
+          },
+          "creation-title": "Create user",
+          "edit-title": "Edit user {{fullName}}",
+          "reset-password": {
+            "confirmation-message": "Are you sure you want to send the user an email to reset their password?",
+            "confirmation-title": "Confirm password reset",
+            "label": "Reset password",
+            "success": "Password reset email sent successfully",
+            "tooltip-message": "Send the user an email to change their password"
+          },
+          "select-language-placeholder": "Select language"
+        },
+        "user-list": {
+          "confirmation-delete-dialog": {
+            "message": "Are you sure you want to delete the selected users?",
+            "title": "Confirm user deletion"
+          },
+          "creation-message": "The user has been created successfully",
+          "delete-button-tooltip": "Cannot delete the currently authenticated user",
+          "delete-message": "User(s) deleted successfully",
+          "edit-message": "User has been updated successfully",
+          "empty-message": "No users found",
+          "filter-placeholder": "Filter users"
+        },
+        "role-selector": {
+          "title": "Role selection",
+          "available-roles": "Available roles",
+          "selected-roles": "Selected roles",
+          "filter-placeholder": "Filter roles"
+        }
+      }
+    }
+  },
+  "permissions": {
+    "USER_MANAGEMENT": "User and role management"
+  }
+}

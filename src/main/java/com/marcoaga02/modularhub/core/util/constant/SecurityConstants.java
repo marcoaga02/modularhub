@@ -6,6 +6,8 @@ public final class SecurityConstants {
         /* This utility class should not be instantiated */
     }
 
-    public static final String ROLE_PREFIX = "ROLE_";
+    public static final String PERMISSION_PREFIX = "PERMISSION_";
+
+    public static final String ADMIN_ROLE_CODE = "ADMIN";
 
 }

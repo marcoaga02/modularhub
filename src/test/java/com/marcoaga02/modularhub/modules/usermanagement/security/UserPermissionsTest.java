@@ -18,18 +18,27 @@ class UserPermissionsTest {
     }
 
     @Test
-    void canManageUsers_shouldReturnTrue_whenAuthenticationHasUserManagementRole() {
+    void canManageUsers_shouldReturnTrue_whenAuthenticationHasUserManagementPermission() {
         SecurityContextHolder.getContext().setAuthentication(
-                new TestingAuthenticationToken("user", "password", new SimpleGrantedAuthority("ROLE_USER_MANAGEMENT"))
+                new TestingAuthenticationToken("user", "password", new SimpleGrantedAuthority("PERMISSION_USER_MANAGEMENT"))
         );
 
         assertThat(userPermissions.canManageUsers()).isTrue();
     }
 
     @Test
-    void canManageUsers_shouldReturnFalse_whenAuthenticationLacksUserManagementRole() {
+    void canManageUsers_shouldReturnFalse_whenAuthenticationLacksUserManagementPermission() {
         SecurityContextHolder.getContext().setAuthentication(
-                new TestingAuthenticationToken("user", "password", new SimpleGrantedAuthority("ROLE_SOME_OTHER_ROLE"))
+                new TestingAuthenticationToken("user", "password", new SimpleGrantedAuthority("PERMISSION_SOME_OTHER_PERMISSION"))
+        );
+
+        assertThat(userPermissions.canManageUsers()).isFalse();
+    }
+
+    @Test
+    void canManageUsers_shouldReturnFalse_whenAuthorityHasTheLegacyRolePrefix() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken("user", "password", new SimpleGrantedAuthority("ROLE_USER_MANAGEMENT"))
         );
 
         assertThat(userPermissions.canManageUsers()).isFalse();

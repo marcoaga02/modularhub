@@ -2,7 +2,6 @@ package com.marcoaga02.modularhub.core.api.dto;
 
 import lombok.*;
 
-import java.util.List;
 
 @Getter
 @Setter
@@ -25,6 +24,5 @@ public class IdentityUserCreateRequestDTO {
 
     private String password;
 
-    private List<String> groupIds;
 
 }

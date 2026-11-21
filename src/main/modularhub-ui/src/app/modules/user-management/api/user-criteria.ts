@@ -1,10 +1,5 @@
 import {PagedCriteria} from 'app/core/api/criteria';
-
-export enum UserSortField {
-  Firstname = "firstname",
-  Lastname = "lastname",
-  Email = "email",
-}
+import {UserSortField} from 'app/modules/user-management/api/generated';
 
 type UserFilter = {
   text?: string;

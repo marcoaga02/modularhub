@@ -1,0 +1,74 @@
+{
+  "$schema": "./node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.26.0",
+    "generators": {
+      "core": {
+        "generatorName": "typescript-angular",
+        "inputSpec": "../openapi/core.yaml",
+        "output": "src/app/core/api/generated",
+        "globalProperty": {
+          "supportingFiles": "",
+          "models": "",
+          "apis": ""
+        },
+        "additionalProperties": {
+          "ngVersion": "21.2.0",
+          "fileNaming": "kebab-case",
+          "providedIn": "root",
+          "stringEnums": true,
+          "supportsES6": true,
+          "serviceSuffix": "ApiService",
+          "serviceFileSuffix": ".api.service"
+        },
+        "typeMappings": {
+          "UUID": "UUID",
+          "set": "Array"
+        },
+        "importMappings": {
+          "UUID": "app/core/api/models/uuid"
+        },
+        "modelNameMappings": {
+          "Error": "ApiError"
+        }
+      },
+      "user-management": {
+        "generatorName": "typescript-angular",
+        "inputSpec": "../openapi/user-management.yaml",
+        "output": "src/app/modules/user-management/api/generated",
+        "globalProperty": {
+          "supportingFiles": "",
+          "models": "",
+          "apis": ""
+        },
+        "additionalProperties": {
+          "ngVersion": "21.2.0",
+          "fileNaming": "kebab-case",
+          "providedIn": "root",
+          "stringEnums": true,
+          "supportsES6": true,
+          "serviceSuffix": "ApiService",
+          "serviceFileSuffix": ".api.service"
+        },
+        "typeMappings": {
+          "UUID": "UUID",
+          "set": "Array"
+        },
+        "importMappings": {
+          "UUID": "app/core/api/models/uuid",
+          "ApiError": "app/core/api/generated",
+          "Gender": "app/core/api/generated",
+          "Audit": "app/core/api/generated",
+          "Language": "app/core/api/generated"
+        },
+        "schemaMappings": {
+          "Error": "ApiError",
+          "Gender": "Gender",
+          "Audit": "Audit",
+          "Language": "Language"
+        }
+      }
+    }
+  }
+}

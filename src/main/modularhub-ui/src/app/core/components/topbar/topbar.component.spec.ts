@@ -1,32 +1,134 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import { Component, Signal, signal, WritableSignal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { provideTranslateService } from '@ngx-translate/core';
+import { DialogService } from 'primeng/dynamicdialog';
+import { TopbarComponent } from 'app/core/components/topbar/topbar.component';
+import { PluginService } from 'app/core/api/services/plugin.service';
+import { AccountService } from 'app/core/api/services/account.service';
+import { Account, Language, Plugin } from 'app/core/api/generated';
+import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
+import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
 
-import {TopbarComponent} from 'app/core/components/topbar/topbar.component';
-import {TranslateService} from '@ngx-translate/core';
-import {OAuthService} from 'angular-oauth2-oidc';
-import {ConfirmationService} from 'primeng/api';
-import {DialogService} from 'primeng/dynamicdialog';
+@Component({ template: '' })
+class DummyComponent {}
 
 describe('TopbarComponent', () => {
-  let component: TopbarComponent;
+  const account: Account = {
+    identityId: 'identity-id',
+    email: 'mario@test.it',
+    username: 'mario',
+    firstName: 'mario',
+    lastName: 'rossi',
+    permissions: [],
+    preferences: { language: Language.It },
+  };
+  const usersPlugin: Plugin = {
+    path: 'user-management',
+    name: 'users',
+    description: 'plugins.user-management.description',
+    icon: 'pi pi-users',
+  };
+
   let fixture: ComponentFixture<TopbarComponent>;
+  let element: HTMLElement;
+  let accountSignal: WritableSignal<Account | null>;
+  let accountService: { account: Signal<Account | null>; logout: ReturnType<typeof vi.fn> };
+  let dialogService: { open: ReturnType<typeof vi.fn> };
+  let confirmDialog: { confirm: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    accountSignal = signal<Account | null>(null);
+    accountService = { account: accountSignal.asReadonly(), logout: vi.fn() };
+    dialogService = { open: vi.fn() };
+    confirmDialog = { confirm: vi.fn() };
+
     await TestBed.configureTestingModule({
       imports: [TopbarComponent],
       providers: [
-        { provide: TranslateService, useValue: {} },
-        { provide: OAuthService, useValue: {} },
-        { provide: ConfirmationService, useValue: {} },
-        { provide: DialogService, useValue: {} },
-      ]
+        provideTranslateService(),
+        provideRouter([{ path: 'user-management', component: DummyComponent }]),
+        { provide: ConfirmDialogService, useValue: confirmDialog },
+        { provide: PluginService, useValue: { plugins: signal([usersPlugin]) } },
+        { provide: AccountService, useValue: accountService },
+        { provide: DialogService, useValue: dialogService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TopbarComponent);
-    component = fixture.componentInstance;
+    element = fixture.nativeElement;
     await fixture.whenStable();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  async function publishAccount() {
+    accountSignal.set(account);
+    await fixture.whenStable();
+  }
+
+  async function openMenu() {
+    element.querySelector<HTMLElement>('p-avatar')!.click();
+    await fixture.whenStable();
+  }
+
+  async function clickMenuItem(label: string) {
+    const items = Array.from(element.querySelectorAll<HTMLElement>('p-popover .cursor-pointer'));
+    items.find((item) => item.textContent?.includes(label))!.click();
+    await fixture.whenStable();
+  }
+
+  it('should not show the avatar until the account is loaded', () => {
+    expect(element.querySelector('p-avatar')).toBeNull();
+  });
+
+  it('should show the initials of the account', async () => {
+    await publishAccount();
+
+    expect(element.querySelector('p-avatar')!.textContent?.trim()).toBe('MR');
+  });
+
+  it('should show full name and username in the menu', async () => {
+    await publishAccount();
+    await openMenu();
+
+    const menu = element.querySelector('p-popover')!.textContent;
+    expect(menu).toContain('mario rossi');
+    expect(menu).toContain('mario');
+  });
+
+  it('should show the description of the plugin of the current route', async () => {
+    await TestBed.inject(Router).navigateByUrl('/user-management?page=1');
+    await fixture.whenStable();
+
+    expect(element.textContent).toContain('plugins.user-management.description');
+  });
+
+  it('should open the account detail dialog from the profile item', async () => {
+    await publishAccount();
+    await openMenu();
+
+    await clickMenuItem('core.components.top-bar.profile');
+
+    expect(dialogService.open).toHaveBeenCalledWith(
+      AccountDetailComponent,
+      expect.objectContaining({ closable: true }),
+    );
+  });
+
+  it('should log out only after the confirmation is accepted', async () => {
+    await publishAccount();
+    await openMenu();
+
+    await clickMenuItem('general.logout.label');
+
+    expect(confirmDialog.confirm).toHaveBeenCalledWith(
+      'general.logout.title',
+      'general.logout.message',
+      expect.any(Function),
+    );
+    expect(accountService.logout).not.toHaveBeenCalled();
+
+    confirmDialog.confirm.mock.lastCall![2]();
+
+    expect(accountService.logout).toHaveBeenCalledOnce();
   });
 });

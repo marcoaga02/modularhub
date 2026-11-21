@@ -1,8 +1,8 @@
-import {TestBed} from '@angular/core/testing';
-import {App} from './app';
-import {TranslateService} from '@ngx-translate/core';
-import {MessageService} from 'primeng/api';
-import {OAuthService} from 'angular-oauth2-oidc';
+import { TestBed } from '@angular/core/testing';
+import { App } from './app';
+import { TranslateService } from '@ngx-translate/core';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { OAuthService } from 'angular-oauth2-oidc';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -11,8 +11,9 @@ describe('App', () => {
       providers: [
         { provide: TranslateService, useValue: {} },
         { provide: MessageService, useValue: {} },
+        ConfirmationService,
         { provide: OAuthService, useValue: {} },
-      ]
+      ],
     }).compileComponents();
   });
 

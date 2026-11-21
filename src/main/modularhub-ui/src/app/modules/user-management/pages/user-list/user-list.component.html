@@ -1,13 +1,13 @@
 <div class="flex flex-col h-full w-full px-15 py-8 gap-4">
   <div class="flex flex-row justify-between items-center">
     <p-iconfield>
-      <p-inputicon class="pi pi-search"/>
+      <p-inputicon class="pi pi-search" />
       <input
         [(ngModel)]="criteria.filter.text"
         (ngModelChange)="filterSubject.next()"
         pInputText
         [placeholder]="'modules.user-management.pages.user-list.filter-placeholder' | translate"
-      >
+      />
     </p-iconfield>
     <div class="flex flex-row gap-3">
       <p-button
@@ -17,30 +17,31 @@
       <p-button
         [label]="'general.button.label.edit' | translate | uppercase"
         (onClick)="onEditButtonClick()"
-        [disabled]="!isEditButtonEnabled()"
+        [disabled]="!singleUserSelected()"
       />
       <p-button
         [label]="'general.button.label.delete' | translate | uppercase"
         (onClick)="onDeleteButtonClick()"
         [disabled]="!isDeleteButtonEnabled()"
-        [pTooltip]="isCurrentAccountSelected() ? ('modules.user-management.pages.user-list.delete-button-tooltip' | translate) : ''"
+        [pTooltip]="
+          isCurrentAccountSelected()
+            ? ('modules.user-management.pages.user-list.delete-button-tooltip' | translate)
+            : ''
+        "
         tooltipPosition="bottom"
       />
     </div>
   </div>
-  <div
-    class="flex flex-row flex-1 min-h-0"
-    [ngClass]="{'gap-4': isUserDetailVisible()}"
-  >
+  <div class="flex flex-row flex-1 min-h-0" [ngClass]="{ 'gap-4': singleUserSelected() }">
     <div class="flex flex-col flex-1 min-h-0 min-w-0">
       <p-table
         class="h-full w-full border rounded-xl self-start overflow-hidden"
-        [value]="users"
+        [value]="users()"
         [lazy]="true"
         [loading]="loading()"
-        [totalRecords]="totalRecords"
+        [totalRecords]="totalRecords()"
         [rows]="criteria.limit"
-        (onLazyLoad)="loadPage($event)"
+        (onLazyLoad)="onLazyLoad($event)"
         [(selection)]="selectedUsers"
         [scrollable]="true"
         [paginator]="true"
@@ -57,35 +58,29 @@
         <ng-template pTemplate="header">
           <tr>
             <th class="w-16">
-              <p-tableHeaderCheckbox/>
-            </th>
-            <th class="uppercase" pSortableColumn="lastname">
-              <div class="flex items-center justify-between">
-                {{ "model.user.lastname" | translate }}
-                <p-sortIcon field="lastname"/>
-              </div>
-            </th>
-            <th class="uppercase" pSortableColumn="firstname">
-              <div class="flex items-center justify-between">
-                {{ "model.user.firstname" | translate }}
-                <p-sortIcon field="firstname"/>
-              </div>
+              <p-tableHeaderCheckbox />
             </th>
             <th class="uppercase">
-              {{ "model.user.username" | translate }}
+              {{ 'model.user.lastname' | translate }}
             </th>
             <th class="uppercase">
-              {{ "model.user.email" | translate }}
+              {{ 'model.user.firstname' | translate }}
             </th>
             <th class="uppercase">
-              {{ "model.user.enabled.label" | translate }}
+              {{ 'model.user.username' | translate }}
+            </th>
+            <th class="uppercase">
+              {{ 'model.user.email' | translate }}
+            </th>
+            <th class="uppercase">
+              {{ 'model.user.enabled.label' | translate }}
             </th>
           </tr>
         </ng-template>
-        <ng-template [appTableRow]="users" pTemplate="body" let-user>
+        <ng-template [appTableRow]="users()" pTemplate="body" let-user>
           <tr [pSelectableRow]="user">
             <td>
-              <p-tableCheckbox [value]="user"/>
+              <p-tableCheckbox [value]="user" />
             </td>
             <td>{{ user.lastname }}</td>
             <td>{{ user.firstname }}</td>
@@ -103,15 +98,12 @@
         <ng-template #emptymessage>
           <tr>
             <td colspan="6">
-              {{ "modules.user-management.pages.user-list.empty-message" | translate }}
+              {{ 'modules.user-management.pages.user-list.empty-message' | translate }}
             </td>
           </tr>
         </ng-template>
       </p-table>
     </div>
-    <app-user-detail
-      [isOpen]="isUserDetailVisible()"
-      [userId]="selectedUsers.length > 0 ? selectedUsers[0].id : undefined"
-    />
+    <app-user-detail [isOpen]="singleUserSelected()" [userId]="selectedUserId()" />
   </div>
 </div>

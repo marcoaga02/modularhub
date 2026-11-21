@@ -1,0 +1,173 @@
+{
+  "core": {
+    "components": {
+      "top-bar": {
+        "profile": "Il mio profilo"
+      }
+    },
+    "pages": {
+      "account-detail": {
+        "account": "Account",
+        "edit-preferences-message": "Le preferenze dell'account sono state modificate con successo",
+        "personal-info": "Informazioni personali",
+        "preferences": "Preferenze"
+      }
+    }
+  },
+  "exception": {
+    "identity-provider": {
+      "error": "Errore del provider dell'identità: riprovare più tardi",
+      "not-found": "Elemento non trovato sul provider dell'identità",
+      "conflict": "Il provider dell'identità contiene già un elemento con gli stessi dati",
+      "invalid-request": "Richiesta rifiutata dal provider dell'identità: verificare i dati inseriti (es. i requisiti della password)"
+    },
+    "internal": {
+      "error": "Errore interno al server: riprovare più tardi"
+    },
+    "model": {
+      "account": {
+        "self-deletion": "Impossibile eliminare l'utente corrente"
+      },
+      "user": {
+        "already-exists": {
+          "email": "Esiste già un utente con la stessa email",
+          "tax-id": "Esiste già un utente con lo stesso codice fiscale",
+          "username": "Esiste già un utente con lo stesso username"
+        },
+        "not-found": "Utente non trovato",
+        "last-admin": "Deve restare almeno un amministratore attivo"
+      },
+      "role": {
+        "not-found": "Ruolo non trovato"
+      }
+    },
+    "validation": {
+      "invalid-fields": "I seguenti campi non sono validi: {{fields}}",
+      "invalid-request": "Richiesta non valida"
+    },
+    "access": {
+      "unauthorized": "Sessione scaduta o non valida: effettuare di nuovo l'accesso",
+      "denied": "Non hai i permessi per eseguire questa operazione"
+    },
+    "generic": {
+      "not-found": "Risorsa non trovata",
+      "method-not-allowed": "Operazione non consentita",
+      "concurrent-modification": "I dati sono stati modificati da un altro utente: ricaricare e riprovare"
+    }
+  },
+  "general": {
+    "button": {
+      "label": {
+        "add": "Aggiungi",
+        "cancel": "Annulla",
+        "confirm": "Conferma",
+        "delete": "Elimina",
+        "edit": "Modifica",
+        "save": "Salva"
+      }
+    },
+    "error": "Errore",
+    "logout": {
+      "label": "Esci",
+      "message": "Sei sicuro di voler uscire?",
+      "title": "Conferma uscita"
+    }
+  },
+  "model": {
+    "account": {
+      "email": "Email",
+      "firstname": "Nome",
+      "gender": "Genere",
+      "lastname": "Cognome",
+      "mobile-number": "Cellulare",
+      "tax-id-number": "Codice fiscale",
+      "username": "Username"
+    },
+    "account-preferences": {
+      "language": "Lingua"
+    },
+    "audit": {
+      "created-by": "Creato da",
+      "created-on": "Creato il",
+      "system": "Sistema",
+      "updated-by": "Modificato da",
+      "updated-on": "Modificato il"
+    },
+    "gender": {
+      "female": "Femmina",
+      "male": "Maschio"
+    },
+    "language": {
+      "en": "Inglese",
+      "it": "Italiano"
+    },
+    "user": {
+      "email": "Email",
+      "enabled": {
+        "false": "Inattivo",
+        "label": "Abilitato",
+        "true": "Attivo"
+      },
+      "firstname": "Nome",
+      "gender": "Genere",
+      "language": "Lingua",
+      "lastname": "Cognome",
+      "mobile-number": "Cellulare",
+      "password": "Password",
+      "tax-id-number": "Codice fiscale",
+      "username": "Username",
+      "roles": "Ruoli"
+    }
+  },
+  "modules": {
+    "user-management": {
+      "description": "Gestione Utenti",
+      "pages": {
+        "user-detail": {
+          "account": "Account",
+          "audit": "Audit",
+          "personal-info": "Informazioni personali",
+          "title": "Dettaglio utente {{fullName}}",
+          "no-roles": "Nessun ruolo assegnato"
+        },
+        "user-form": {
+          "confirmation-cancel-dialog": {
+            "message": "Tutte le modifiche andranno perse. Continuare?",
+            "title": "Conferma annullamento modifiche"
+          },
+          "creation-title": "Creazione utente",
+          "edit-title": "Modifica utente {{fullName}}",
+          "reset-password": {
+            "confirmation-message": "Sei sicuro di voler inviare una mail all'utente per reimpostare la password?",
+            "confirmation-title": "Conferma reset password",
+            "label": "Reimposta password",
+            "success": "Email per reset della password inviata con successo",
+            "tooltip-message": "Invia un'email all'utente per cambiare la password"
+          },
+          "select-language-placeholder": "Seleziona lingua"
+        },
+        "user-list": {
+          "confirmation-delete-dialog": {
+            "message": "Sei sicuro di voler eliminare gli utenti selezionati?",
+            "title": "Conferma cancellazione utenti"
+          },
+          "creation-message": "L'utente è stato creato con successo",
+          "delete-button-tooltip": "Non è possibile eliminare l'utente correntemente autenticato",
+          "delete-message": "Utente/i cancellato/i con successo",
+          "edit-message": "L'utente è stato modificato con successo",
+          "empty-message": "Nessun utente trovato",
+          "filter-placeholder": "Filtra utenti"
+        },
+        "role-selector": {
+          "title": "Selezione ruoli",
+          "available-roles": "Ruoli disponibili",
+          "selected-roles": "Ruoli selezionati",
+          "filter-placeholder": "Filtra ruoli"
+        }
+      }
+    }
+  },
+  "permissions": {
+    "USER_MANAGEMENT": "Gestione utenti e ruoli"
+  }
+}

@@ -19,16 +19,15 @@ public class PluginRegistryService {
     }
 
     public List<PluginDTO> getAuthorizedPlugins() {
-        Set<String> userRoles = accountService.getRoles();
+        Set<String> userPermissions = accountService.getPermissions();
 
         return plugins.stream()
-                .filter(p -> userRoles.containsAll(p.getRequiredRoles()))
-                .map(p -> new PluginDTO(
-                        p.getPath(),
-                        p.getName(),
-                        p.getDescription(),
-                        p.getIcon()
-                ))
+                .filter(p -> p.getPermissions().isEmpty() || p.getPermissions().stream().anyMatch(userPermissions::contains))
+                .map(p -> new PluginDTO()
+                        .path(p.getPath())
+                        .name(p.getName())
+                        .description(p.getDescription())
+                        .icon(p.getIcon()))
                 .toList();
     }
 
