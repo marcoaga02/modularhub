@@ -23,7 +23,6 @@ export class ConfirmDialogService {
       },
       acceptButtonProps: {
         label: this.translateService.instant('general.button.label.confirm'),
-        severity: 'secondary',
       },
       accept,
     });

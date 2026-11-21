@@ -106,7 +106,7 @@ describe('SidebarComponent', () => {
   });
 
   it('should log out only after the confirmation is accepted', async () => {
-    element.querySelector<HTMLElement>('.text-red-500')!.click();
+    element.querySelector<HTMLElement>('.text-danger')!.click();
     await fixture.whenStable();
 
     expect(confirmDialog.confirm).toHaveBeenCalledWith(

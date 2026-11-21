@@ -8,7 +8,7 @@
     </div>
   } @else if (user(); as user) {
     <div class="flex flex-col flex-1 overflow-y-auto min-w-0">
-      <div class="sticky top-0 z-10 flex gap-3 items-center border-b p-4 bg-white">
+      <div class="sticky top-0 z-10 flex gap-3 items-center border-b p-4 bg-content">
         <p-avatar
           [label]="initials()"
           shape="circle"
@@ -18,7 +18,7 @@
         />
         <div class="flex flex-col min-w-0">
           <span class="text-xl truncate">{{ fullName() }}</span>
-          <span class="truncate text-gray-500">{{ user.username }}</span>
+          <span class="truncate text-muted">{{ user.username }}</span>
         </div>
         <p-tag
           [value]="'model.user.enabled.' + user.enabled | translate"
@@ -34,7 +34,7 @@
         <div class="grid grid-cols-2 gap-x-12 gap-y-4 min-w-0">
           <!-- ROW 1 -->
           <div class="flex flex-col min-w-0">
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-muted">
               {{ 'model.user.firstname' | translate }}
             </span>
             <span class="wrap-break-word">
@@ -42,7 +42,7 @@
             </span>
           </div>
           <div class="flex flex-col min-w-0">
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-muted">
               {{ 'model.user.lastname' | translate }}
             </span>
             <span class="wrap-break-word">
@@ -52,7 +52,7 @@
 
           <!-- ROW 2 -->
           <div class="flex flex-col min-w-0">
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-muted">
               {{ 'model.user.gender' | translate }}
             </span>
             <span>
@@ -60,7 +60,7 @@
             </span>
           </div>
           <div class="flex flex-col min-w-0">
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-muted">
               {{ 'model.user.language' | translate }}
             </span>
             <span>{{ 'model.language.' + user.language | translate }}</span>
@@ -68,7 +68,7 @@
 
           <!-- ROW 3 -->
           <div class="flex flex-col min-w-0">
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-muted">
               {{ 'model.user.tax-id-number' | translate }}
             </span>
             <span class="wrap-break-word uppercase">
@@ -77,7 +77,7 @@
           </div>
 
           <div class="flex flex-col min-w-0">
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-muted">
               {{ 'model.user.mobile-number' | translate }}
             </span>
             <span class="wrap-break-word">
@@ -92,11 +92,11 @@
         }}</span>
         <div class="flex gap-12">
           <div class="flex flex-col flex-1 min-w-0">
-            <span class="text-sm text-gray-500">{{ 'model.user.email' | translate }}</span>
+            <span class="text-sm text-muted">{{ 'model.user.email' | translate }}</span>
             <span class="break-all">{{ user.email }}</span>
           </div>
           <div class="flex flex-col flex-1 min-w-0">
-            <span class="text-sm text-gray-500">{{ 'model.user.username' | translate }}</span>
+            <span class="text-sm text-muted">{{ 'model.user.username' | translate }}</span>
             <span class="break-all">{{ user.username }}</span>
           </div>
         </div>
@@ -124,11 +124,11 @@
         }}</span>
         <div class="flex flex-col gap-1">
           <div class="flex justify-between">
-            <span class="text-sm text-gray-500">{{ 'model.audit.created-on' | translate }}</span>
+            <span class="text-sm text-muted">{{ 'model.audit.created-on' | translate }}</span>
             <span>{{ user.audit!.createdOn | localizedDate: 'dd MMMM yyyy, HH:mm' }}</span>
           </div>
           <div class="flex justify-between min-w-0">
-            <span class="text-sm text-gray-500 shrink-0">{{
+            <span class="text-sm text-muted shrink-0">{{
               'model.audit.created-by' | translate
             }}</span>
             <span class="min-w-0 break-all text-right">{{
@@ -136,11 +136,11 @@
             }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-sm text-gray-500">{{ 'model.audit.updated-on' | translate }}</span>
+            <span class="text-sm text-muted">{{ 'model.audit.updated-on' | translate }}</span>
             <span>{{ user.audit!.updatedOn! | localizedDate: 'dd MMMM yyyy, HH:mm' }}</span>
           </div>
           <div class="flex justify-between min-w-0">
-            <span class="text-sm text-gray-500 shrink-0">{{
+            <span class="text-sm text-muted shrink-0">{{
               'model.audit.updated-by' | translate
             }}</span>
             <span class="min-w-0 break-all text-right">{{ user.audit!.updatedBy }}</span>

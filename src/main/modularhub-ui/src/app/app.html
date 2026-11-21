@@ -2,7 +2,7 @@
   <ng-template #message let-msg>
     @if (msg.severity === 'error') {
       <div class="flex items-start gap-3 p-2">
-        <i class="pi pi-times-circle text-red-500 mt-0.5"></i>
+        <i class="pi pi-times-circle mt-0.5"></i>
         <div class="flex flex-col gap-2">
           <span class="font-bold">{{ msg.summary | translate }}</span>
           <span class="text-sm">{{ msg.detail | translate: (msg.data?.fields ? { fields: msg.data.fields } : {}) }}</span>
@@ -11,9 +11,9 @@
     } @else {
       <div class="flex items-start gap-3 p-2">
         <i class="pi" [ngClass]="{
-          'pi-check-circle text-green-500': msg.severity === 'success',
-          'pi-info-circle text-blue-500': msg.severity === 'info',
-          'pi-exclamation-triangle text-yellow-500': msg.severity === 'warn'
+          'pi-check-circle': msg.severity === 'success',
+          'pi-info-circle': msg.severity === 'info',
+          'pi-exclamation-triangle': msg.severity === 'warn'
         }"></i>
         <div class="flex flex-col gap-2">
           @if (msg.summary) {

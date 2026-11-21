@@ -20,20 +20,20 @@
             <p-avatar [label]="initials()" shape="circle" [pt]="avatarPT" size="large" />
             <div class="flex flex-col min-w-0">
               <span class="font-bold truncate">{{ fullName() }}</span>
-              <span class="text-sm text-gray-500 truncate">{{ account.username }}</span>
+              <span class="text-sm text-muted truncate">{{ account.username }}</span>
             </div>
           </div>
           <hr />
           <div
-            class="flex items-center gap-3 px-3 py-3.5 cursor-pointer hover:bg-gray-100 rounded-lg"
+            class="flex items-center gap-3 px-3 py-3.5 cursor-pointer hover:bg-content-hover rounded-lg"
             (click)="onProfileClick()"
           >
-            <i class="pi pi-user text-gray-500"></i>
+            <i class="pi pi-user text-muted"></i>
             <span class="text-sm">{{ 'core.components.top-bar.profile' | translate }}</span>
           </div>
           <hr />
           <div
-            class="flex items-center gap-3 px-3 py-3.5 cursor-pointer hover:bg-gray-100 rounded-lg text-red-500"
+            class="flex items-center gap-3 px-3 py-3.5 cursor-pointer hover:bg-content-hover rounded-lg text-danger"
             (click)="logout()"
           >
             <i class="pi pi-sign-out"></i>

@@ -22,6 +22,7 @@
       <p-button
         [label]="'general.button.label.delete' | translate | uppercase"
         (onClick)="onDeleteButtonClick()"
+        severity="danger"
         [disabled]="!isDeleteButtonEnabled()"
         [pTooltip]="
           isCurrentAccountSelected()
@@ -88,9 +89,9 @@
             <td>{{ user.email }}</td>
             <td>
               @if (user.enabled) {
-                <i class="pi pi-check-circle text-green-500"></i>
+                <i class="pi pi-check-circle text-success"></i>
               } @else {
-                <i class="pi pi-times-circle text-red-500"></i>
+                <i class="pi pi-times-circle text-danger"></i>
               }
             </td>
           </tr>

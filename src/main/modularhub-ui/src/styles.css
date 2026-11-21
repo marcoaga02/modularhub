@@ -1,4 +1,22 @@
-/* You can add global styles to this file, and also import other style files */
-
 @import 'tailwindcss';
-@import "primeicons/primeicons.css";
+@import 'primeicons/primeicons.css';
+
+@theme inline {
+  --color-primary: var(--p-primary-color);
+  --color-muted: var(--p-text-muted-color);
+  --color-content: var(--p-content-background);
+  --color-content-hover: var(--p-content-hover-background);
+  --color-content-border: var(--p-content-border-color);
+  --color-success: var(--p-green-500);
+  --color-danger: var(--p-red-500);
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-content-border);
+  }
+}

@@ -7,7 +7,7 @@
       <div class="grid grid-cols-2 gap-x-12 gap-y-2 min-w-0">
         <!-- ROW 1 -->
         <div class="flex flex-col min-w-0">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-muted">
             {{ 'model.account.firstname' | translate }}
           </span>
           <span class="wrap-break-word">
@@ -15,7 +15,7 @@
           </span>
         </div>
         <div class="flex flex-col min-w-0">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-muted">
             {{ 'model.account.lastname' | translate }}
           </span>
           <span class="wrap-break-word">
@@ -25,7 +25,7 @@
 
         <!-- ROW 2 -->
         <div class="flex flex-col min-w-0">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-muted">
             {{ 'model.account.gender' | translate }}
           </span>
           <span>
@@ -36,7 +36,7 @@
           </span>
         </div>
         <div class="flex flex-col min-w-0">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-muted">
             {{ 'model.account.tax-id-number' | translate }}
           </span>
           <span class="wrap-break-word uppercase">
@@ -46,7 +46,7 @@
 
         <!-- ROW 3 -->
         <div class="flex flex-col min-w-0">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-muted">
             {{ 'model.account.mobile-number' | translate }}
           </span>
           <span class="wrap-break-word">
@@ -62,7 +62,7 @@
       </span>
       <div class="grid grid-cols-2 gap-x-12 gap-y-4 min-w-0">
         <div class="flex flex-col min-w-0">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-muted">
             {{ 'model.account.email' | translate }}
           </span>
           <span class="break-all">
@@ -70,7 +70,7 @@
           </span>
         </div>
         <div class="flex flex-col min-w-0">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-muted">
             {{ 'model.account.username' | translate }}
           </span>
           <span class="break-all">
@@ -87,7 +87,7 @@
       @if (editing()) {
         <div class="flex justify-between items-center" [formGroup]="preferencesForm">
           <div class="flex w-full flex-col min-w-0 gap-1">
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-muted">
               {{ 'model.account-preferences.language' | translate }}
             </span>
             <div class="flex w-full items-center gap-2">
@@ -121,7 +121,7 @@
       } @else {
         <div class="flex justify-between items-center">
           <div class="flex flex-col min-w-0">
-            <span class="text-sm text-gray-500">
+            <span class="text-sm text-muted">
               {{ 'model.account-preferences.language' | translate }}
             </span>
             <span class="break-all">
