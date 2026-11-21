@@ -62,9 +62,10 @@
           {{ account.username }}
         </div>
       </dl>
-      <p-message severity="secondary" size="small" icon="pi pi-info-circle" class="mt-2">
+      <p class="mt-1 flex items-center gap-2 text-xs text-muted">
+        <i class="pi pi-info-circle text-xs"></i>
         {{ 'core.pages.account-detail.managed-by-admin' | translate }}
-      </p-message>
+      </p>
     </section>
 
     <section class="flex flex-col gap-3">
@@ -96,6 +97,28 @@
             {{ 'model.language.' + language | translate }}
           </ng-template>
         </p-select>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-3">
+      <app-section-title icon="pi pi-lock">
+        {{ 'core.pages.account-detail.security' | translate }}
+      </app-section-title>
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex min-w-0 flex-col">
+          <span class="text-sm font-medium">{{ 'model.account.password' | translate }}</span>
+          <span class="text-xs text-muted">
+            {{ 'core.pages.account-detail.change-password.description' | translate }}
+          </span>
+        </div>
+        <p-button
+          icon="pi pi-lock"
+          severity="warn"
+          class="shrink-0"
+          [outlined]="true"
+          [label]="'core.pages.account-detail.change-password.label' | translate"
+          (onClick)="changePassword()"
+        />
       </div>
     </section>
   </div>

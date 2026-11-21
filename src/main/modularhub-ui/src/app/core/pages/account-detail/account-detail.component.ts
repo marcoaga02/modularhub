@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Avatar } from 'primeng/avatar';
 import { Button } from 'primeng/button';
-import { Message } from 'primeng/message';
 import { Select } from 'primeng/select';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { AccountService } from 'app/core/api/services/account.service';
@@ -20,7 +19,6 @@ import { DetailRowComponent } from 'app/core/components/detail-row/detail-row.co
     TranslatePipe,
     Avatar,
     Button,
-    Message,
     Select,
     SectionTitleComponent,
     DetailRowComponent,
@@ -56,5 +54,9 @@ export class AccountDetailComponent {
         this.saving.set(false);
       },
     });
+  }
+
+  protected changePassword() {
+    this.accountService.changePassword();
   }
 }

@@ -1,5 +1,8 @@
 {
   "core": {
+    "auth": {
+      "password-updated": "Password updated"
+    },
     "components": {
       "top-bar": {
         "profile": "My profile"
@@ -12,10 +15,15 @@
     "pages": {
       "account-detail": {
         "account": "Account",
+        "change-password": {
+          "label": "Change password",
+          "description": "Choose a new password for your account."
+        },
         "language-hint": "Applied immediately, no need to save.",
         "managed-by-admin": "These details can only be changed by an administrator.",
         "personal-details": "Personal details",
         "preferences": "Preferences",
+        "security": "Security",
         "title": "My profile"
       }
     }
@@ -88,6 +96,7 @@
       "gender": "Gender",
       "lastname": "Last name",
       "mobile-number": "Mobile number",
+      "password": "Password",
       "tax-id-number": "Tax ID number",
       "username": "Username"
     },

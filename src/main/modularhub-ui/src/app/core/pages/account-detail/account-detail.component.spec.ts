@@ -27,6 +27,7 @@ describe('AccountDetailComponent', () => {
   let accountService: {
     account: WritableSignal<Account | null>;
     updateCurrentAccountPreferences: ReturnType<typeof vi.fn>;
+    changePassword: ReturnType<typeof vi.fn>;
   };
   let closed: number;
 
@@ -35,6 +36,7 @@ describe('AccountDetailComponent', () => {
     accountService = {
       account: accountSignal,
       updateCurrentAccountPreferences: vi.fn().mockReturnValue(of({ language: Language.En })),
+      changePassword: vi.fn(),
     };
     const ref = new DynamicDialogRef();
     closed = 0;
@@ -100,6 +102,17 @@ describe('AccountDetailComponent', () => {
     await fixture.whenStable();
 
     expect(closed).toBe(1);
+  });
+
+  it('should start the password change from the security section', async () => {
+    Array.from(element.querySelectorAll<HTMLButtonElement>('p-button button'))
+      .find((button) =>
+        button.textContent?.includes('core.pages.account-detail.change-password.label'),
+      )!
+      .click();
+    await fixture.whenStable();
+
+    expect(accountService.changePassword).toHaveBeenCalledOnce();
   });
 
   it('should save the language as soon as it is chosen', async () => {

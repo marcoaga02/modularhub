@@ -29,6 +29,7 @@ describe('AccountService', () => {
   let oauthService: {
     hasValidAccessToken: ReturnType<typeof vi.fn>;
     logOut: ReturnType<typeof vi.fn>;
+    initCodeFlow: ReturnType<typeof vi.fn>;
     refreshToken: ReturnType<typeof vi.fn>;
   };
   let service: AccountService;
@@ -42,6 +43,7 @@ describe('AccountService', () => {
     oauthService = {
       hasValidAccessToken: vi.fn().mockReturnValue(true),
       logOut: vi.fn(),
+      initCodeFlow: vi.fn(),
       refreshToken: vi.fn().mockResolvedValue({}),
     };
 
@@ -112,6 +114,14 @@ describe('AccountService', () => {
       service.logout();
 
       expect(oauthService.logOut).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('changePassword', () => {
+    it('should ask the identity provider to update the password', () => {
+      service.changePassword();
+
+      expect(oauthService.initCodeFlow).toHaveBeenCalledWith('', { kc_action: 'UPDATE_PASSWORD' });
     });
   });
 

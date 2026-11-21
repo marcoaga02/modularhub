@@ -232,14 +232,15 @@
         }}</app-section-title>
       </p-divider>
       @if (isUserEdit) {
-        <div class="flex items-center gap-4 rounded-lg border bg-content-hover px-4 py-3">
-          <div class="flex flex-1 flex-col">
-            <span class="text-sm font-semibold">{{ 'model.user.password' | translate }}</span>
-            <span class="text-sm text-muted">
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex min-w-0 flex-col">
+            <span class="text-sm font-medium">{{ 'model.user.password' | translate }}</span>
+            <span class="text-xs text-muted">
               {{ 'modules.user-management.pages.user-form.reset-password.description' | translate }}
             </span>
           </div>
           <p-button
+            class="shrink-0"
             icon="pi pi-refresh"
             severity="warn"
             [outlined]="true"

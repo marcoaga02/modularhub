@@ -8,6 +8,7 @@ import {
   AccountPreferencesResponse,
   AccountPreferencesUpdate,
 } from 'app/core/api/generated';
+import { UPDATE_PASSWORD_ACTION } from 'app/core/auth/password-update';
 
 @Injectable({
   providedIn: 'root',
@@ -50,6 +51,10 @@ export class AccountService {
 
   logout(): void {
     this.oauthService.logOut();
+  }
+
+  changePassword(): void {
+    this.oauthService.initCodeFlow('', { kc_action: UPDATE_PASSWORD_ACTION });
   }
 
   async reload(): Promise<void> {

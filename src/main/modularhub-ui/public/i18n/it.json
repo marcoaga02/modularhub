@@ -1,5 +1,8 @@
 {
   "core": {
+    "auth": {
+      "password-updated": "Password aggiornata"
+    },
     "components": {
       "top-bar": {
         "profile": "Il mio profilo"
@@ -12,10 +15,15 @@
     "pages": {
       "account-detail": {
         "account": "Account",
+        "change-password": {
+          "label": "Cambia password",
+          "description": "Scegli una nuova password per il tuo account."
+        },
         "language-hint": "Si applica subito, senza salvare.",
         "managed-by-admin": "Questi dati possono essere modificati solo da un amministratore.",
         "personal-details": "Dati personali",
         "preferences": "Preferenze",
+        "security": "Sicurezza",
         "title": "Il mio profilo"
       }
     }
@@ -88,6 +96,7 @@
       "gender": "Genere",
       "lastname": "Cognome",
       "mobile-number": "Cellulare",
+      "password": "Password",
       "tax-id-number": "Codice fiscale",
       "username": "Username"
     },
