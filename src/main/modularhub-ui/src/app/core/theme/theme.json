@@ -12,6 +12,19 @@
       "800": "#03377d",
       "900": "#082f66",
       "950": "#061d42"
+    },
+    "accent": {
+      "50": "#fff6eb",
+      "100": "#ffe9cc",
+      "200": "#ffd199",
+      "300": "#ffb35c",
+      "400": "#ff9f33",
+      "500": "#ff8a00",
+      "600": "#e46c00",
+      "700": "#bd5400",
+      "800": "#964204",
+      "900": "#7a3708",
+      "950": "#461a00"
     }
   },
   "semantic": {
@@ -27,6 +40,91 @@
       "800": "{brand.800}",
       "900": "{brand.900}",
       "950": "{brand.950}"
+    },
+    "colorScheme": {
+      "light": {
+        "formField": {
+          "invalidPlaceholderColor": "{form.field.placeholder.color}"
+        }
+      },
+      "dark": {
+        "formField": {
+          "invalidPlaceholderColor": "{form.field.placeholder.color}"
+        }
+      }
+    }
+  },
+  "components": {
+    "avatar": {
+      "colorScheme": {
+        "light": {
+          "root": {
+            "background": "{primary.100}",
+            "color": "{primary.700}"
+          }
+        },
+        "dark": {
+          "root": {
+            "background": "color-mix(in srgb, {primary.400}, transparent 84%)",
+            "color": "{primary.300}"
+          }
+        }
+      },
+      "lg": {
+        "fontSize": "1.125rem"
+      }
+    },
+    "divider": {
+      "horizontal": {
+        "padding": "0",
+        "content": {
+          "padding": "0 0.75rem 0 0"
+        }
+      }
+    },
+    "togglebutton": {
+      "colorScheme": {
+        "light": {
+          "root": {
+            "background": "{form.field.background}",
+            "checkedBackground": "{form.field.background}",
+            "hoverBackground": "{form.field.background}",
+            "borderColor": "{form.field.border.color}",
+            "checkedBorderColor": "{form.field.border.color}",
+            "color": "{text.muted.color}",
+            "hoverColor": "{text.color}",
+            "checkedColor": "{primary.color}"
+          },
+          "content": {
+            "checkedBackground": "{highlight.background}"
+          },
+          "icon": {
+            "color": "{text.muted.color}",
+            "hoverColor": "{text.color}",
+            "checkedColor": "{primary.color}"
+          }
+        },
+        "dark": {
+          "root": {
+            "background": "{form.field.background}",
+            "checkedBackground": "{form.field.background}",
+            "hoverBackground": "{form.field.background}",
+            "borderColor": "{form.field.border.color}",
+            "checkedBorderColor": "{form.field.border.color}",
+            "color": "{text.muted.color}",
+            "hoverColor": "{text.color}",
+            "checkedColor": "{primary.color}"
+          },
+          "content": {
+            "checkedBackground": "{highlight.background}"
+          },
+          "icon": {
+            "color": "{text.muted.color}",
+            "hoverColor": "{text.color}",
+            "checkedColor": "{primary.color}"
+          }
+        }
+      }
     }
   }
 }

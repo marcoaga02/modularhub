@@ -63,7 +63,8 @@
         "confirm": "Confirm",
         "delete": "Delete",
         "edit": "Edit",
-        "save": "Save"
+        "save": "Save",
+        "close": "Close"
       }
     },
     "error": "Error",
@@ -135,16 +136,53 @@
             "message": "All changes will be lost. Continue?",
             "title": "Confirm discard changes"
           },
-          "creation-title": "Create user",
-          "edit-title": "Edit user {{fullName}}",
+          "creation-title": "New user",
+          "edit-title": "Edit user",
           "reset-password": {
             "confirmation-message": "Are you sure you want to send the user an email to reset their password?",
             "confirmation-title": "Confirm password reset",
             "label": "Reset password",
             "success": "Password reset email sent successfully",
-            "tooltip-message": "Send the user an email to change their password"
+            "tooltip-message": "Send the user an email to change their password",
+            "description": "The password is never shown. The reset sends the user a link to choose a new one."
           },
-          "select-language-placeholder": "Select language"
+          "select-language-placeholder": "Select language",
+          "roles": {
+            "filter-placeholder": "Filter roles",
+            "system": "System",
+            "empty": "No roles available",
+            "selected-count": "{{selected}} of {{total}} selected"
+          },
+          "sections": {
+            "personal-details": "Personal details",
+            "account": "Account",
+            "security": "Security"
+          },
+          "enabled-hint": {
+            "true": "Can sign in",
+            "false": "Cannot sign in"
+          },
+          "required-fields": "Required fields",
+          "save": "Save changes",
+          "create": "Create user",
+          "password-confirmation": "Confirm password",
+          "placeholders": {
+            "firstname": "e.g. Mario",
+            "lastname": "e.g. Rossi",
+            "tax-id-number": "16 characters",
+            "mobile-number": "Digits only",
+            "email": "name@example.com",
+            "username": "name.surname",
+            "password": "Enter a password",
+            "password-confirmation": "Repeat the password"
+          },
+          "errors": {
+            "required": "Required field",
+            "email": "Invalid email",
+            "tax-id-number": "Invalid tax ID number",
+            "mobile-number": "Digits only",
+            "password-mismatch": "Passwords do not match"
+          }
         },
         "user-list": {
           "confirmation-delete-dialog": {
@@ -157,12 +195,6 @@
           "edit-message": "User has been updated successfully",
           "empty-message": "No users found",
           "filter-placeholder": "Filter users"
-        },
-        "role-selector": {
-          "title": "Role selection",
-          "available-roles": "Available roles",
-          "selected-roles": "Selected roles",
-          "filter-placeholder": "Filter roles"
         }
       }
     }

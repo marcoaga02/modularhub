@@ -63,7 +63,8 @@
         "confirm": "Conferma",
         "delete": "Elimina",
         "edit": "Modifica",
-        "save": "Salva"
+        "save": "Salva",
+        "close": "Chiudi"
       }
     },
     "error": "Errore",
@@ -135,16 +136,53 @@
             "message": "Tutte le modifiche andranno perse. Continuare?",
             "title": "Conferma annullamento modifiche"
           },
-          "creation-title": "Creazione utente",
-          "edit-title": "Modifica utente {{fullName}}",
+          "creation-title": "Nuovo utente",
+          "edit-title": "Modifica utente",
           "reset-password": {
             "confirmation-message": "Sei sicuro di voler inviare una mail all'utente per reimpostare la password?",
             "confirmation-title": "Conferma reset password",
             "label": "Reimposta password",
             "success": "Email per reset della password inviata con successo",
-            "tooltip-message": "Invia un'email all'utente per cambiare la password"
+            "tooltip-message": "Invia un'email all'utente per cambiare la password",
+            "description": "La password non viene mai mostrata. Il reset invia all'utente un link per sceglierne una nuova."
           },
-          "select-language-placeholder": "Seleziona lingua"
+          "select-language-placeholder": "Seleziona lingua",
+          "roles": {
+            "filter-placeholder": "Filtra ruoli",
+            "system": "Sistema",
+            "empty": "Nessun ruolo disponibile",
+            "selected-count": "{{selected}} di {{total}} selezionati"
+          },
+          "sections": {
+            "personal-details": "Dati anagrafici",
+            "account": "Account",
+            "security": "Sicurezza"
+          },
+          "enabled-hint": {
+            "true": "Può accedere",
+            "false": "Non può accedere"
+          },
+          "required-fields": "Campi obbligatori",
+          "save": "Salva modifiche",
+          "create": "Crea utente",
+          "password-confirmation": "Conferma password",
+          "placeholders": {
+            "firstname": "Es. Mario",
+            "lastname": "Es. Rossi",
+            "tax-id-number": "16 caratteri",
+            "mobile-number": "Solo cifre",
+            "email": "nome@example.com",
+            "username": "nome.cognome",
+            "password": "Inserisci una password",
+            "password-confirmation": "Ripeti la password"
+          },
+          "errors": {
+            "required": "Campo obbligatorio",
+            "email": "Email non valida",
+            "tax-id-number": "Codice fiscale non valido",
+            "mobile-number": "Solo cifre",
+            "password-mismatch": "Le password non coincidono"
+          }
         },
         "user-list": {
           "confirmation-delete-dialog": {
@@ -157,12 +195,6 @@
           "edit-message": "L'utente è stato modificato con successo",
           "empty-message": "Nessun utente trovato",
           "filter-placeholder": "Filtra utenti"
-        },
-        "role-selector": {
-          "title": "Selezione ruoli",
-          "available-roles": "Ruoli disponibili",
-          "selected-roles": "Ruoli selezionati",
-          "filter-placeholder": "Filtra ruoli"
         }
       }
     }

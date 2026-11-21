@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgClass, UpperCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { BehaviorSubject, debounceTime, retry, Subject } from 'rxjs';
+import { debounceTime, retry, Subject } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { TableLazyLoadEvent, TableModule, TablePassThrough } from 'primeng/table';
 import { InputText } from 'primeng/inputtext';
@@ -15,15 +15,17 @@ import { MessageService } from 'primeng/api';
 import { UserService } from 'app/modules/user-management/api/services/user.service';
 import { UserResponse } from 'app/modules/user-management/api/generated';
 import { UserCriteria } from 'app/modules/user-management/api/user-criteria';
-import { UserFormComponent } from 'app/modules/user-management/pages/user-form/user-form.component';
-import { UserFormFooterComponent } from 'app/modules/user-management/pages/user-form/user-form-footer/user-form-footer.component';
+import {
+  UserFormComponent,
+  UserFormConfig,
+} from 'app/modules/user-management/pages/user-form/user-form.component';
 import { UserDetailComponent } from 'app/modules/user-management/pages/user-detail/user-detail.component';
 import { AccountService } from 'app/core/api/services/account.service';
 import { HttpHeader } from 'app/core/api/http-header';
 import { MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS } from 'app/core/utils/constants/retry';
+import { FORM_DIALOG_CONFIG } from 'app/core/utils/constants/dialog';
 import { TableRowDirective } from 'app/core/utils/directives/table-row.directive';
 import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
-import { getFullName } from 'app/core/utils/functions/person-name';
 
 @Component({
   selector: 'app-user-list',
@@ -117,37 +119,16 @@ export class UserListComponent {
   }
 
   private openUserFormDialog(user?: UserResponse) {
-    let header: string;
-    let detail: string;
-
-    if (user) {
-      header = this.translateService.instant('modules.user-management.pages.user-form.edit-title', {
-        fullName: getFullName(user.firstname, user.lastname),
-      });
-      detail = this.translateService.instant(
-        'modules.user-management.pages.user-list.edit-message',
-      );
-    } else {
-      header = this.translateService.instant(
-        'modules.user-management.pages.user-form.creation-title',
-      );
-      detail = this.translateService.instant(
-        'modules.user-management.pages.user-list.creation-message',
-      );
-    }
+    const detail = this.translateService.instant(
+      user
+        ? 'modules.user-management.pages.user-list.edit-message'
+        : 'modules.user-management.pages.user-list.creation-message',
+    );
 
     this.dialogService
-      .open(UserFormComponent, {
-        header,
-        width: '60vw',
-        data: {
-          buttonClick: new Subject<string>(),
-          formValid: new BehaviorSubject(false),
-          userId: user?.id,
-        },
-        templates: {
-          footer: UserFormFooterComponent,
-        },
+      .open<UserFormComponent, UserFormConfig>(UserFormComponent, {
+        ...FORM_DIALOG_CONFIG,
+        data: { userId: user?.id },
       })
       ?.onClose.subscribe((result: UserResponse | undefined) => {
         if (!result) {

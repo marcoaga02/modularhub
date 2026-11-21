@@ -220,7 +220,6 @@ describe('UserListComponent', () => {
 
       const [component, config] = dialogService.open.mock.lastCall!;
       expect(component).toBe(UserFormComponent);
-      expect(config.header).toBe('modules.user-management.pages.user-form.creation-title');
       expect(config.data.userId).toBeUndefined();
     });
 
@@ -260,7 +259,6 @@ describe('UserListComponent', () => {
       await click('general.button.label.edit');
 
       const config = dialogService.open.mock.lastCall![1];
-      expect(config.header).toBe('modules.user-management.pages.user-form.edit-title');
       expect(config.data.userId).toBe(luigi.id);
     });
 
