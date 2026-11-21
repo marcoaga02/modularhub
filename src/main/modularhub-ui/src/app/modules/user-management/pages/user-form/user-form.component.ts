@@ -81,6 +81,7 @@ export class UserFormComponent {
     roleIds: this.formBuilder.nonNullable.array<UUID>([]),
     enabled: [false, Validators.required],
   });
+  private initialFormValue = this.currentFormValue();
 
   protected readonly loading = signal(true);
   private readonly userEdited = signal<UserResponse | undefined>(undefined);
@@ -140,6 +141,7 @@ export class UserFormComponent {
           this.userForm.controls.password.clearValidators();
           this.userForm.controls.password.updateValueAndValidity();
           this.userForm.controls.password.disable();
+          this.initialFormValue = this.currentFormValue();
 
           this.loading.set(false);
         },
@@ -182,7 +184,17 @@ export class UserFormComponent {
     });
   }
 
+  private currentFormValue(): string {
+    const value = this.userForm.getRawValue();
+    return JSON.stringify({ ...value, roleIds: [...value.roleIds].sort() });
+  }
+
   private cancel() {
+    if (this.currentFormValue() === this.initialFormValue) {
+      this.ref.close();
+      return;
+    }
+
     this.confirmDialog.confirm(
       'modules.user-management.pages.user-form.confirmation-cancel-dialog.title',
       'modules.user-management.pages.user-form.confirmation-cancel-dialog.message',

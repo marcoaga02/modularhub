@@ -274,8 +274,58 @@ describe('UserFormComponent', () => {
   });
 
   describe('cancel', () => {
-    it('should close without result only after the confirmation is accepted', async () => {
+    it('should close without confirmation when nothing is changed in creation', async () => {
       await setUp();
+
+      await press('cancel');
+
+      expect(confirmDialog.confirm).not.toHaveBeenCalled();
+      expect(closedWith).toEqual([undefined]);
+    });
+
+    it('should close without confirmation when nothing is changed in edit', async () => {
+      await setUp(user.id);
+
+      await press('cancel');
+
+      expect(confirmDialog.confirm).not.toHaveBeenCalled();
+      expect(closedWith).toEqual([undefined]);
+    });
+
+    it('should close without confirmation when a changed field is restored', async () => {
+      await setUp(user.id);
+      await type(input('firstname'), 'Marco');
+      await type(input('firstname'), 'Mario');
+
+      await press('cancel');
+
+      expect(confirmDialog.confirm).not.toHaveBeenCalled();
+      expect(closedWith).toEqual([undefined]);
+    });
+
+    it('should ask a confirmation when the roles are changed', async () => {
+      await setUp(user.id);
+      await closeRolesDialogWith([role.id, otherRole.id]);
+
+      await press('cancel');
+
+      expect(confirmDialog.confirm).toHaveBeenCalledOnce();
+      expect(closedWith).toEqual([]);
+    });
+
+    it('should not ask a confirmation when the same roles are confirmed in another order', async () => {
+      userService.getUserById.mockReturnValue(of({ ...user, roles: [role, otherRole] }));
+      await setUp(user.id);
+      await closeRolesDialogWith([otherRole.id, role.id]);
+
+      await press('cancel');
+
+      expect(confirmDialog.confirm).not.toHaveBeenCalled();
+    });
+
+    it('should close without result only after the confirmation is accepted when a field is changed', async () => {
+      await setUp();
+      await type(input('firstname'), 'Luigi');
 
       await press('cancel');
       expect(confirmDialog.confirm).toHaveBeenCalledWith(
