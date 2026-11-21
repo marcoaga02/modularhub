@@ -1,8 +1,13 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { OAuthService } from 'angular-oauth2-oidc';
-import { firstValueFrom, ReplaySubject } from 'rxjs';
-import { Account, AccountApiService, AccountPreferencesUpdate } from 'app/core/api/generated';
+import { firstValueFrom, ReplaySubject, tap } from 'rxjs';
+import {
+  Account,
+  AccountApiService,
+  AccountPreferencesResponse,
+  AccountPreferencesUpdate,
+} from 'app/core/api/generated';
 
 @Injectable({
   providedIn: 'root',
@@ -53,6 +58,13 @@ export class AccountService {
   }
 
   updateCurrentAccountPreferences(preferences: AccountPreferencesUpdate) {
-    return this.accountApi.updatePreferences(preferences);
+    return this.accountApi
+      .updatePreferences(preferences)
+      .pipe(tap((updated) => this.applyPreferences(updated)));
+  }
+
+  private applyPreferences(preferences: AccountPreferencesResponse) {
+    this.translateService.use(preferences.language);
+    this.currentAccount.update((account) => account && { ...account, preferences });
   }
 }

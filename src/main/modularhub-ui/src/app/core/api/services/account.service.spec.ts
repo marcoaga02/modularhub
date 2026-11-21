@@ -116,14 +116,49 @@ describe('AccountService', () => {
   });
 
   describe('updateCurrentAccountPreferences', () => {
-    it('should send the preferences to the api', async () => {
-      const preferences: AccountPreferencesUpdate = { language: Language.En };
-      accountApi.updatePreferences.mockReturnValue(of(account));
+    const preferences: AccountPreferencesUpdate = { language: Language.En };
+
+    it('should send the preferences to the api and return the saved ones', async () => {
+      accountApi.updatePreferences.mockReturnValue(of(preferences));
 
       const result = await firstValueFrom(service.updateCurrentAccountPreferences(preferences));
 
       expect(accountApi.updatePreferences).toHaveBeenCalledWith(preferences);
-      expect(result).toEqual(account);
+      expect(result).toEqual(preferences);
+    });
+
+    it('should update the account and use the saved language', async () => {
+      service.load();
+      await service.whenLoaded();
+      accountApi.updatePreferences.mockReturnValue(of(preferences));
+
+      await firstValueFrom(service.updateCurrentAccountPreferences(preferences));
+
+      expect(service.account()).toEqual({ ...account, preferences });
+      expect(translateService.use).toHaveBeenLastCalledWith(Language.En);
+    });
+
+    it('should keep no account when the preferences are saved before the account is loaded', async () => {
+      accountApi.updatePreferences.mockReturnValue(of(preferences));
+
+      await firstValueFrom(service.updateCurrentAccountPreferences(preferences));
+
+      expect(service.account()).toBeNull();
+      expect(translateService.use).toHaveBeenCalledWith(Language.En);
+    });
+
+    it('should leave account and language unchanged when the save fails', async () => {
+      service.load();
+      await service.whenLoaded();
+      translateService.use.mockClear();
+      accountApi.updatePreferences.mockReturnValue(throwError(() => new Error('boom')));
+
+      await expect(
+        firstValueFrom(service.updateCurrentAccountPreferences(preferences)),
+      ).rejects.toThrow('boom');
+
+      expect(service.account()).toEqual(account);
+      expect(translateService.use).not.toHaveBeenCalled();
     });
   });
 });

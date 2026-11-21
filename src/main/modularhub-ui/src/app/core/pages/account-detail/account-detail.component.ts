@@ -72,14 +72,13 @@ export class AccountDetailComponent {
 
     this.accountService.updateCurrentAccountPreferences(preferences).subscribe({
       next: () => {
+        this.resetForm(this.account()!);
         this.messageService.add({
           severity: 'success',
           summary: this.translateService.instant(
             'core.pages.account-detail.edit-preferences-message',
           ),
         });
-
-        globalThis.location.reload();
       },
       error: () => undefined,
     });

@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
-import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateService, TranslateService } from '@ngx-translate/core';
+import { registerLocaleData } from '@angular/common';
+import localeIt from '@angular/common/locales/it';
 import { UserDetailComponent } from 'app/modules/user-management/pages/user-detail/user-detail.component';
 import { UserService } from 'app/modules/user-management/api/services/user.service';
 import { RoleSummary, UserResponse } from 'app/modules/user-management/api/generated';
@@ -76,6 +78,17 @@ describe('UserDetailComponent', () => {
     expect(text).toContain('RSSMRA80A01H501U');
     expect(text).toContain('Operators');
     expect(text).toContain('Luigi Verdi');
+  });
+
+  it('should show the dates in the new language when the language changes', async () => {
+    registerLocaleData(localeIt, 'it');
+    await showUser(user.id);
+    expect(element.textContent).toContain('January 2026');
+
+    TestBed.inject(TranslateService).use('it');
+    await fixture.whenStable();
+
+    expect(element.textContent).toContain('gennaio 2026');
   });
 
   it('should show the spinner while the user is loading', async () => {

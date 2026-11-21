@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal, Signal } from '@angular/core';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { provideTranslateService } from '@ngx-translate/core';
 import { MessageService, ToastMessageOptions } from 'primeng/api';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
@@ -32,7 +32,7 @@ describe('AccountDetailComponent', () => {
   async function setUp(initialAccount: Account | null) {
     accountService = {
       account: signal(initialAccount).asReadonly(),
-      updateCurrentAccountPreferences: vi.fn().mockReturnValue(of(account)),
+      updateCurrentAccountPreferences: vi.fn().mockReturnValue(of(account.preferences)),
     };
 
     await TestBed.configureTestingModule({
@@ -103,7 +103,7 @@ describe('AccountDetailComponent', () => {
     expect(accountService.updateCurrentAccountPreferences).not.toHaveBeenCalled();
   });
 
-  it('should save the selected language and show a confirmation', async () => {
+  it('should save the selected language, show a confirmation and go back to the read only view', async () => {
     await setUp(account);
     await clickButton('general.button.label.edit');
 
@@ -115,5 +115,19 @@ describe('AccountDetailComponent', () => {
     expect(messages).toEqual([
       { severity: 'success', summary: 'core.pages.account-detail.edit-preferences-message' },
     ]);
+    expect(languageSelect()).toBeNull();
+  });
+
+  it('should stay in edit mode when the save fails', async () => {
+    await setUp(account);
+    accountService.updateCurrentAccountPreferences.mockReturnValue(
+      throwError(() => new Error('boom')),
+    );
+    await clickButton('general.button.label.edit');
+
+    await clickButton('general.button.label.save');
+
+    expect(messages).toEqual([]);
+    expect(languageSelect()).not.toBeNull();
   });
 });
