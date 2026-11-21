@@ -153,7 +153,7 @@ export class UserListComponent {
   }
 
   private deleteUser(user: UserResponse) {
-    this.userService.deleteUsers([user]).subscribe({
+    this.userService.deleteUser(user.id).subscribe({
       next: () => {
         this.showSuccess('modules.user-management.pages.user-list.delete-message');
         this.loadPage();

@@ -109,15 +109,14 @@ describe('UserService', () => {
     expect(await result).toEqual(user);
   });
 
-  it('should delete every selected user', async () => {
-    const otherId = 'other-id' as UUID;
+  it('should delete a user', async () => {
+    const result = firstValueFrom(service.deleteUser(userId));
 
-    const result = firstValueFrom(service.deleteUsers([user, {...user, id: otherId}]));
+    const request = httpTesting.expectOne(`${apiUrl}/users/${userId}`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null);
 
-    httpTesting.expectOne(`${apiUrl}/users/${userId}`).flush(null);
-    httpTesting.expectOne(`${apiUrl}/users/${otherId}`).flush(null);
-
-    expect((await result).length).toBe(2);
+    await result;
   });
 
   it('should reset the password of a user', async () => {

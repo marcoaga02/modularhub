@@ -9,6 +9,7 @@ import { AccountService } from 'app/core/api/services/account.service';
 import { Account, Language, Plugin } from 'app/core/api/generated';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
 import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
+import { FORM_DIALOG_CONFIG } from 'app/core/utils/constants/dialog';
 
 @Component({ template: '' })
 class DummyComponent {}
@@ -71,7 +72,7 @@ describe('TopbarComponent', () => {
   }
 
   async function clickMenuItem(label: string) {
-    const items = Array.from(element.querySelectorAll<HTMLElement>('p-popover .cursor-pointer'));
+    const items = Array.from(element.querySelectorAll<HTMLElement>('p-popover button'));
     items.find((item) => item.textContent?.includes(label))!.click();
     await fixture.whenStable();
   }
@@ -86,13 +87,13 @@ describe('TopbarComponent', () => {
     expect(element.querySelector('p-avatar')!.textContent?.trim()).toBe('MR');
   });
 
-  it('should show full name and username in the menu', async () => {
+  it('should show full name and email in the menu', async () => {
     await publishAccount();
     await openMenu();
 
     const menu = element.querySelector('p-popover')!.textContent;
     expect(menu).toContain('mario rossi');
-    expect(menu).toContain('mario');
+    expect(menu).toContain('mario@test.it');
   });
 
   it('should show the description of the plugin of the current route', async () => {
@@ -110,7 +111,7 @@ describe('TopbarComponent', () => {
 
     expect(dialogService.open).toHaveBeenCalledWith(
       AccountDetailComponent,
-      expect.objectContaining({ closable: true }),
+      expect.objectContaining({ ...FORM_DIALOG_CONFIG, width: '32rem' }),
     );
   });
 

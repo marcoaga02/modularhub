@@ -60,7 +60,7 @@ describe('UserListComponent', () => {
   let userService: {
     getUsers: ReturnType<typeof vi.fn>;
     getUserById: ReturnType<typeof vi.fn>;
-    deleteUsers: ReturnType<typeof vi.fn>;
+    deleteUser: ReturnType<typeof vi.fn>;
   };
   let accountService: {
     account: Signal<Account | null>;
@@ -75,7 +75,7 @@ describe('UserListComponent', () => {
     userService = {
       getUsers: vi.fn().mockReturnValue(page(users, total)),
       getUserById: vi.fn().mockReturnValue(of(mario)),
-      deleteUsers: vi.fn().mockReturnValue(of([undefined])),
+      deleteUser: vi.fn().mockReturnValue(of(undefined)),
     };
     accountService = {
       account: signal(account).asReadonly(),
@@ -320,13 +320,13 @@ describe('UserListComponent', () => {
         `${LIST}.confirmation-delete-dialog.message`,
         expect.any(Function),
       );
-      expect(userService.deleteUsers).not.toHaveBeenCalled();
+      expect(userService.deleteUser).not.toHaveBeenCalled();
       userService.getUsers.mockReturnValue(page([mario]));
 
       confirmDialog.confirm.mock.lastCall![2]();
       await fixture.whenStable();
 
-      expect(userService.deleteUsers).toHaveBeenCalledWith([luigi]);
+      expect(userService.deleteUser).toHaveBeenCalledWith(luigi.id);
       expect(messages).toEqual([{ severity: 'success', detail: `${LIST}.delete-message` }]);
       expect(rows()).toHaveLength(1);
       expect(detail()).toBeNull();

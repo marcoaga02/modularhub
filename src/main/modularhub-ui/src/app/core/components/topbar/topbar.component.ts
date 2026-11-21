@@ -12,13 +12,12 @@ import { AccountService } from 'app/core/api/services/account.service';
 import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
 import { getFullName, getInitials } from 'app/core/utils/functions/person-name';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
-import { AccountDetailHeaderComponent } from 'app/core/pages/account-detail/account-detail-header/account-detail-header.component';
+import { FORM_DIALOG_CONFIG } from 'app/core/utils/constants/dialog';
 
 @Component({
   selector: 'app-topbar',
   imports: [Toolbar, TranslatePipe, Avatar, Popover],
   templateUrl: './topbar.component.html',
-  styleUrl: './topbar.component.css',
 })
 export class TopbarComponent {
   private readonly router = inject(Router);
@@ -27,21 +26,13 @@ export class TopbarComponent {
   private readonly dialogService = inject(DialogService);
 
   protected readonly avatarPT: AvatarPassThroughOptions = {
-    label: {
-      class: 'text-sm',
-    },
-    root: {
-      class: 'cursor-pointer',
-    },
+    root: { class: 'cursor-pointer' },
+    label: { class: 'text-sm' },
   };
 
   protected readonly popoverPT: PopoverPassThroughOptions = {
-    content: {
-      class: 'p-0',
-    },
-    root: {
-      class: 'rounded-xl',
-    },
+    root: { class: 'rounded-xl before:hidden after:hidden' },
+    content: { class: 'p-0' },
   };
 
   private readonly plugins = inject(PluginService).plugins;
@@ -76,12 +67,10 @@ export class TopbarComponent {
 
   protected onProfileClick() {
     this.dialogService.open(AccountDetailComponent, {
-      style: { 'max-width': '60vw', 'min-width': '40rem' },
-      closable: true,
+      ...FORM_DIALOG_CONFIG,
+      width: '32rem',
       closeOnEscape: true,
-      templates: {
-        header: AccountDetailHeaderComponent,
-      },
+      dismissableMask: true,
     });
   }
 }

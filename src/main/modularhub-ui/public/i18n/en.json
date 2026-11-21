@@ -12,9 +12,11 @@
     "pages": {
       "account-detail": {
         "account": "Account",
-        "edit-preferences-message": "Account preferences have been updated successfully",
-        "personal-info": "Personal information",
-        "preferences": "Preferences"
+        "language-hint": "Applied immediately, no need to save.",
+        "managed-by-admin": "These details can only be changed by an administrator.",
+        "personal-details": "Personal details",
+        "preferences": "Preferences",
+        "title": "My profile"
       }
     }
   },

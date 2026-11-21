@@ -17,29 +17,30 @@
         (click)="op.toggle($event)"
       />
       <p-popover #op [pt]="popoverPT" appendTo="self">
-        <div class="flex flex-col">
-          <div class="flex items-center gap-3 p-3">
-            <p-avatar [label]="initials()" shape="circle" [pt]="avatarPT" size="large" />
-            <div class="flex flex-col min-w-0">
-              <span class="font-bold truncate">{{ fullName() }}</span>
-              <span class="text-sm text-muted truncate">{{ account.username }}</span>
-            </div>
+        <div class="flex w-64 flex-col">
+          <div class="flex min-w-0 flex-col p-4">
+            <span class="truncate font-semibold">{{ fullName() }}</span>
+            <span class="truncate text-sm text-muted">{{ account.email }}</span>
           </div>
-          <hr />
-          <div
-            class="flex items-center gap-3 px-3 py-3.5 cursor-pointer hover:bg-content-hover rounded-lg"
-            (click)="onProfileClick()"
-          >
-            <i class="pi pi-user text-muted"></i>
-            <span class="text-sm">{{ 'core.components.top-bar.profile' | translate }}</span>
+          <div class="border-t p-2">
+            <button
+              type="button"
+              class="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm hover:bg-content-hover"
+              (click)="op.hide(); onProfileClick()"
+            >
+              <i class="pi pi-user"></i>
+              {{ 'core.components.top-bar.profile' | translate }}
+            </button>
           </div>
-          <hr />
-          <div
-            class="flex items-center gap-3 px-3 py-3.5 cursor-pointer hover:bg-content-hover rounded-lg text-danger"
-            (click)="logout()"
-          >
-            <i class="pi pi-sign-out"></i>
-            <span class="text-sm">{{ 'general.logout.label' | translate }}</span>
+          <div class="border-t p-2">
+            <button
+              type="button"
+              class="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm hover:bg-content-hover hover:text-danger"
+              (click)="op.hide(); logout()"
+            >
+              <i class="pi pi-sign-out"></i>
+              {{ 'general.logout.label' | translate }}
+            </button>
           </div>
         </div>
       </p-popover>

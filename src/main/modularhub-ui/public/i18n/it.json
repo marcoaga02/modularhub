@@ -12,9 +12,11 @@
     "pages": {
       "account-detail": {
         "account": "Account",
-        "edit-preferences-message": "Le preferenze dell'account sono state modificate con successo",
-        "personal-info": "Informazioni personali",
-        "preferences": "Preferenze"
+        "language-hint": "Si applica subito, senza salvare.",
+        "managed-by-admin": "Questi dati possono essere modificati solo da un amministratore.",
+        "personal-details": "Dati personali",
+        "preferences": "Preferenze",
+        "title": "Il mio profilo"
       }
     }
   },

@@ -1,10 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { forkJoin } from 'rxjs';
 import { UserCriteria } from 'app/modules/user-management/api/user-criteria';
 import {
   UserApiService,
   UserCreateRequest,
-  UserResponse,
   UserUpdateRequest,
 } from 'app/modules/user-management/api/generated';
 import { UUID } from 'app/core/api/models/uuid';
@@ -37,8 +35,8 @@ export class UserService {
     return this.userApi.updateUser(id, user);
   }
 
-  deleteUsers(usersToDelete: UserResponse[]) {
-    return forkJoin(usersToDelete.map((u) => this.userApi.deleteUserByUuid(u.id)));
+  deleteUser(id: UUID) {
+    return this.userApi.deleteUserByUuid(id);
   }
 
   resetPassword(id: UUID) {

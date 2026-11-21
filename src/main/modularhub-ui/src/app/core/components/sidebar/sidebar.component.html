@@ -1,13 +1,45 @@
 <nav
-  class="flex h-full flex-col border-r bg-content transition-[width] duration-300"
-  [class.w-64]="isOpen()"
-  [class.w-16]="!isOpen()"
+  class="absolute inset-y-0 left-0 flex flex-col overflow-hidden border-r bg-content transition-[width] duration-300"
+  [class.w-64]="isExpanded()"
+  [class.w-16]="!isExpanded()"
+  [class.shadow-xl]="isFloating()"
+  (mouseleave)="isHovered.set(false)"
 >
   <div class="flex h-14 shrink-0 items-center gap-3 border-b px-4">
-    <img src="/logo.svg" class="size-8 shrink-0" alt="" />
-    @if (isOpen()) {
-      <span class="truncate font-semibold">ModularHub</span>
+    @if (isExpanded()) {
+      <img
+        src="/logo-full.svg"
+        class="h-8 min-w-0 flex-1 object-contain object-left"
+        alt="ModularHub"
+      />
     }
+    <button
+      type="button"
+      class="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-content-hover"
+      [class.order-first]="!isPinned()"
+      [attr.aria-label]="
+        (isPinned() ? 'core.components.sidebar.collapse' : 'core.components.sidebar.expand')
+          | translate
+      "
+      [pTooltip]="isPinned() ? ('core.components.sidebar.collapse' | translate) : ''"
+      tooltipPosition="right"
+      (mouseenter)="isHovered.set(true)"
+      (click)="togglePinned()"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        class="size-5"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 3v18" />
+        <path [attr.d]="isPinned() ? 'm16 15-3-3 3-3' : 'm14 9 3 3-3 3'" />
+      </svg>
+    </button>
   </div>
 
   <ul class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2">
@@ -17,13 +49,10 @@
           [routerLink]="['/', plugin.path]"
           routerLinkActive="bg-highlight text-on-highlight"
           #link="routerLinkActive"
-          class="flex h-10 items-center gap-3 rounded-lg px-3 hover:bg-content-hover"
-          [class.justify-center]="!isOpen()"
-          [pTooltip]="isOpen() ? '' : (plugin.description | translate)"
-          tooltipPosition="right"
+          class="flex h-10 items-center gap-3 rounded-lg px-3.5 hover:bg-content-hover"
         >
           <i class="shrink-0 text-lg" [class]="plugin.icon"></i>
-          @if (isOpen()) {
+          @if (isExpanded()) {
             <span class="flex-1 truncate text-sm">{{ plugin.description | translate }}</span>
             @if (link.isActive) {
               <span class="size-1.5 shrink-0 rounded-full bg-accent"></span>
@@ -34,34 +63,14 @@
     }
   </ul>
 
-  <div class="flex flex-col gap-1 border-t p-2">
+  <div class="border-t p-2">
     <button
       type="button"
-      class="flex h-10 items-center gap-3 rounded-lg px-3 text-muted hover:bg-content-hover"
-      [class.justify-center]="!isOpen()"
-      [pTooltip]="isOpen() ? '' : ('core.components.sidebar.expand' | translate)"
-      tooltipPosition="right"
-      (click)="toggle()"
-    >
-      <i
-        class="pi shrink-0 text-lg"
-        [class.pi-angle-double-left]="isOpen()"
-        [class.pi-angle-double-right]="!isOpen()"
-      ></i>
-      @if (isOpen()) {
-        <span class="truncate text-sm">{{ 'core.components.sidebar.collapse' | translate }}</span>
-      }
-    </button>
-    <button
-      type="button"
-      class="flex h-10 items-center gap-3 rounded-lg px-3 text-muted hover:bg-content-hover hover:text-danger"
-      [class.justify-center]="!isOpen()"
-      [pTooltip]="isOpen() ? '' : ('general.logout.label' | translate)"
-      tooltipPosition="right"
+      class="flex h-10 w-full items-center gap-3 rounded-lg px-3.5 text-muted hover:bg-content-hover hover:text-danger"
       (click)="logout()"
     >
       <i class="pi pi-sign-out shrink-0 text-lg"></i>
-      @if (isOpen()) {
+      @if (isExpanded()) {
         <span class="truncate text-sm">{{ 'general.logout.label' | translate }}</span>
       }
     </button>

@@ -1,146 +1,102 @@
-@if (account(); as currentAccount) {
-  <div class="flex flex-col flex-1 overflow-y-auto min-w-0">
-    <div class="flex flex-col gap-3 px-2 pb-4 min-w-0">
-      <span class="text-sm">
-        {{ 'core.pages.account-detail.personal-info' | translate | uppercase }}
-      </span>
-      <div class="grid grid-cols-2 gap-x-12 gap-y-2 min-w-0">
-        <!-- ROW 1 -->
-        <div class="flex flex-col min-w-0">
-          <span class="text-sm text-muted">
-            {{ 'model.account.firstname' | translate }}
-          </span>
-          <span class="wrap-break-word">
-            {{ currentAccount.firstName }}
-          </span>
-        </div>
-        <div class="flex flex-col min-w-0">
-          <span class="text-sm text-muted">
-            {{ 'model.account.lastname' | translate }}
-          </span>
-          <span class="wrap-break-word">
-            {{ currentAccount.lastName }}
-          </span>
-        </div>
+@if (account(); as account) {
+  <header class="flex shrink-0 items-center gap-3 border-b px-6 py-4">
+    <p-avatar
+      [label]="initials()"
+      shape="circle"
+      size="large"
+      class="shrink-0 bg-primary text-on-primary"
+    />
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-xs text-muted">{{ 'core.pages.account-detail.title' | translate }}</span>
+      <h2 class="truncate text-lg font-semibold">{{ fullName() }}</h2>
+    </div>
+    <p-button
+      icon="pi pi-times"
+      severity="secondary"
+      [text]="true"
+      [rounded]="true"
+      [ariaLabel]="'general.button.label.close' | translate"
+      (onClick)="dialogRef.close()"
+    />
+  </header>
 
-        <!-- ROW 2 -->
-        <div class="flex flex-col min-w-0">
-          <span class="text-sm text-muted">
-            {{ 'model.account.gender' | translate }}
-          </span>
-          <span>
-            {{
-              (currentAccount.gender == 'M' ? 'model.gender.male' : 'model.gender.female')
-                | translate
-            }}
-          </span>
+  <div class="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-5">
+    <section class="flex flex-col gap-1">
+      <app-section-title icon="pi pi-id-card">
+        {{ 'core.pages.account-detail.personal-details' | translate }}
+      </app-section-title>
+      <dl class="text-sm">
+        <div app-detail-row [label]="'model.account.firstname' | translate">
+          {{ account.firstName }}
         </div>
-        <div class="flex flex-col min-w-0">
-          <span class="text-sm text-muted">
-            {{ 'model.account.tax-id-number' | translate }}
-          </span>
-          <span class="wrap-break-word uppercase">
-            {{ currentAccount.taxIdNumber }}
-          </span>
+        <div app-detail-row [label]="'model.account.lastname' | translate">
+          {{ account.lastName }}
         </div>
+        @if (account.gender) {
+          <div app-detail-row [label]="'model.account.gender' | translate">
+            {{ (account.gender === 'M' ? 'model.gender.male' : 'model.gender.female') | translate }}
+          </div>
+        }
+        @if (account.taxIdNumber) {
+          <div app-detail-row [label]="'model.account.tax-id-number' | translate">
+            <span class="font-mono uppercase">{{ account.taxIdNumber }}</span>
+          </div>
+        }
+        @if (account.mobileNumber) {
+          <div app-detail-row [label]="'model.account.mobile-number' | translate">
+            {{ account.mobileNumber }}
+          </div>
+        }
+      </dl>
+    </section>
 
-        <!-- ROW 3 -->
-        <div class="flex flex-col min-w-0">
-          <span class="text-sm text-muted">
-            {{ 'model.account.mobile-number' | translate }}
-          </span>
-          <span class="wrap-break-word">
-            {{ currentAccount.mobileNumber }}
+    <section class="flex flex-col gap-1">
+      <app-section-title icon="pi pi-key">
+        {{ 'core.pages.account-detail.account' | translate }}
+      </app-section-title>
+      <dl class="text-sm">
+        <div app-detail-row [label]="'model.account.email' | translate">
+          {{ account.email }}
+        </div>
+        <div app-detail-row [label]="'model.account.username' | translate">
+          {{ account.username }}
+        </div>
+      </dl>
+      <p-message severity="secondary" size="small" icon="pi pi-info-circle" class="mt-2">
+        {{ 'core.pages.account-detail.managed-by-admin' | translate }}
+      </p-message>
+    </section>
+
+    <section class="flex flex-col gap-3">
+      <app-section-title icon="pi pi-sliders-h">
+        {{ 'core.pages.account-detail.preferences' | translate }}
+      </app-section-title>
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex min-w-0 flex-col">
+          <label for="language" class="text-sm font-medium">
+            {{ 'model.account-preferences.language' | translate }}
+          </label>
+          <span class="text-xs text-muted">
+            {{ 'core.pages.account-detail.language-hint' | translate }}
           </span>
         </div>
+        <p-select
+          inputId="language"
+          class="w-40 shrink-0"
+          appendTo="body"
+          [options]="languages"
+          [ngModel]="language()"
+          [disabled]="saving()"
+          (ngModelChange)="onLanguageChange($event)"
+        >
+          <ng-template #selectedItem let-language>
+            {{ 'model.language.' + language | translate }}
+          </ng-template>
+          <ng-template #item let-language>
+            {{ 'model.language.' + language | translate }}
+          </ng-template>
+        </p-select>
       </div>
-    </div>
-    <hr class="mx-2" />
-    <div class="flex flex-col gap-3 px-2 py-4">
-      <span class="text-sm">
-        {{ 'core.pages.account-detail.account' | translate | uppercase }}
-      </span>
-      <div class="grid grid-cols-2 gap-x-12 gap-y-4 min-w-0">
-        <div class="flex flex-col min-w-0">
-          <span class="text-sm text-muted">
-            {{ 'model.account.email' | translate }}
-          </span>
-          <span class="break-all">
-            {{ currentAccount.email }}
-          </span>
-        </div>
-        <div class="flex flex-col min-w-0">
-          <span class="text-sm text-muted">
-            {{ 'model.account.username' | translate }}
-          </span>
-          <span class="break-all">
-            {{ currentAccount.username }}
-          </span>
-        </div>
-      </div>
-    </div>
-    <hr class="mx-2" />
-    <div class="flex flex-col gap-3 px-2 pt-4 pb-0">
-      <span class="text-sm">
-        {{ 'core.pages.account-detail.preferences' | translate | uppercase }}
-      </span>
-      @if (editing()) {
-        <div class="flex justify-between items-center" [formGroup]="preferencesForm">
-          <div class="flex w-full flex-col min-w-0 gap-1">
-            <span class="text-sm text-muted">
-              {{ 'model.account-preferences.language' | translate }}
-            </span>
-            <div class="flex w-full items-center gap-2">
-              <p-select
-                formControlName="language"
-                [options]="languages"
-                appendTo="body"
-                class="flex-1"
-                size="small"
-              >
-                <ng-template #selectedItem let-language>
-                  {{ 'model.language.' + language | translate }}
-                </ng-template>
-                <ng-template #item let-language>
-                  {{ 'model.language.' + language | translate }}
-                </ng-template>
-              </p-select>
-              <p-button
-                [label]="'general.button.label.save' | translate"
-                size="small"
-                (onClick)="onSaveClick()"
-              />
-              <p-button
-                [label]="'general.button.label.cancel' | translate"
-                size="small"
-                (onClick)="onCancelClick()"
-              />
-            </div>
-          </div>
-        </div>
-      } @else {
-        <div class="flex justify-between items-center">
-          <div class="flex flex-col min-w-0">
-            <span class="text-sm text-muted">
-              {{ 'model.account-preferences.language' | translate }}
-            </span>
-            <span class="break-all">
-              {{ 'model.language.' + currentAccount.preferences.language | translate }}
-            </span>
-          </div>
-          <p-button
-            icon="pi pi-pen-to-square"
-            [label]="'general.button.label.edit' | translate"
-            [text]="true"
-            size="small"
-            (onClick)="onEditClick()"
-          />
-        </div>
-      }
-    </div>
-  </div>
-} @else {
-  <div class="flex justify-center items-center h-full">
-    <p-progress-spinner size="small" />
+    </section>
   </div>
 }
