@@ -1,18 +1,14 @@
-@if (loading()) {
-  <div class="flex justify-center items-center h-full">
-    <p-progress-spinner size="small"/>
-  </div>
-} @else if (currentAccount) {
+@if (account(); as currentAccount) {
   <div class="flex flex-col flex-1 overflow-y-auto min-w-0">
     <div class="flex flex-col gap-3 px-2 pb-4 min-w-0">
       <span class="text-sm">
-        {{ "core.pages.account-detail.personal-info" | translate | uppercase }}
+        {{ 'core.pages.account-detail.personal-info' | translate | uppercase }}
       </span>
       <div class="grid grid-cols-2 gap-x-12 gap-y-2 min-w-0">
         <!-- ROW 1 -->
         <div class="flex flex-col min-w-0">
           <span class="text-sm text-gray-500">
-            {{ "model.account.firstname" | translate }}
+            {{ 'model.account.firstname' | translate }}
           </span>
           <span class="wrap-break-word">
             {{ currentAccount.firstName }}
@@ -20,7 +16,7 @@
         </div>
         <div class="flex flex-col min-w-0">
           <span class="text-sm text-gray-500">
-            {{ "model.account.lastname" | translate }}
+            {{ 'model.account.lastname' | translate }}
           </span>
           <span class="wrap-break-word">
             {{ currentAccount.lastName }}
@@ -30,15 +26,18 @@
         <!-- ROW 2 -->
         <div class="flex flex-col min-w-0">
           <span class="text-sm text-gray-500">
-            {{ "model.account.gender" | translate }}
+            {{ 'model.account.gender' | translate }}
           </span>
           <span>
-            {{ ((currentAccount.gender == 'M') ? 'model.gender.male' : 'model.gender.female') | translate }}
+            {{
+              (currentAccount.gender == 'M' ? 'model.gender.male' : 'model.gender.female')
+                | translate
+            }}
           </span>
         </div>
         <div class="flex flex-col min-w-0">
           <span class="text-sm text-gray-500">
-            {{ "model.account.tax-id-number" | translate }}
+            {{ 'model.account.tax-id-number' | translate }}
           </span>
           <span class="wrap-break-word uppercase">
             {{ currentAccount.taxIdNumber }}
@@ -48,7 +47,7 @@
         <!-- ROW 3 -->
         <div class="flex flex-col min-w-0">
           <span class="text-sm text-gray-500">
-            {{ "model.account.mobile-number" | translate }}
+            {{ 'model.account.mobile-number' | translate }}
           </span>
           <span class="wrap-break-word">
             {{ currentAccount.mobileNumber }}
@@ -56,15 +55,15 @@
         </div>
       </div>
     </div>
-    <hr class="mx-2">
+    <hr class="mx-2" />
     <div class="flex flex-col gap-3 px-2 py-4">
       <span class="text-sm">
-        {{ "core.pages.account-detail.account" | translate | uppercase }}
+        {{ 'core.pages.account-detail.account' | translate | uppercase }}
       </span>
       <div class="grid grid-cols-2 gap-x-12 gap-y-4 min-w-0">
         <div class="flex flex-col min-w-0">
           <span class="text-sm text-gray-500">
-            {{ "model.account.email" | translate }}
+            {{ 'model.account.email' | translate }}
           </span>
           <span class="break-all">
             {{ currentAccount.email }}
@@ -72,7 +71,7 @@
         </div>
         <div class="flex flex-col min-w-0">
           <span class="text-sm text-gray-500">
-            {{ "model.account.username" | translate }}
+            {{ 'model.account.username' | translate }}
           </span>
           <span class="break-all">
             {{ currentAccount.username }}
@@ -80,16 +79,16 @@
         </div>
       </div>
     </div>
-    <hr class="mx-2">
+    <hr class="mx-2" />
     <div class="flex flex-col gap-3 px-2 pt-4 pb-0">
       <span class="text-sm">
-        {{ "core.pages.account-detail.preferences" | translate | uppercase }}
+        {{ 'core.pages.account-detail.preferences' | translate | uppercase }}
       </span>
-      @if (editing) {
+      @if (editing()) {
         <div class="flex justify-between items-center" [formGroup]="preferencesForm">
           <div class="flex w-full flex-col min-w-0 gap-1">
             <span class="text-sm text-gray-500">
-              {{ "model.account-preferences.language" | translate }}
+              {{ 'model.account-preferences.language' | translate }}
             </span>
             <div class="flex w-full items-center gap-2">
               <p-select
@@ -100,10 +99,10 @@
                 size="small"
               >
                 <ng-template #selectedItem let-language>
-                  {{ ('model.language.' + language) | translate }}
+                  {{ 'model.language.' + language | translate }}
                 </ng-template>
                 <ng-template #item let-language>
-                  {{ ('model.language.' + language) | translate }}
+                  {{ 'model.language.' + language | translate }}
                 </ng-template>
               </p-select>
               <p-button
@@ -123,10 +122,10 @@
         <div class="flex justify-between items-center">
           <div class="flex flex-col min-w-0">
             <span class="text-sm text-gray-500">
-              {{ "model.account-preferences.language" | translate }}
+              {{ 'model.account-preferences.language' | translate }}
             </span>
             <span class="break-all">
-              {{ ('model.language.' + currentAccount.preferences.language) | translate }}
+              {{ 'model.language.' + currentAccount.preferences.language | translate }}
             </span>
           </div>
           <p-button
@@ -140,5 +139,8 @@
       }
     </div>
   </div>
+} @else {
+  <div class="flex justify-center items-center h-full">
+    <p-progress-spinner size="small" />
+  </div>
 }
-

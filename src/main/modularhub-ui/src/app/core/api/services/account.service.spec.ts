@@ -55,16 +55,12 @@ describe('AccountService', () => {
     service = TestBed.inject(AccountService);
   });
 
-  function publishedAccount(): Promise<Account | null> {
-    return firstValueFrom(service.getObservableAccount());
-  }
-
   describe('load', () => {
     it('should publish the account and use its language', async () => {
       service.load();
       await service.whenLoaded();
 
-      expect(await publishedAccount()).toEqual(account);
+      expect(service.account()).toEqual(account);
       expect(translateService.use).toHaveBeenCalledWith(Language.It);
     });
 
@@ -74,7 +70,7 @@ describe('AccountService', () => {
       service.load();
       await service.whenLoaded();
 
-      expect(await publishedAccount()).toBeNull();
+      expect(service.account()).toBeNull();
       expect(translateService.use).not.toHaveBeenCalled();
     });
 
@@ -85,7 +81,7 @@ describe('AccountService', () => {
       await service.whenLoaded();
 
       expect(accountApi.getCurrentAccount).not.toHaveBeenCalled();
-      expect(await publishedAccount()).toBeNull();
+      expect(service.account()).toBeNull();
     });
   });
 
@@ -98,7 +94,7 @@ describe('AccountService', () => {
       expect(oauthService.refreshToken.mock.invocationCallOrder[0]).toBeLessThan(
         accountApi.getCurrentAccount.mock.invocationCallOrder[0],
       );
-      expect(await publishedAccount()).toEqual(account);
+      expect(service.account()).toEqual(account);
     });
 
     it('should load the account even when the token refresh fails', async () => {
@@ -107,7 +103,7 @@ describe('AccountService', () => {
       await service.reload();
 
       expect(accountApi.getCurrentAccount).toHaveBeenCalledOnce();
-      expect(await publishedAccount()).toEqual(account);
+      expect(service.account()).toEqual(account);
     });
   });
 

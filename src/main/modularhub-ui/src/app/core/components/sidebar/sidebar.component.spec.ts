@@ -2,11 +2,11 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
-import { Confirmation, ConfirmationService } from 'primeng/api';
 import { SidebarComponent } from 'app/core/components/sidebar/sidebar.component';
 import { PluginService } from 'app/core/api/services/plugin.service';
 import { AccountService } from 'app/core/api/services/account.service';
 import { Plugin } from 'app/core/api/generated';
+import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
 
 @Component({ template: '' })
 class DummyComponent {}
@@ -28,10 +28,11 @@ describe('SidebarComponent', () => {
   let fixture: ComponentFixture<SidebarComponent>;
   let element: HTMLElement;
   let accountService: { logout: ReturnType<typeof vi.fn> };
-  let confirmations: Confirmation[];
+  let confirmDialog: { confirm: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     accountService = { logout: vi.fn() };
+    confirmDialog = { confirm: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [SidebarComponent],
@@ -41,16 +42,11 @@ describe('SidebarComponent', () => {
           { path: 'users', component: DummyComponent },
           { path: 'reports', component: DummyComponent },
         ]),
-        ConfirmationService,
+        { provide: ConfirmDialogService, useValue: confirmDialog },
         { provide: PluginService, useValue: { plugins: signal([usersPlugin, reportsPlugin]) } },
         { provide: AccountService, useValue: accountService },
       ],
     }).compileComponents();
-
-    confirmations = [];
-    TestBed.inject(ConfirmationService).requireConfirmation$.subscribe(
-      (c) => c && confirmations.push(c),
-    );
 
     fixture = TestBed.createComponent(SidebarComponent);
     element = fixture.nativeElement;
@@ -113,10 +109,14 @@ describe('SidebarComponent', () => {
     element.querySelector<HTMLElement>('.text-red-500')!.click();
     await fixture.whenStable();
 
-    expect(confirmations).toHaveLength(1);
+    expect(confirmDialog.confirm).toHaveBeenCalledWith(
+      'general.logout.title',
+      'general.logout.message',
+      expect.any(Function),
+    );
     expect(accountService.logout).not.toHaveBeenCalled();
 
-    confirmations[0].accept!();
+    confirmDialog.confirm.mock.lastCall![2]();
 
     expect(accountService.logout).toHaveBeenCalledOnce();
   });

@@ -1,22 +1,20 @@
-import {Injectable} from '@angular/core';
-import {TranslateService} from '@ngx-translate/core';
-import {OAuthService} from 'angular-oauth2-oidc';
-import {BehaviorSubject, firstValueFrom, Observable, ReplaySubject} from 'rxjs';
-import {Account, AccountApiService, AccountPreferencesUpdate} from 'app/core/api/generated';
+import { inject, Injectable, signal } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
+import { OAuthService } from 'angular-oauth2-oidc';
+import { firstValueFrom, ReplaySubject } from 'rxjs';
+import { Account, AccountApiService, AccountPreferencesUpdate } from 'app/core/api/generated';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AccountService {
+  private readonly accountApi = inject(AccountApiService);
+  private readonly translateService = inject(TranslateService);
+  private readonly oauthService = inject(OAuthService);
 
-  private readonly accountSubject = new BehaviorSubject<Account | null>(null);
+  private readonly currentAccount = signal<Account | null>(null);
+  readonly account = this.currentAccount.asReadonly();
   private readonly loaded = new ReplaySubject<void>(1);
-
-  constructor(
-    private readonly accountApi: AccountApiService,
-    private readonly translateService: TranslateService,
-    private readonly oauthService: OAuthService,
-  ) {}
 
   load(): void {
     if (!this.oauthService.hasValidAccessToken()) {
@@ -25,23 +23,19 @@ export class AccountService {
     }
 
     this.accountApi.getCurrentAccount().subscribe({
-      next: (account: Account) => {
-        this.onSuccess(account);
-      },
-      error: () => {
-        this.onError();
-      }
-    })
+      next: (account) => this.onSuccess(account),
+      error: () => this.onError(),
+    });
   }
 
-  private onSuccess(accont: Account) {
-    this.translateService.use(accont.preferences.language);
-    this.accountSubject.next(accont);
+  private onSuccess(account: Account) {
+    this.translateService.use(account.preferences.language);
+    this.currentAccount.set(account);
     this.loaded.next();
   }
 
   private onError() {
-    this.accountSubject.next(null);
+    this.currentAccount.set(null);
     this.loaded.next();
   }
 
@@ -51,10 +45,6 @@ export class AccountService {
 
   logout(): void {
     this.oauthService.logOut();
-  }
-
-  getObservableAccount(): Observable<Account | null> {
-    return this.accountSubject.asObservable();
   }
 
   async reload(): Promise<void> {

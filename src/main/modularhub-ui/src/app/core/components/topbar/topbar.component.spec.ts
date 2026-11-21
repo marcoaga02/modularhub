@@ -1,15 +1,14 @@
-import { Component, signal } from '@angular/core';
+import { Component, Signal, signal, WritableSignal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
 import { provideTranslateService } from '@ngx-translate/core';
-import { Confirmation, ConfirmationService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { TopbarComponent } from 'app/core/components/topbar/topbar.component';
 import { PluginService } from 'app/core/api/services/plugin.service';
 import { AccountService } from 'app/core/api/services/account.service';
 import { Account, Language, Plugin } from 'app/core/api/generated';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
+import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
 
 @Component({ template: '' })
 class DummyComponent {}
@@ -33,32 +32,28 @@ describe('TopbarComponent', () => {
 
   let fixture: ComponentFixture<TopbarComponent>;
   let element: HTMLElement;
-  let accountSubject: BehaviorSubject<Account | null>;
-  let accountService: { getObservableAccount: () => unknown; logout: ReturnType<typeof vi.fn> };
+  let accountSignal: WritableSignal<Account | null>;
+  let accountService: { account: Signal<Account | null>; logout: ReturnType<typeof vi.fn> };
   let dialogService: { open: ReturnType<typeof vi.fn> };
-  let confirmations: Confirmation[];
+  let confirmDialog: { confirm: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    accountSubject = new BehaviorSubject<Account | null>(null);
-    accountService = { getObservableAccount: () => accountSubject.asObservable(), logout: vi.fn() };
+    accountSignal = signal<Account | null>(null);
+    accountService = { account: accountSignal.asReadonly(), logout: vi.fn() };
     dialogService = { open: vi.fn() };
+    confirmDialog = { confirm: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [TopbarComponent],
       providers: [
         provideTranslateService(),
         provideRouter([{ path: 'user-management', component: DummyComponent }]),
-        ConfirmationService,
+        { provide: ConfirmDialogService, useValue: confirmDialog },
         { provide: PluginService, useValue: { plugins: signal([usersPlugin]) } },
         { provide: AccountService, useValue: accountService },
         { provide: DialogService, useValue: dialogService },
       ],
     }).compileComponents();
-
-    confirmations = [];
-    TestBed.inject(ConfirmationService).requireConfirmation$.subscribe(
-      (c) => c && confirmations.push(c),
-    );
 
     fixture = TestBed.createComponent(TopbarComponent);
     element = fixture.nativeElement;
@@ -66,7 +61,7 @@ describe('TopbarComponent', () => {
   });
 
   async function publishAccount() {
-    accountSubject.next(account);
+    accountSignal.set(account);
     await fixture.whenStable();
   }
 
@@ -125,10 +120,14 @@ describe('TopbarComponent', () => {
 
     await clickMenuItem('general.logout.label');
 
-    expect(confirmations).toHaveLength(1);
+    expect(confirmDialog.confirm).toHaveBeenCalledWith(
+      'general.logout.title',
+      'general.logout.message',
+      expect.any(Function),
+    );
     expect(accountService.logout).not.toHaveBeenCalled();
 
-    confirmations[0].accept!();
+    confirmDialog.confirm.mock.lastCall![2]();
 
     expect(accountService.logout).toHaveBeenCalledOnce();
   });

@@ -1,12 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject, of, Subject } from 'rxjs';
 import { DialogService, DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-import {
-  Confirmation,
-  ConfirmationService,
-  MessageService,
-  ToastMessageOptions,
-} from 'primeng/api';
+import { MessageService, ToastMessageOptions } from 'primeng/api';
 import { provideTranslateService } from '@ngx-translate/core';
 import { UserFormComponent } from 'app/modules/user-management/pages/user-form/user-form.component';
 import { RoleService } from 'app/modules/user-management/api/services/role.service';
@@ -14,6 +9,7 @@ import { UserService } from 'app/modules/user-management/api/services/user.servi
 import { RoleSummary, UserResponse } from 'app/modules/user-management/api/generated';
 import { Gender, Language } from 'app/core/api/generated';
 import { UUID } from 'app/core/api/models/uuid';
+import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
 
 describe('UserFormComponent', () => {
   const role: RoleSummary = { id: 'role-id' as UUID, name: 'Operators', system: false };
@@ -54,7 +50,7 @@ describe('UserFormComponent', () => {
   };
   let dialogService: { open: ReturnType<typeof vi.fn> };
   let rolesDialogClose: Subject<UUID[] | undefined>;
-  let confirmations: Confirmation[];
+  let confirmDialog: { confirm: ReturnType<typeof vi.fn> };
   let messages: ToastMessageOptions[];
 
   beforeEach(() => {
@@ -75,6 +71,7 @@ describe('UserFormComponent', () => {
         return { onClose: rolesDialogClose.asObservable() };
       }),
     };
+    confirmDialog = { confirm: vi.fn() };
   });
 
   async function setUp(userId?: UUID) {
@@ -82,8 +79,8 @@ describe('UserFormComponent', () => {
       imports: [UserFormComponent],
       providers: [
         provideTranslateService(),
-        ConfirmationService,
         MessageService,
+        { provide: ConfirmDialogService, useValue: confirmDialog },
         { provide: DynamicDialogConfig, useValue: { data: { buttonClick, formValid, userId } } },
         { provide: DynamicDialogRef, useValue: ref },
         { provide: DialogService, useValue: dialogService },
@@ -92,10 +89,6 @@ describe('UserFormComponent', () => {
       ],
     }).compileComponents();
 
-    confirmations = [];
-    TestBed.inject(ConfirmationService).requireConfirmation$.subscribe(
-      (c) => c && confirmations.push(c),
-    );
     messages = [];
     TestBed.inject(MessageService).messageObserver.subscribe((m) =>
       messages.push(...(Array.isArray(m) ? m : [m])),
@@ -137,6 +130,10 @@ describe('UserFormComponent', () => {
   async function closeRolesDialogWith(roleIds: UUID[] | undefined) {
     await press('roles');
     rolesDialogClose.next(roleIds);
+  }
+
+  function acceptConfirmation() {
+    confirmDialog.confirm.mock.lastCall![2]();
   }
 
   function roleIdsPassedToRolesDialog(): UUID[] {
@@ -257,9 +254,14 @@ describe('UserFormComponent', () => {
 
       resetButton.click();
       await fixture.whenStable();
+      expect(confirmDialog.confirm).toHaveBeenCalledWith(
+        'modules.user-management.pages.user-form.reset-password.confirmation-title',
+        'modules.user-management.pages.user-form.reset-password.confirmation-message',
+        expect.any(Function),
+      );
       expect(userService.resetPassword).not.toHaveBeenCalled();
 
-      confirmations[0].accept!();
+      acceptConfirmation();
 
       expect(userService.resetPassword).toHaveBeenCalledWith(user.id);
       expect(messages).toEqual([
@@ -276,9 +278,14 @@ describe('UserFormComponent', () => {
       await setUp();
 
       await press('cancel');
+      expect(confirmDialog.confirm).toHaveBeenCalledWith(
+        'modules.user-management.pages.user-form.confirmation-cancel-dialog.title',
+        'modules.user-management.pages.user-form.confirmation-cancel-dialog.message',
+        expect.any(Function),
+      );
       expect(closedWith).toEqual([]);
 
-      confirmations[0].accept!();
+      acceptConfirmation();
 
       expect(closedWith).toEqual([undefined]);
     });

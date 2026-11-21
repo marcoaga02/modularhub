@@ -1,20 +1,19 @@
-import {Injectable} from '@angular/core';
-import {forkJoin} from 'rxjs';
-import {UserCriteria} from 'app/modules/user-management/api/user-criteria';
+import { inject, Injectable } from '@angular/core';
+import { forkJoin } from 'rxjs';
+import { UserCriteria } from 'app/modules/user-management/api/user-criteria';
 import {
   UserApiService,
   UserCreateRequest,
   UserResponse,
-  UserUpdateRequest
+  UserUpdateRequest,
 } from 'app/modules/user-management/api/generated';
-import {UUID} from 'app/core/api/models/uuid';
+import { UUID } from 'app/core/api/models/uuid';
 
 @Injectable({
   providedIn: 'root',
 })
 export class UserService {
-
-  constructor(private readonly userApi: UserApiService) {}
+  private readonly userApi = inject(UserApiService);
 
   getUsers(criteria: UserCriteria) {
     return this.userApi.getAllUsers(
@@ -22,7 +21,7 @@ export class UserService {
       criteria.page,
       criteria.size,
       criteria.sort ? [criteria.sort] : undefined,
-      'response'
+      'response',
     );
   }
 
@@ -39,7 +38,7 @@ export class UserService {
   }
 
   deleteUsers(usersToDelete: UserResponse[]) {
-    return forkJoin(usersToDelete.map(u => this.userApi.deleteUserByUuid(u.id)));
+    return forkJoin(usersToDelete.map((u) => this.userApi.deleteUserByUuid(u.id)));
   }
 
   resetPassword(id: UUID) {

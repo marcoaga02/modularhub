@@ -19,7 +19,7 @@ describe('LocalizedDatePipe', () => {
       providers: [provideTranslateService()],
     });
     translateService = TestBed.inject(TranslateService);
-    pipe = new LocalizedDatePipe(translateService);
+    pipe = TestBed.runInInjectionContext(() => new LocalizedDatePipe());
   });
 
   it('should format the date with the locale of the current language', () => {

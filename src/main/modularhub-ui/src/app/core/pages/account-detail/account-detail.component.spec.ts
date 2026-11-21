@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BehaviorSubject, of } from 'rxjs';
+import { signal, Signal } from '@angular/core';
+import { of } from 'rxjs';
 import { provideTranslateService } from '@ngx-translate/core';
 import { MessageService, ToastMessageOptions } from 'primeng/api';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
@@ -22,17 +23,15 @@ describe('AccountDetailComponent', () => {
 
   let fixture: ComponentFixture<AccountDetailComponent>;
   let element: HTMLElement;
-  let accountSubject: BehaviorSubject<Account | null>;
   let accountService: {
-    getObservableAccount: () => unknown;
+    account: Signal<Account | null>;
     updateCurrentAccountPreferences: ReturnType<typeof vi.fn>;
   };
   let messages: ToastMessageOptions[];
 
   async function setUp(initialAccount: Account | null) {
-    accountSubject = new BehaviorSubject<Account | null>(initialAccount);
     accountService = {
-      getObservableAccount: () => accountSubject.asObservable(),
+      account: signal(initialAccount).asReadonly(),
       updateCurrentAccountPreferences: vi.fn().mockReturnValue(of(account)),
     };
 

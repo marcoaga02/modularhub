@@ -1,13 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
-import { BehaviorSubject, of, Subject } from 'rxjs';
+import { signal, Signal } from '@angular/core';
+import { of, Subject } from 'rxjs';
 import { provideTranslateService } from '@ngx-translate/core';
-import {
-  Confirmation,
-  ConfirmationService,
-  MessageService,
-  ToastMessageOptions,
-} from 'primeng/api';
+import { MessageService, ToastMessageOptions } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { UserListComponent } from 'app/modules/user-management/pages/user-list/user-list.component';
 import { UserFormComponent } from 'app/modules/user-management/pages/user-form/user-form.component';
@@ -18,6 +14,7 @@ import { AccountService } from 'app/core/api/services/account.service';
 import { Account, Gender, Language } from 'app/core/api/generated';
 import { HttpHeader } from 'app/core/api/http-header';
 import { UUID } from 'app/core/api/models/uuid';
+import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
 
 describe('UserListComponent', () => {
   const FILTER_DEBOUNCE_MS = 250;
@@ -66,22 +63,22 @@ describe('UserListComponent', () => {
     deleteUsers: ReturnType<typeof vi.fn>;
   };
   let accountService: {
-    getObservableAccount: ReturnType<typeof vi.fn>;
+    account: Signal<Account | null>;
     reload: ReturnType<typeof vi.fn>;
   };
   let dialogService: { open: ReturnType<typeof vi.fn> };
   let formDialogClose: Subject<UserResponse | undefined>;
-  let confirmations: Confirmation[];
+  let confirmDialog: { confirm: ReturnType<typeof vi.fn> };
   let messages: ToastMessageOptions[];
 
-  async function setUp(users: UserResponse[] | null = [mario, luigi]) {
+  async function setUp(users: UserResponse[] | null = [mario, luigi], total?: number) {
     userService = {
-      getUsers: vi.fn().mockReturnValue(page(users)),
+      getUsers: vi.fn().mockReturnValue(page(users, total)),
       getUserById: vi.fn().mockReturnValue(of(mario)),
       deleteUsers: vi.fn().mockReturnValue(of([undefined])),
     };
     accountService = {
-      getObservableAccount: vi.fn().mockReturnValue(new BehaviorSubject(account)),
+      account: signal(account).asReadonly(),
       reload: vi.fn().mockResolvedValue(undefined),
     };
     dialogService = {
@@ -90,23 +87,20 @@ describe('UserListComponent', () => {
         return { onClose: formDialogClose.asObservable() };
       }),
     };
+    confirmDialog = { confirm: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [UserListComponent],
       providers: [
         provideTranslateService({ lang: 'en' }),
-        ConfirmationService,
         MessageService,
+        { provide: ConfirmDialogService, useValue: confirmDialog },
         { provide: UserService, useValue: userService },
         { provide: AccountService, useValue: accountService },
         { provide: DialogService, useValue: dialogService },
       ],
     }).compileComponents();
 
-    confirmations = [];
-    TestBed.inject(ConfirmationService).requireConfirmation$.subscribe(
-      (c) => c && confirmations.push(c),
-    );
     messages = [];
     TestBed.inject(MessageService).messageObserver.subscribe((m) =>
       messages.push(...(Array.isArray(m) ? m : [m])),
@@ -172,15 +166,14 @@ describe('UserListComponent', () => {
       expect(lastCriteria().filter.text).toBe('mar');
     });
 
-    it('should read the current account only once regardless of how many pages are loaded', async () => {
-      await setUp();
-      await selectRow(1);
-      await click('general.button.label.add');
-      formDialogClose.next(luigi);
+    it('should load the page and the page size requested by the paginator', async () => {
+      await setUp([mario, luigi], 60);
+
+      element.querySelector<HTMLButtonElement>('.p-paginator-next')!.click();
       await fixture.whenStable();
 
-      expect(userService.getUsers.mock.calls.length).toBeGreaterThan(1);
-      expect(accountService.getObservableAccount).toHaveBeenCalledOnce();
+      expect(lastCriteria().page).toBe(1);
+      expect(lastCriteria().size).toBe(20);
     });
   });
 
@@ -303,9 +296,14 @@ describe('UserListComponent', () => {
       await selectRow(1);
       await click('general.button.label.delete');
       const loadsBefore = userService.getUsers.mock.calls.length;
+      expect(confirmDialog.confirm).toHaveBeenCalledWith(
+        'modules.user-management.pages.user-list.confirmation-delete-dialog.title',
+        'modules.user-management.pages.user-list.confirmation-delete-dialog.message',
+        expect.any(Function),
+      );
       expect(userService.deleteUsers).not.toHaveBeenCalled();
 
-      confirmations[0].accept!();
+      confirmDialog.confirm.mock.lastCall![2]();
       await fixture.whenStable();
 
       expect(userService.deleteUsers).toHaveBeenCalledWith([luigi]);

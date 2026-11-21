@@ -107,6 +107,22 @@ describe('UserDetailComponent', () => {
     expect(element.textContent?.trim()).toBe('');
   });
 
+  it('should show the last selected user when an earlier request answers later', async () => {
+    const luigi: UserResponse = { ...user, id: 'luigi-id' as UUID, username: 'luigi.verdi' };
+    const slowMario = new Subject<UserResponse>();
+    userService.getUserById.mockImplementation((id: UUID) =>
+      id === user.id ? slowMario : of(luigi),
+    );
+
+    await showUser(user.id);
+    await showUser(luigi.id);
+    slowMario.next(user);
+    await fixture.whenStable();
+
+    expect(element.textContent).toContain('luigi.verdi');
+    expect(element.textContent).not.toContain('mario.rossi');
+  });
+
   it('should clear the user when the id is removed', async () => {
     await showUser(user.id);
 
