@@ -1,10 +1,14 @@
-import {TestBed} from '@angular/core/testing';
-import {of, throwError} from 'rxjs';
-
-import {AccountService} from 'app/core/api/services/account.service';
-import {Account, AccountApiService, Language} from 'app/core/api/generated';
-import {TranslateService} from '@ngx-translate/core';
-import {OAuthService} from 'angular-oauth2-oidc';
+import { TestBed } from '@angular/core/testing';
+import { firstValueFrom, of, throwError } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
+import { OAuthService } from 'angular-oauth2-oidc';
+import { AccountService } from 'app/core/api/services/account.service';
+import {
+  Account,
+  AccountApiService,
+  AccountPreferencesUpdate,
+  Language,
+} from 'app/core/api/generated';
 
 describe('AccountService', () => {
   const account: Account = {
@@ -14,61 +18,116 @@ describe('AccountService', () => {
     firstName: 'Mario',
     lastName: 'Rossi',
     permissions: ['USER_MANAGEMENT'],
-    preferences: {language: Language.It},
+    preferences: { language: Language.It },
   };
 
-  let usedLanguages: string[];
+  let accountApi: {
+    getCurrentAccount: ReturnType<typeof vi.fn>;
+    updatePreferences: ReturnType<typeof vi.fn>;
+  };
+  let translateService: { use: ReturnType<typeof vi.fn> };
+  let oauthService: {
+    hasValidAccessToken: ReturnType<typeof vi.fn>;
+    logOut: ReturnType<typeof vi.fn>;
+    refreshToken: ReturnType<typeof vi.fn>;
+  };
+  let service: AccountService;
 
-  function setUp(getCurrentAccount: () => unknown, hasValidAccessToken = true) {
-    usedLanguages = [];
+  beforeEach(() => {
+    accountApi = {
+      getCurrentAccount: vi.fn().mockReturnValue(of(account)),
+      updatePreferences: vi.fn(),
+    };
+    translateService = { use: vi.fn() };
+    oauthService = {
+      hasValidAccessToken: vi.fn().mockReturnValue(true),
+      logOut: vi.fn(),
+      refreshToken: vi.fn().mockResolvedValue({}),
+    };
+
     TestBed.configureTestingModule({
       providers: [
-        AccountService,
-        {provide: TranslateService, useValue: {use: (lang: string) => usedLanguages.push(lang)}},
-        {provide: AccountApiService, useValue: {getCurrentAccount}},
-        {provide: OAuthService, useValue: {hasValidAccessToken: () => hasValidAccessToken}},
-      ]
+        { provide: AccountApiService, useValue: accountApi },
+        { provide: TranslateService, useValue: translateService },
+        { provide: OAuthService, useValue: oauthService },
+      ],
     });
-    return TestBed.inject(AccountService);
+    service = TestBed.inject(AccountService);
+  });
+
+  function publishedAccount(): Promise<Account | null> {
+    return firstValueFrom(service.getObservableAccount());
   }
 
-  it('should be created', () => {
-    expect(setUp(() => of(account))).toBeTruthy();
+  describe('load', () => {
+    it('should publish the account and use its language', async () => {
+      service.load();
+      await service.whenLoaded();
+
+      expect(await publishedAccount()).toEqual(account);
+      expect(translateService.use).toHaveBeenCalledWith(Language.It);
+    });
+
+    it('should complete the loading with no account when the request fails', async () => {
+      accountApi.getCurrentAccount.mockReturnValue(throwError(() => new Error('boom')));
+
+      service.load();
+      await service.whenLoaded();
+
+      expect(await publishedAccount()).toBeNull();
+      expect(translateService.use).not.toHaveBeenCalled();
+    });
+
+    it('should complete the loading without requesting the account when there is no valid token', async () => {
+      oauthService.hasValidAccessToken.mockReturnValue(false);
+
+      service.load();
+      await service.whenLoaded();
+
+      expect(accountApi.getCurrentAccount).not.toHaveBeenCalled();
+      expect(await publishedAccount()).toBeNull();
+    });
   });
 
-  it('should publish the account and use its language when it is loaded', async () => {
-    const service = setUp(() => of(account));
-    let published: Account | null = null;
-    service.getObservableAccount().subscribe(value => published = value);
+  describe('reload', () => {
+    it('should refresh the token and then load the account again', async () => {
+      await service.reload();
 
-    service.load();
-    await service.whenLoaded();
+      expect(oauthService.refreshToken).toHaveBeenCalledOnce();
+      expect(accountApi.getCurrentAccount).toHaveBeenCalledOnce();
+      expect(oauthService.refreshToken.mock.invocationCallOrder[0]).toBeLessThan(
+        accountApi.getCurrentAccount.mock.invocationCallOrder[0],
+      );
+      expect(await publishedAccount()).toEqual(account);
+    });
 
-    expect(published).toEqual(account);
-    expect(usedLanguages).toEqual([Language.It]);
+    it('should load the account even when the token refresh fails', async () => {
+      oauthService.refreshToken.mockRejectedValue(new Error('refresh failed'));
+
+      await service.reload();
+
+      expect(accountApi.getCurrentAccount).toHaveBeenCalledOnce();
+      expect(await publishedAccount()).toEqual(account);
+    });
   });
 
-  it('should complete the loading with no account when the request fails', async () => {
-    const service = setUp(() => throwError(() => new Error('boom')));
-    let published: Account | null | undefined;
-    service.getObservableAccount().subscribe(value => published = value);
+  describe('logout', () => {
+    it('should log out from the identity provider', () => {
+      service.logout();
 
-    service.load();
-    await service.whenLoaded();
-
-    expect(published).toBeNull();
+      expect(oauthService.logOut).toHaveBeenCalledOnce();
+    });
   });
 
-  it('should complete the loading without requesting the account when there is no valid token', async () => {
-    let requested = false;
-    const service = setUp(() => {
-      requested = true;
-      return of(account);
-    }, false);
+  describe('updateCurrentAccountPreferences', () => {
+    it('should send the preferences to the api', async () => {
+      const preferences: AccountPreferencesUpdate = { language: Language.En };
+      accountApi.updatePreferences.mockReturnValue(of(account));
 
-    service.load();
-    await service.whenLoaded();
+      const result = await firstValueFrom(service.updateCurrentAccountPreferences(preferences));
 
-    expect(requested).toBe(false);
+      expect(accountApi.updatePreferences).toHaveBeenCalledWith(preferences);
+      expect(result).toEqual(account);
+    });
   });
 });

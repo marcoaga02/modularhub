@@ -1,7 +1,6 @@
 import {Component, inject, signal} from '@angular/core';
 import {AccountService} from 'app/core/api/services/account.service';
-import {first, retry} from 'rxjs';
-import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
+import {first} from 'rxjs';
 import {Account, Language} from 'app/core/api/generated';
 import {ProgressSpinner} from 'primeng/progressspinner';
 import {UpperCasePipe} from '@angular/common';
@@ -48,7 +47,6 @@ export class AccountDetailComponent {
   ) {
     this.accountService.getObservableAccount().pipe(
       first(),
-      retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
     ).subscribe({
       next: account => {
         if (!account) {

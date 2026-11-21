@@ -1,8 +1,7 @@
 import {Component, signal} from '@angular/core';
 import {Avatar, AvatarPassThroughOptions} from "primeng/avatar";
 import {AccountService} from 'app/core/api/services/account.service';
-import {retry} from 'rxjs';
-import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {Account} from 'app/core/api/generated';
 
 @Component({
@@ -28,19 +27,14 @@ export class AccountDetailHeaderComponent {
     private readonly accountService: AccountService
   ) {
     this.accountService.getObservableAccount()
-      .pipe(retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}))
-      .subscribe({
-        next: (account) => {
-          if (!account) {
-            return;
-          }
-
-          this.currentAccount = account;
-          this.loading.set(false);
-        },
-        error: () => {
-          this.loading.set(false);
+      .pipe(takeUntilDestroyed())
+      .subscribe(account => {
+        if (!account) {
+          return;
         }
+
+        this.currentAccount = account;
+        this.loading.set(false);
       });
   }
 

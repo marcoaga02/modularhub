@@ -6,7 +6,7 @@ import {Checkbox} from 'primeng/checkbox';
 import {Gender, Language} from 'app/core/api/generated';
 import {RadioButton} from 'primeng/radiobutton';
 import {BehaviorSubject, retry, Subject} from 'rxjs';
-import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
+import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/core/utils/constants/retry';
 import {Select} from 'primeng/select';
 import {DialogService, DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {
@@ -113,25 +113,29 @@ export class UserFormComponent {
         }
 
         if (this.config.data?.userId) {
-          this.userService.getUserById(this.config.data.userId).pipe(
-            retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
-          ).subscribe({
-            next: user => {
-              if (!user) {
-                return;
-              }
-
-              this.userEdited = user;
-              this.initForm(user);
-
-              this.userForm.controls.password.clearValidators();
-              this.userForm.controls.password.updateValueAndValidity();
-              this.userForm.controls.password.disable();
-            },
-            error: () => {
-            }
-          });
+          this.loadUser(this.config.data.userId);
+          return;
         }
+
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+      }
+    });
+  }
+
+  private loadUser(userId: UUID) {
+    this.userService.getUserById(userId).pipe(
+      retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
+    ).subscribe({
+      next: user => {
+        this.userEdited = user;
+        this.initForm(user);
+
+        this.userForm.controls.password.clearValidators();
+        this.userForm.controls.password.updateValueAndValidity();
+        this.userForm.controls.password.disable();
 
         this.loading.set(false);
       },

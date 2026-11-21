@@ -57,10 +57,9 @@ export class AccountService {
     return this.accountSubject.asObservable();
   }
 
-  async reload() {
-    this.oauthService.refreshToken().then(() => {
-      this.load();
-    });
+  async reload(): Promise<void> {
+    await this.oauthService.refreshToken().catch(() => undefined);
+    this.load();
   }
 
   updateCurrentAccountPreferences(preferences: AccountPreferencesUpdate) {

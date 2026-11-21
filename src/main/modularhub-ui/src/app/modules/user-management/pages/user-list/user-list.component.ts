@@ -2,7 +2,7 @@ import {Component, signal} from '@angular/core';
 import {TableModule, TablePassThrough} from 'primeng/table';
 import {UserService} from 'app/modules/user-management/api/services/user.service';
 import {UserResponse} from 'app/modules/user-management/api/generated';
-import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
+import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/core/utils/constants/retry';
 import {BehaviorSubject, debounceTime, retry, Subject} from 'rxjs';
 import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 import {TableRowDirective} from 'app/core/utils/directives/table-row.directive';
@@ -78,9 +78,15 @@ export class UserListComponent {
     this.filterSubject.pipe(
       debounceTime(200),
       takeUntilDestroyed()
-    ).subscribe(value => {
+    ).subscribe(() => {
       this.loadPage();
     });
+
+    this.accountService.getObservableAccount()
+      .pipe(takeUntilDestroyed())
+      .subscribe(account => {
+        this.currentAccount = account ?? undefined;
+      });
   }
 
   protected loadPage(event?: any) {
@@ -95,34 +101,15 @@ export class UserListComponent {
       .pipe(retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}))
       .subscribe({
         next: response => {
-          if (!response.body) {
-            return;
-          }
-
-          this.users = response.body;
+          this.users = response.body ?? [];
           this.totalRecords = Number(response.headers.get(HttpHeader.TotalCount));
 
           this.loading.set(false);
         },
-        error: err => {
+        error: () => {
           this.loading.set(false);
         }
       });
-
-    this.accountService.getObservableAccount()
-      .pipe(retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}))
-      .subscribe({
-        next: (account) => {
-          if (!account) {
-            return;
-          }
-
-          this.currentAccount = account;
-        },
-        error: () => {
-        }
-      });
-
   }
 
   protected isEditButtonEnabled() {
@@ -213,7 +200,7 @@ export class UserListComponent {
       },
       accept: () => {
         this.userService.deleteUsers(this.selectedUsers).subscribe({
-          next: (deleted) => {
+          next: () => {
             this.selectedUsers = [];
             this.messageService.add({
               severity: 'success',
@@ -222,7 +209,7 @@ export class UserListComponent {
 
             this.loadPage();
           },
-          error: (err) => {
+          error: () => {
             this.loadPage();
           }
         });

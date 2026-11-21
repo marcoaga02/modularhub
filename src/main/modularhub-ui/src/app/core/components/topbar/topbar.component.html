@@ -2,7 +2,7 @@
   <ng-template #start>
     <div class="flex items-center gap-4">
       <img src="/logo.svg" class="h-7 w-7" width="28" height="28" alt="ModularHub"/>
-      <span>{{ currentPlugin?.description | translate }}</span>
+      <span>{{ currentPlugin()?.description | translate }}</span>
     </div>
   </ng-template>
   <ng-template #end>

@@ -4,7 +4,7 @@ import {TranslatePipe} from '@ngx-translate/core';
 import {UserResponse} from 'app/modules/user-management/api/generated';
 import {UserService} from 'app/modules/user-management/api/services/user.service';
 import {retry} from 'rxjs';
-import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
+import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/core/utils/constants/retry';
 import {ProgressSpinner} from 'primeng/progressspinner';
 import {Avatar, AvatarPassThroughOptions} from 'primeng/avatar';
 import {Tag} from 'primeng/tag';

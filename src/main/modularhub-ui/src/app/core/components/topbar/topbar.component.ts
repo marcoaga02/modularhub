@@ -4,12 +4,11 @@ import {PluginService} from 'app/core/api/services/plugin.service';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {NavigationEnd, Router} from '@angular/router';
 import {Plugin} from 'app/core/api/generated';
-import {filter, retry} from 'rxjs';
+import {filter} from 'rxjs';
 import {TranslatePipe, TranslateService} from '@ngx-translate/core';
 import {Avatar, AvatarPassThroughOptions} from 'primeng/avatar';
 import {AccountService} from 'app/core/api/services/account.service';
 import {Account} from 'app/core/api/generated';
-import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
 import {Popover, PopoverPassThroughOptions} from 'primeng/popover';
 import {ConfirmationService} from 'primeng/api';
 import {DialogService} from 'primeng/dynamicdialog';
@@ -52,7 +51,7 @@ export class TopbarComponent {
   protected readonly plugins: Signal<Plugin[]>;
   protected loading = signal(true);
 
-  protected currentPlugin?: Plugin;
+  protected readonly currentPlugin = signal<Plugin | undefined>(undefined);
   protected currentAccount?: Account;
 
   constructor(
@@ -80,26 +79,21 @@ export class TopbarComponent {
       });
 
     this.accountService.getObservableAccount()
-      .pipe(retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}))
-      .subscribe({
-        next: (account) => {
-          if (!account) {
-            return;
-          }
-
-          this.currentAccount = account;
-          this.loading.set(false);
-        },
-        error: () => {
-          this.loading.set(false);
+      .pipe(takeUntilDestroyed())
+      .subscribe(account => {
+        if (!account) {
+          return;
         }
+
+        this.currentAccount = account;
+        this.loading.set(false);
       });
   }
 
   private updateCurrentPlugin() {
     const url = this.router.url.split('/')[1].split('?')[0];
 
-    this.currentPlugin = this.plugins().find((p) => p.path === url);
+    this.currentPlugin.set(this.plugins().find((p) => p.path === url));
   }
 
   protected getInitials(): string {

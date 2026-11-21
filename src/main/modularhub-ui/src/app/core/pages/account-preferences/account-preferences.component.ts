@@ -2,8 +2,7 @@ import {Component, inject, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {AccountService} from 'app/core/api/services/account.service';
 import {Account, Language} from 'app/core/api/generated';
-import {first, retry} from 'rxjs';
-import {MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS} from 'app/app.config';
+import {first} from 'rxjs';
 import {Select} from 'primeng/select';
 import {TranslatePipe} from '@ngx-translate/core';
 import {Button} from 'primeng/button';
@@ -36,7 +35,6 @@ export class AccountPreferencesComponent {
   constructor(private readonly accountService: AccountService) {
     this.accountService.getObservableAccount().pipe(
       first(),
-      retry({count: MAX_RETRY_ATTEMPTS, delay: RETRY_DELAY_MS}),
     ).subscribe({
       next: account => {
         if (!account) {
