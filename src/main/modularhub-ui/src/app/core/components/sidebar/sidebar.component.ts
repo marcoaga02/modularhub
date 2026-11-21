@@ -4,7 +4,6 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { Tooltip } from 'primeng/tooltip';
 import { PluginService } from 'app/core/api/services/plugin.service';
 import { AccountService } from 'app/core/api/services/account.service';
-import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -18,7 +17,6 @@ import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.ser
 })
 export class SidebarComponent {
   private readonly accountService = inject(AccountService);
-  private readonly confirmDialog = inject(ConfirmDialogService);
 
   protected readonly isPinned = signal(true);
   protected readonly isHovered = signal(false);
@@ -32,8 +30,6 @@ export class SidebarComponent {
   }
 
   protected logout() {
-    this.confirmDialog.confirm('general.logout.title', 'general.logout.message', () =>
-      this.accountService.logout(),
-    );
+    this.accountService.logout();
   }
 }

@@ -25,7 +25,45 @@
 </div>
 
 <div class="flex min-h-0 flex-1 items-start">
-  <div class="@container max-h-full min-w-68 flex-1 overflow-auto rounded-xl border bg-content">
+  @if (isEmpty()) {
+    <div
+      class="flex flex-1 flex-col items-center gap-3 rounded-xl border bg-content px-6 py-12 text-center"
+    >
+      <i class="pi pi-users text-3xl text-muted"></i>
+      <div class="flex flex-col gap-1">
+        <h2 class="font-semibold">
+          {{ 'modules.user-management.pages.user-list.empty.title' | translate }}
+        </h2>
+        <p class="text-sm text-muted">
+          {{
+            (criteria.filter.text
+              ? 'modules.user-management.pages.user-list.empty.filtered'
+              : 'modules.user-management.pages.user-list.empty.no-users'
+            ) | translate
+          }}
+        </p>
+      </div>
+      @if (criteria.filter.text) {
+        <p-button
+          icon="pi pi-filter-slash"
+          severity="secondary"
+          [outlined]="true"
+          [label]="'modules.user-management.pages.user-list.empty.clear-filters' | translate"
+          (onClick)="onClearFiltersClick()"
+        />
+      } @else {
+        <p-button
+          icon="pi pi-plus"
+          [label]="'modules.user-management.pages.user-list.new-user' | translate"
+          (onClick)="onAddClick()"
+        />
+      }
+    </div>
+  }
+  <div
+    class="@container max-h-full min-w-68 flex-1 overflow-auto rounded-xl border bg-content"
+    [class.hidden]="isEmpty()"
+  >
     <p-table
       [value]="users()"
       [lazy]="true"
@@ -79,8 +117,6 @@
             <div class="flex flex-wrap gap-1">
               @for (role of user.roles; track role.id) {
                 <p-tag [value]="role.name" severity="secondary" class="border bg-content" />
-              } @empty {
-                <span class="text-muted">—</span>
               }
             </div>
           </td>
@@ -89,13 +125,6 @@
               [value]="'model.user.enabled.' + user.enabled | translate"
               [severity]="user.enabled ? 'success' : 'secondary'"
             />
-          </td>
-        </tr>
-      </ng-template>
-      <ng-template #emptymessage>
-        <tr>
-          <td colspan="4" class="text-center text-muted">
-            {{ 'modules.user-management.pages.user-list.empty-message' | translate }}
           </td>
         </tr>
       </ng-template>

@@ -20,6 +20,10 @@
 }
 
 @layer base {
+  body {
+    color: var(--p-text-color);
+  }
+
   *,
   ::after,
   ::before,

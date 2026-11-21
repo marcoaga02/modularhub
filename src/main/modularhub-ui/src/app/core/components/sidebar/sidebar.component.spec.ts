@@ -6,7 +6,6 @@ import { SidebarComponent } from 'app/core/components/sidebar/sidebar.component'
 import { PluginService } from 'app/core/api/services/plugin.service';
 import { AccountService } from 'app/core/api/services/account.service';
 import { Plugin } from 'app/core/api/generated';
-import { ConfirmDialogService } from 'app/core/utils/services/confirm-dialog.service';
 
 @Component({ template: '' })
 class DummyComponent {}
@@ -28,11 +27,9 @@ describe('SidebarComponent', () => {
   let fixture: ComponentFixture<SidebarComponent>;
   let element: HTMLElement;
   let accountService: { logout: ReturnType<typeof vi.fn> };
-  let confirmDialog: { confirm: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     accountService = { logout: vi.fn() };
-    confirmDialog = { confirm: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [SidebarComponent],
@@ -42,7 +39,6 @@ describe('SidebarComponent', () => {
           { path: 'users', component: DummyComponent },
           { path: 'reports', component: DummyComponent },
         ]),
-        { provide: ConfirmDialogService, useValue: confirmDialog },
         { provide: PluginService, useValue: { plugins: signal([usersPlugin, reportsPlugin]) } },
         { provide: AccountService, useValue: accountService },
       ],
@@ -149,17 +145,8 @@ describe('SidebarComponent', () => {
     expect(pluginLinks()[0].classList).not.toContain('bg-highlight');
   });
 
-  it('should log out only after the confirmation is accepted', async () => {
+  it('should log out right away', async () => {
     await click(element.querySelector<HTMLElement>('nav i.pi-sign-out')!.closest('button')!);
-
-    expect(confirmDialog.confirm).toHaveBeenCalledWith(
-      'general.logout.title',
-      'general.logout.message',
-      expect.any(Function),
-    );
-    expect(accountService.logout).not.toHaveBeenCalled();
-
-    confirmDialog.confirm.mock.lastCall![2]();
 
     expect(accountService.logout).toHaveBeenCalledOnce();
   });

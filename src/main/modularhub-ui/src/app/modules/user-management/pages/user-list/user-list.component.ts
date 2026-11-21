@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { debounceTime, retry, Subject } from 'rxjs';
@@ -64,6 +64,7 @@ export class UserListComponent {
   protected readonly selectedUser = signal<UserResponse | null>(null);
   protected readonly totalRecords = signal(0);
   protected readonly first = signal(0);
+  protected readonly isEmpty = computed(() => !this.loading() && this.totalRecords() === 0);
 
   protected readonly filterSubject = new Subject<void>();
   protected readonly criteria = new UserCriteria(0, 20);
@@ -106,6 +107,11 @@ export class UserListComponent {
     this.first.set(0);
 
     this.loadPage();
+  }
+
+  protected onClearFiltersClick() {
+    this.criteria.filter.text = '';
+    this.loadFirstPage();
   }
 
   protected onAddClick() {

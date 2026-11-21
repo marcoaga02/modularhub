@@ -21,6 +21,7 @@ export class AccountService {
   private readonly currentAccount = signal<Account | null>(null);
   readonly account = this.currentAccount.asReadonly();
   private readonly loaded = new ReplaySubject<void>(1);
+  private loginStarted = false;
 
   load(): void {
     if (!this.oauthService.hasValidAccessToken()) {
@@ -47,6 +48,15 @@ export class AccountService {
 
   whenLoaded(): Promise<void> {
     return firstValueFrom(this.loaded);
+  }
+
+  login(): void {
+    if (this.loginStarted) {
+      return;
+    }
+
+    this.loginStarted = true;
+    this.oauthService.initLoginFlow();
   }
 
   logout(): void {

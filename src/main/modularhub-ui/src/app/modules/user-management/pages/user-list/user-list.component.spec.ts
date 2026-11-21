@@ -147,6 +147,14 @@ describe('UserListComponent', () => {
     )!;
   }
 
+  async function search(text: string) {
+    const input = element.querySelector<HTMLInputElement>('p-iconfield input')!;
+    input.value = text;
+    input.dispatchEvent(new Event('input'));
+    await new Promise((resolve) => setTimeout(resolve, FILTER_DEBOUNCE_MS));
+    await fixture.whenStable();
+  }
+
   function lastCriteria(): UserCriteria {
     return userService.getUsers.mock.lastCall![0];
   }
@@ -171,22 +179,48 @@ describe('UserListComponent', () => {
       expect(rows()[0].textContent).toContain('ADMIN');
     });
 
-    it('should stop loading and show the empty message when the response has no body', async () => {
+    it('should stop loading and show the empty state instead of the table when there are no users', async () => {
       await setUp(null);
 
       expect(element.querySelector('.p-datatable-mask')).toBeNull();
-      expect(element.textContent).toContain(`${LIST}.empty-message`);
+      expect(element.textContent).toContain(`${LIST}.empty.title`);
+      expect(element.textContent).toContain(`${LIST}.empty.no-users`);
+      expect(button(`${LIST}.empty.clear-filters`)).toBeUndefined();
+      expect(element.querySelector('p-table')!.parentElement!.classList).toContain('hidden');
+    });
+
+    it('should open the creation form from the empty state', async () => {
+      await setUp(null);
+      const emptyState = element.querySelector<HTMLElement>('.pi-users')!.parentElement!;
+
+      await click(button(`${LIST}.new-user`, emptyState));
+
+      expect(dialogService.open).toHaveBeenCalledOnce();
     });
 
     it('should reload the users filtered by the typed text', async () => {
       await setUp();
-      const search = element.querySelector<HTMLInputElement>('p-iconfield input')!;
 
-      search.value = 'mar';
-      search.dispatchEvent(new Event('input'));
-      await new Promise((resolve) => setTimeout(resolve, FILTER_DEBOUNCE_MS));
+      await search('mar');
 
       expect(lastCriteria().filter.text).toBe('mar');
+    });
+
+    it('should offer to clear the filter when the search finds no users', async () => {
+      await setUp();
+      userService.getUsers.mockReturnValue(page([]));
+      await search('zzz');
+
+      expect(element.textContent).toContain(`${LIST}.empty.filtered`);
+      userService.getUsers.mockReturnValue(page([mario, luigi]));
+
+      await click(button(`${LIST}.empty.clear-filters`));
+
+      expect(lastCriteria().filter.text).toBe('');
+      expect(lastCriteria().page).toBe(0);
+      expect(element.querySelector<HTMLInputElement>('p-iconfield input')!.value).toBe('');
+      expect(rows()).toHaveLength(2);
+      expect(element.textContent).not.toContain(`${LIST}.empty.title`);
     });
 
     it('should load the page and the page size requested by the paginator', async () => {

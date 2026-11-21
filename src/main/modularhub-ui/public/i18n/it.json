@@ -84,9 +84,7 @@
     },
     "error": "Errore",
     "logout": {
-      "label": "Esci",
-      "message": "Sei sicuro di voler uscire?",
-      "title": "Conferma uscita"
+      "label": "Esci"
     }
   },
   "model": {
@@ -204,7 +202,12 @@
           "creation-message": "L'utente è stato creato con successo",
           "delete-message": "Utente eliminato con successo",
           "edit-message": "L'utente è stato modificato con successo",
-          "empty-message": "Nessun utente trovato",
+          "empty": {
+            "title": "Nessun utente trovato",
+            "filtered": "Nessun utente corrisponde alla ricerca.",
+            "clear-filters": "Azzera filtri",
+            "no-users": "Inizia creando il primo utente."
+          },
           "filter-placeholder": "Filtra utenti",
           "title": "Utenti",
           "new-user": "Nuovo utente",

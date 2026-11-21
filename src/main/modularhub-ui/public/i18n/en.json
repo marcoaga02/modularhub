@@ -84,9 +84,7 @@
     },
     "error": "Error",
     "logout": {
-      "label": "Logout",
-      "message": "Are you sure you want to log out?",
-      "title": "Confirm logout"
+      "label": "Logout"
     }
   },
   "model": {
@@ -204,7 +202,12 @@
           "creation-message": "The user has been created successfully",
           "delete-message": "User deleted successfully",
           "edit-message": "User has been updated successfully",
-          "empty-message": "No users found",
+          "empty": {
+            "title": "No users found",
+            "filtered": "No user matches your search.",
+            "clear-filters": "Clear filters",
+            "no-users": "Get started by creating the first user."
+          },
           "filter-placeholder": "Filter users",
           "title": "Users",
           "new-user": "New user",

@@ -30,6 +30,7 @@ describe('AccountService', () => {
     hasValidAccessToken: ReturnType<typeof vi.fn>;
     logOut: ReturnType<typeof vi.fn>;
     initCodeFlow: ReturnType<typeof vi.fn>;
+    initLoginFlow: ReturnType<typeof vi.fn>;
     refreshToken: ReturnType<typeof vi.fn>;
   };
   let service: AccountService;
@@ -44,6 +45,7 @@ describe('AccountService', () => {
       hasValidAccessToken: vi.fn().mockReturnValue(true),
       logOut: vi.fn(),
       initCodeFlow: vi.fn(),
+      initLoginFlow: vi.fn(),
       refreshToken: vi.fn().mockResolvedValue({}),
     };
 
@@ -106,6 +108,15 @@ describe('AccountService', () => {
 
       expect(accountApi.getCurrentAccount).toHaveBeenCalledOnce();
       expect(service.account()).toEqual(account);
+    });
+  });
+
+  describe('login', () => {
+    it('should start the login flow only once', () => {
+      service.login();
+      service.login();
+
+      expect(oauthService.initLoginFlow).toHaveBeenCalledOnce();
     });
   });
 
