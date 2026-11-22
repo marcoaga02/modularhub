@@ -1,11 +1,10 @@
 import { EnvironmentProviders, inject, provideAppInitializer } from '@angular/core';
 import { Route, Router, Routes } from '@angular/router';
 import { firstValueFrom, retry } from 'rxjs';
-import { OAuthService } from 'angular-oauth2-oidc';
 import { Plugin } from 'app/core/api/generated';
 import { AccountService } from 'app/core/api/services/account.service';
 import { PluginService } from 'app/core/api/services/plugin.service';
-import { waitForValidToken } from 'app/core/auth/auth-initializer';
+import { AuthService } from 'app/core/auth/auth.service';
 import { MAX_RETRY_ATTEMPTS, RETRY_DELAY_MS } from 'app/core/utils/constants/retry';
 import { PLUGIN_REGISTRY } from 'app/plugin-registry';
 
@@ -13,12 +12,12 @@ export const FALLBACK_PATH = 'dashboard';
 
 export function providePluginRoutes(): EnvironmentProviders {
   return provideAppInitializer(async () => {
-    const oAuthService = inject(OAuthService);
+    const authService = inject(AuthService);
     const accountService = inject(AccountService);
     const pluginService = inject(PluginService);
     const router = inject(Router);
 
-    await waitForValidToken(oAuthService);
+    await authService.whenAuthenticated();
     await accountService.whenLoaded();
 
     const plugins = await firstValueFrom(

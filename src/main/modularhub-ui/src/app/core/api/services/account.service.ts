@@ -1,6 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { OAuthService } from 'angular-oauth2-oidc';
 import { firstValueFrom, ReplaySubject, tap } from 'rxjs';
 import {
   Account,
@@ -8,7 +7,7 @@ import {
   AccountPreferencesResponse,
   AccountPreferencesUpdate,
 } from 'app/core/api/generated';
-import { UPDATE_PASSWORD_ACTION } from 'app/core/auth/password-update';
+import { AuthService } from 'app/core/auth/auth.service';
 
 @Injectable({
   providedIn: 'root',
@@ -16,15 +15,14 @@ import { UPDATE_PASSWORD_ACTION } from 'app/core/auth/password-update';
 export class AccountService {
   private readonly accountApi = inject(AccountApiService);
   private readonly translateService = inject(TranslateService);
-  private readonly oauthService = inject(OAuthService);
+  private readonly authService = inject(AuthService);
 
   private readonly currentAccount = signal<Account | null>(null);
   readonly account = this.currentAccount.asReadonly();
   private readonly loaded = new ReplaySubject<void>(1);
-  private loginStarted = false;
 
   load(): void {
-    if (!this.oauthService.hasValidAccessToken()) {
+    if (!this.authService.hasValidAccessToken()) {
       this.loaded.next();
       return;
     }
@@ -50,25 +48,8 @@ export class AccountService {
     return firstValueFrom(this.loaded);
   }
 
-  login(): void {
-    if (this.loginStarted) {
-      return;
-    }
-
-    this.loginStarted = true;
-    this.oauthService.initLoginFlow();
-  }
-
-  logout(): void {
-    this.oauthService.logOut();
-  }
-
-  changePassword(): void {
-    this.oauthService.initCodeFlow('', { kc_action: UPDATE_PASSWORD_ACTION });
-  }
-
   async reload(): Promise<void> {
-    await this.oauthService.refreshToken().catch(() => undefined);
+    await this.authService.refreshToken().catch(() => undefined);
     this.load();
   }
 

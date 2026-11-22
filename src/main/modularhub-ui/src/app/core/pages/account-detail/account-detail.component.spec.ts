@@ -5,6 +5,7 @@ import { provideTranslateService } from '@ngx-translate/core';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
 import { AccountService } from 'app/core/api/services/account.service';
+import { AuthService } from 'app/core/auth/auth.service';
 import { Account, AccountPreferencesResponse, Gender, Language } from 'app/core/api/generated';
 
 describe('AccountDetailComponent', () => {
@@ -27,8 +28,8 @@ describe('AccountDetailComponent', () => {
   let accountService: {
     account: WritableSignal<Account | null>;
     updateCurrentAccountPreferences: ReturnType<typeof vi.fn>;
-    changePassword: ReturnType<typeof vi.fn>;
   };
+  let authService: { changePassword: ReturnType<typeof vi.fn> };
   let closed: number;
 
   beforeEach(async () => {
@@ -36,8 +37,8 @@ describe('AccountDetailComponent', () => {
     accountService = {
       account: accountSignal,
       updateCurrentAccountPreferences: vi.fn().mockReturnValue(of({ language: Language.En })),
-      changePassword: vi.fn(),
     };
+    authService = { changePassword: vi.fn() };
     const ref = new DynamicDialogRef();
     closed = 0;
     ref.onClose.subscribe(() => closed++);
@@ -47,6 +48,7 @@ describe('AccountDetailComponent', () => {
       providers: [
         provideTranslateService(),
         { provide: AccountService, useValue: accountService },
+        { provide: AuthService, useValue: authService },
         { provide: DynamicDialogRef, useValue: ref },
       ],
     }).compileComponents();
@@ -112,7 +114,7 @@ describe('AccountDetailComponent', () => {
       .click();
     await fixture.whenStable();
 
-    expect(accountService.changePassword).toHaveBeenCalledOnce();
+    expect(authService.changePassword).toHaveBeenCalledOnce();
   });
 
   it('should save the language as soon as it is chosen', async () => {

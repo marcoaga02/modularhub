@@ -6,6 +6,7 @@ import { Button } from 'primeng/button';
 import { Select } from 'primeng/select';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { AccountService } from 'app/core/api/services/account.service';
+import { AuthService } from 'app/core/auth/auth.service';
 import { Language } from 'app/core/api/generated';
 import { LANGUAGES } from 'app/core/utils/constants/languages';
 import { getFullName, getInitials } from 'app/core/utils/functions/person-name';
@@ -28,6 +29,7 @@ import { DetailRowComponent } from 'app/core/components/detail-row/detail-row.co
 })
 export class AccountDetailComponent {
   private readonly accountService = inject(AccountService);
+  private readonly authService = inject(AuthService);
   protected readonly dialogRef = inject(DynamicDialogRef);
 
   protected readonly languages = LANGUAGES;
@@ -57,6 +59,6 @@ export class AccountDetailComponent {
   }
 
   protected changePassword() {
-    this.accountService.changePassword();
+    this.authService.changePassword();
   }
 }

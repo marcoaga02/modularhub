@@ -3,7 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { Tooltip } from 'primeng/tooltip';
 import { PluginService } from 'app/core/api/services/plugin.service';
-import { AccountService } from 'app/core/api/services/account.service';
+import { AuthService } from 'app/core/auth/auth.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -16,7 +16,7 @@ import { AccountService } from 'app/core/api/services/account.service';
   },
 })
 export class SidebarComponent {
-  private readonly accountService = inject(AccountService);
+  private readonly authService = inject(AuthService);
 
   protected readonly isPinned = signal(true);
   protected readonly isHovered = signal(false);
@@ -30,6 +30,6 @@ export class SidebarComponent {
   }
 
   protected logout() {
-    this.accountService.logout();
+    this.authService.logout();
   }
 }

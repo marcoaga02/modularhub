@@ -12,8 +12,11 @@ import {
   DEFAULT_ERROR_CODE,
   errorHandlerInterceptor,
 } from 'app/core/api/interceptors/error-handler.interceptor';
-import { ApiError } from 'app/core/api/generated';
+import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
+import { AccountApiService, ApiError, Language } from 'app/core/api/generated';
 import { AccountService } from 'app/core/api/services/account.service';
+import { AuthService } from 'app/core/auth/auth.service';
 
 describe('errorHandlerInterceptor', () => {
   const url = 'http://test/api/resource';
@@ -22,17 +25,17 @@ describe('errorHandlerInterceptor', () => {
   let http: HttpClient;
   let httpTesting: HttpTestingController;
   let messages: ToastMessageOptions[];
-  let accountService: { login: ReturnType<typeof vi.fn> };
+  let authService: { login: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    accountService = { login: vi.fn() };
+    authService = { login: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([errorHandlerInterceptor])),
         provideHttpClientTesting(),
         MessageService,
-        { provide: AccountService, useValue: accountService },
+        { provide: AuthService, useValue: authService },
       ],
     });
     http = TestBed.inject(HttpClient);
@@ -106,8 +109,30 @@ describe('errorHandlerInterceptor', () => {
   it('should send the user back to the login instead of showing an error when unauthorized', async () => {
     const error = await failWith(null, { status: 401, statusText: 'Unauthorized' });
 
-    expect(accountService.login).toHaveBeenCalledOnce();
+    expect(authService.login).toHaveBeenCalledOnce();
     expect(messages).toEqual([]);
     expect(error).toBeInstanceOf(HttpErrorResponse);
+  });
+});
+
+describe('errorHandlerInterceptor while the account service is being created', () => {
+  it('should let the translations of the default language be loaded', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(withInterceptors([errorHandlerInterceptor])),
+        provideHttpClientTesting(),
+        provideTranslateService({
+          loader: provideTranslateHttpLoader({ prefix: './i18n/', suffix: '.json' }),
+          lang: Language.En,
+        }),
+        MessageService,
+        { provide: AccountApiService, useValue: {} },
+        { provide: AuthService, useValue: {} },
+      ],
+    });
+
+    TestBed.inject(AccountService);
+
+    TestBed.inject(HttpTestingController).expectOne('./i18n/en.json').flush({});
   });
 });

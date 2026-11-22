@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { provideTranslateService } from '@ngx-translate/core';
 import { SidebarComponent } from 'app/core/components/sidebar/sidebar.component';
 import { PluginService } from 'app/core/api/services/plugin.service';
-import { AccountService } from 'app/core/api/services/account.service';
+import { AuthService } from 'app/core/auth/auth.service';
 import { Plugin } from 'app/core/api/generated';
 
 @Component({ template: '' })
@@ -26,10 +26,10 @@ describe('SidebarComponent', () => {
 
   let fixture: ComponentFixture<SidebarComponent>;
   let element: HTMLElement;
-  let accountService: { logout: ReturnType<typeof vi.fn> };
+  let authService: { logout: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    accountService = { logout: vi.fn() };
+    authService = { logout: vi.fn() };
 
     await TestBed.configureTestingModule({
       imports: [SidebarComponent],
@@ -40,7 +40,7 @@ describe('SidebarComponent', () => {
           { path: 'reports', component: DummyComponent },
         ]),
         { provide: PluginService, useValue: { plugins: signal([usersPlugin, reportsPlugin]) } },
-        { provide: AccountService, useValue: accountService },
+        { provide: AuthService, useValue: authService },
       ],
     }).compileComponents();
 
@@ -148,6 +148,6 @@ describe('SidebarComponent', () => {
   it('should log out right away', async () => {
     await click(element.querySelector<HTMLElement>('nav i.pi-sign-out')!.closest('button')!);
 
-    expect(accountService.logout).toHaveBeenCalledOnce();
+    expect(authService.logout).toHaveBeenCalledOnce();
   });
 });
