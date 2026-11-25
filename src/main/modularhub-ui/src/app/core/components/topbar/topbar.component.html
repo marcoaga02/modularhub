@@ -1,10 +1,7 @@
 <p-toolbar class="h-14 shrink-0 border-x-0 border-t-0">
   <ng-template #start>
     @if (currentPlugin(); as plugin) {
-      <div class="flex min-w-0 items-center gap-2">
-        <i class="text-lg text-primary" [class]="plugin.icon"></i>
-        <span class="truncate text-lg font-semibold">{{ plugin.description | translate }}</span>
-      </div>
+      <span class="truncate font-semibold text-muted">{{ plugin.description | translate }}</span>
     }
   </ng-template>
   <ng-template #end>

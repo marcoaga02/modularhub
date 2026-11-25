@@ -83,13 +83,14 @@
           <th>{{ 'modules.user-management.pages.user-list.columns.user' | translate }}</th>
           <th class="hidden @xl:table-cell">{{ 'model.user.email' | translate }}</th>
           <th class="hidden @3xl:table-cell">{{ 'model.user.roles' | translate }}</th>
-          <th class="hidden @sm:table-cell">
+          <th class="hidden w-0 @sm:table-cell">
             {{ 'modules.user-management.pages.user-list.columns.status' | translate }}
           </th>
+          <th class="w-0"></th>
         </tr>
       </ng-template>
       <ng-template #body [appTableRow]="users()" let-user>
-        <tr [pSelectableRow]="user" class="cursor-pointer">
+        <tr [pSelectableRow]="user" class="cursor-pointer" [class.text-muted]="!user.enabled">
           <td>
             <div class="flex min-w-56 items-center gap-3">
               <p-avatar
@@ -111,12 +112,16 @@
             </div>
           </td>
           <td class="hidden @xl:table-cell">
-            <span class="break-all">{{ user.email }}</span>
+            <span class="block max-w-64 truncate" [title]="user.email">{{ user.email }}</span>
           </td>
           <td class="hidden @3xl:table-cell">
             <div class="flex flex-wrap gap-1">
               @for (role of user.roles; track role.id) {
                 <p-tag [value]="role.name" severity="secondary" class="border bg-content" />
+              } @empty {
+                <span class="text-sm text-muted">
+                  {{ 'modules.user-management.pages.user-list.no-roles' | translate }}
+                </span>
               }
             </div>
           </td>
@@ -125,6 +130,9 @@
               [value]="'model.user.enabled.' + user.enabled | translate"
               [severity]="user.enabled ? 'success' : 'secondary'"
             />
+          </td>
+          <td>
+            <i class="pi pi-chevron-right text-sm text-muted"></i>
           </td>
         </tr>
       </ng-template>
