@@ -177,6 +177,22 @@ describe('UserListComponent', () => {
       await setUp([{ ...mario, roles: [{ id: 'role-id' as UUID, name: 'ADMIN', system: true }] }]);
 
       expect(rows()[0].textContent).toContain('ADMIN');
+      expect(rows()[0].textContent).not.toContain(
+        'modules.user-management.pages.user-list.no-roles',
+      );
+    });
+
+    it('should show that a user has no roles', async () => {
+      await setUp([mario]);
+
+      expect(rows()[0].textContent).toContain('modules.user-management.pages.user-list.no-roles');
+    });
+
+    it('should mute only the rows of the disabled users', async () => {
+      await setUp([mario, { ...luigi, enabled: false }]);
+
+      expect(rows()[0].classList).not.toContain('text-muted');
+      expect(rows()[1].classList).toContain('text-muted');
     });
 
     it('should stop loading and show the empty state instead of the table when there are no users', async () => {

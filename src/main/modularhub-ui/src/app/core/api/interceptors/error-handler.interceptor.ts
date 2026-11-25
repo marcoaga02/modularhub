@@ -9,7 +9,7 @@ import {
 import { catchError, Observable, throwError } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { ApiError } from 'app/core/api/generated';
-import { AccountService } from 'app/core/api/services/account.service';
+import { AuthService } from 'app/core/auth/auth.service';
 
 export const DEFAULT_ERROR_CODE = 'exception.internal.error';
 
@@ -18,12 +18,12 @@ export function errorHandlerInterceptor(
   next: HttpHandlerFn,
 ): Observable<HttpEvent<unknown>> {
   const messageService = inject(MessageService);
-  const accountService = inject(AccountService);
+  const authService = inject(AuthService);
 
   return next(req).pipe(
     catchError((e: HttpErrorResponse) => {
       if (e.status === HttpStatusCode.Unauthorized) {
-        accountService.login();
+        authService.login();
         return throwError(() => e);
       }
 

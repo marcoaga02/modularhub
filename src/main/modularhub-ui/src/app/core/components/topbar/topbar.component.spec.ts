@@ -6,6 +6,7 @@ import { DialogService } from 'primeng/dynamicdialog';
 import { TopbarComponent } from 'app/core/components/topbar/topbar.component';
 import { PluginService } from 'app/core/api/services/plugin.service';
 import { AccountService } from 'app/core/api/services/account.service';
+import { AuthService } from 'app/core/auth/auth.service';
 import { Account, Language, Plugin } from 'app/core/api/generated';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
 import { FORM_DIALOG_CONFIG } from 'app/core/utils/constants/dialog';
@@ -33,12 +34,14 @@ describe('TopbarComponent', () => {
   let fixture: ComponentFixture<TopbarComponent>;
   let element: HTMLElement;
   let accountSignal: WritableSignal<Account | null>;
-  let accountService: { account: Signal<Account | null>; logout: ReturnType<typeof vi.fn> };
+  let accountService: { account: Signal<Account | null> };
+  let authService: { logout: ReturnType<typeof vi.fn> };
   let dialogService: { open: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     accountSignal = signal<Account | null>(null);
-    accountService = { account: accountSignal.asReadonly(), logout: vi.fn() };
+    accountService = { account: accountSignal.asReadonly() };
+    authService = { logout: vi.fn() };
     dialogService = { open: vi.fn() };
 
     await TestBed.configureTestingModule({
@@ -48,6 +51,7 @@ describe('TopbarComponent', () => {
         provideRouter([{ path: 'user-management', component: DummyComponent }]),
         { provide: PluginService, useValue: { plugins: signal([usersPlugin]) } },
         { provide: AccountService, useValue: accountService },
+        { provide: AuthService, useValue: authService },
         { provide: DialogService, useValue: dialogService },
       ],
     }).compileComponents();
@@ -117,6 +121,6 @@ describe('TopbarComponent', () => {
 
     await clickMenuItem('general.logout.label');
 
-    expect(accountService.logout).toHaveBeenCalledOnce();
+    expect(authService.logout).toHaveBeenCalledOnce();
   });
 });

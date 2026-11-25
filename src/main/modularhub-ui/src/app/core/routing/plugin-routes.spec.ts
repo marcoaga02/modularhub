@@ -2,7 +2,7 @@ import { ApplicationInitStatus, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Route, Router } from '@angular/router';
 import { of } from 'rxjs';
-import { OAuthService } from 'angular-oauth2-oidc';
+import { AuthService } from 'app/core/auth/auth.service';
 import { Plugin } from 'app/core/api/generated';
 import { AccountService } from 'app/core/api/services/account.service';
 import { PluginService } from 'app/core/api/services/plugin.service';
@@ -73,6 +73,7 @@ describe('plugin routes', () => {
   describe('providePluginRoutes', () => {
     it('should load the plugins after the account and install their routes', async () => {
       const userManagement: Plugin = { ...users, path: 'user-management' };
+      const authService = { whenAuthenticated: vi.fn().mockResolvedValue(undefined) };
       const accountService = { whenLoaded: vi.fn().mockResolvedValue(undefined) };
       const pluginService = { getPlugins: vi.fn().mockReturnValue(of([userManagement, unknown])) };
 
@@ -80,13 +81,16 @@ describe('plugin routes', () => {
         providers: [
           provideRouter([]),
           providePluginRoutes(),
-          { provide: OAuthService, useValue: { hasValidAccessToken: () => true } },
+          { provide: AuthService, useValue: authService },
           { provide: AccountService, useValue: accountService },
           { provide: PluginService, useValue: pluginService },
         ],
       });
       await TestBed.inject(ApplicationInitStatus).donePromise;
 
+      expect(authService.whenAuthenticated.mock.invocationCallOrder[0]).toBeLessThan(
+        accountService.whenLoaded.mock.invocationCallOrder[0],
+      );
       expect(accountService.whenLoaded.mock.invocationCallOrder[0]).toBeLessThan(
         pluginService.getPlugins.mock.invocationCallOrder[0],
       );

@@ -211,6 +211,7 @@
           "filter-placeholder": "Filtra utenti",
           "title": "Utenti",
           "new-user": "Nuovo utente",
+          "no-roles": "Nessun ruolo",
           "columns": {
             "user": "Utente",
             "status": "Stato"

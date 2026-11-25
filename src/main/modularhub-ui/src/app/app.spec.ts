@@ -3,7 +3,7 @@ import { Location, PlatformLocation } from '@angular/common';
 import { MOCK_PLATFORM_LOCATION_CONFIG, MockPlatformLocation } from '@angular/common/testing';
 import { provideTranslateService } from '@ngx-translate/core';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { OAuthService } from 'angular-oauth2-oidc';
+import { AuthService } from 'app/core/auth/auth.service';
 import { App } from './app';
 
 describe('App', () => {
@@ -14,7 +14,7 @@ describe('App', () => {
         provideTranslateService(),
         MessageService,
         ConfirmationService,
-        { provide: OAuthService, useValue: {} },
+        { provide: AuthService, useValue: {} },
         { provide: PlatformLocation, useClass: MockPlatformLocation },
         { provide: MOCK_PLATFORM_LOCATION_CONFIG, useValue: { startUrl: url } },
       ],

@@ -9,6 +9,7 @@ import { Popover, PopoverPassThroughOptions } from 'primeng/popover';
 import { DialogService } from 'primeng/dynamicdialog';
 import { PluginService } from 'app/core/api/services/plugin.service';
 import { AccountService } from 'app/core/api/services/account.service';
+import { AuthService } from 'app/core/auth/auth.service';
 import { getFullName, getInitials } from 'app/core/utils/functions/person-name';
 import { AccountDetailComponent } from 'app/core/pages/account-detail/account-detail.component';
 import { FORM_DIALOG_CONFIG } from 'app/core/utils/constants/dialog';
@@ -21,6 +22,7 @@ import { FORM_DIALOG_CONFIG } from 'app/core/utils/constants/dialog';
 export class TopbarComponent {
   private readonly router = inject(Router);
   private readonly accountService = inject(AccountService);
+  private readonly authService = inject(AuthService);
   private readonly dialogService = inject(DialogService);
 
   protected readonly avatarPT: AvatarPassThroughOptions = {
@@ -57,7 +59,7 @@ export class TopbarComponent {
   });
 
   protected logout() {
-    this.accountService.logout();
+    this.authService.logout();
   }
 
   protected onProfileClick() {

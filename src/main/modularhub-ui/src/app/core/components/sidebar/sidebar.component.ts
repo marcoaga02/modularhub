@@ -1,13 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { Tooltip } from 'primeng/tooltip';
 import { PluginService } from 'app/core/api/services/plugin.service';
-import { AccountService } from 'app/core/api/services/account.service';
+import { AuthService } from 'app/core/auth/auth.service';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [RouterLink, RouterLinkActive, Tooltip, TranslatePipe],
+  imports: [RouterLink, RouterLinkActive, TranslatePipe],
   templateUrl: './sidebar.component.html',
   host: {
     class: 'relative z-20 shrink-0 transition-[width] duration-300',
@@ -16,7 +15,7 @@ import { AccountService } from 'app/core/api/services/account.service';
   },
 })
 export class SidebarComponent {
-  private readonly accountService = inject(AccountService);
+  private readonly authService = inject(AuthService);
 
   protected readonly isPinned = signal(true);
   protected readonly isHovered = signal(false);
@@ -30,6 +29,6 @@ export class SidebarComponent {
   }
 
   protected logout() {
-    this.accountService.logout();
+    this.authService.logout();
   }
 }

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
-import { OAuthService } from 'angular-oauth2-oidc';
+import { AuthService } from 'app/core/auth/auth.service';
 import { AccountService } from 'app/core/api/services/account.service';
 import {
   Account,
@@ -26,11 +26,8 @@ describe('AccountService', () => {
     updatePreferences: ReturnType<typeof vi.fn>;
   };
   let translateService: { use: ReturnType<typeof vi.fn> };
-  let oauthService: {
+  let authService: {
     hasValidAccessToken: ReturnType<typeof vi.fn>;
-    logOut: ReturnType<typeof vi.fn>;
-    initCodeFlow: ReturnType<typeof vi.fn>;
-    initLoginFlow: ReturnType<typeof vi.fn>;
     refreshToken: ReturnType<typeof vi.fn>;
   };
   let service: AccountService;
@@ -41,19 +38,16 @@ describe('AccountService', () => {
       updatePreferences: vi.fn(),
     };
     translateService = { use: vi.fn() };
-    oauthService = {
+    authService = {
       hasValidAccessToken: vi.fn().mockReturnValue(true),
-      logOut: vi.fn(),
-      initCodeFlow: vi.fn(),
-      initLoginFlow: vi.fn(),
-      refreshToken: vi.fn().mockResolvedValue({}),
+      refreshToken: vi.fn().mockResolvedValue(undefined),
     };
 
     TestBed.configureTestingModule({
       providers: [
         { provide: AccountApiService, useValue: accountApi },
         { provide: TranslateService, useValue: translateService },
-        { provide: OAuthService, useValue: oauthService },
+        { provide: AuthService, useValue: authService },
       ],
     });
     service = TestBed.inject(AccountService);
@@ -79,7 +73,7 @@ describe('AccountService', () => {
     });
 
     it('should complete the loading without requesting the account when there is no valid token', async () => {
-      oauthService.hasValidAccessToken.mockReturnValue(false);
+      authService.hasValidAccessToken.mockReturnValue(false);
 
       service.load();
       await service.whenLoaded();
@@ -93,46 +87,21 @@ describe('AccountService', () => {
     it('should refresh the token and then load the account again', async () => {
       await service.reload();
 
-      expect(oauthService.refreshToken).toHaveBeenCalledOnce();
+      expect(authService.refreshToken).toHaveBeenCalledOnce();
       expect(accountApi.getCurrentAccount).toHaveBeenCalledOnce();
-      expect(oauthService.refreshToken.mock.invocationCallOrder[0]).toBeLessThan(
+      expect(authService.refreshToken.mock.invocationCallOrder[0]).toBeLessThan(
         accountApi.getCurrentAccount.mock.invocationCallOrder[0],
       );
       expect(service.account()).toEqual(account);
     });
 
     it('should load the account even when the token refresh fails', async () => {
-      oauthService.refreshToken.mockRejectedValue(new Error('refresh failed'));
+      authService.refreshToken.mockRejectedValue(new Error('refresh failed'));
 
       await service.reload();
 
       expect(accountApi.getCurrentAccount).toHaveBeenCalledOnce();
       expect(service.account()).toEqual(account);
-    });
-  });
-
-  describe('login', () => {
-    it('should start the login flow only once', () => {
-      service.login();
-      service.login();
-
-      expect(oauthService.initLoginFlow).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe('logout', () => {
-    it('should log out from the identity provider', () => {
-      service.logout();
-
-      expect(oauthService.logOut).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe('changePassword', () => {
-    it('should ask the identity provider to update the password', () => {
-      service.changePassword();
-
-      expect(oauthService.initCodeFlow).toHaveBeenCalledWith('', { kc_action: 'UPDATE_PASSWORD' });
     });
   });
 

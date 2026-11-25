@@ -21,8 +21,6 @@
         (isPinned() ? 'core.components.sidebar.collapse' : 'core.components.sidebar.expand')
           | translate
       "
-      [pTooltip]="isPinned() ? ('core.components.sidebar.collapse' | translate) : ''"
-      tooltipPosition="right"
       (mouseenter)="isHovered.set(true)"
       (click)="togglePinned()"
     >
